@@ -133,6 +133,17 @@ select { background: var(--surf2); }
   border: 1px solid var(--sage-bd); color: var(--sage); background: var(--sage-bg);
 }
 .wk-medal-prestige:hover { background: var(--sage-bd); }
+.wk-medal-reset {
+  margin-top: 4px; font-size: 10px; padding: 3px 8px; border-radius: calc(6px * var(--radius-scale, 1));
+  border: 1px solid var(--border); color: var(--ink-dim); background: var(--surf2);
+}
+.wk-medal-reset:hover { background: var(--surf3); color: var(--ink); }
+.wk-achieve-history-btn {
+  margin-left: auto; font-size: 11px; color: var(--sage); background: none; border: none;
+  padding: 2px 4px; flex-shrink: 0; cursor: pointer;
+}
+.wk-achieve-history-btn:hover { text-decoration: underline; }
+.wk-achieve-lifetime { font-size: 11px; color: var(--ink-dim); margin: -2px 0 10px; }
 .prestige-tag {
   display: inline-flex; align-items: center;
   font-size: 9.5px; font-weight: 700; letter-spacing: 0.03em;
@@ -2344,7 +2355,8 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
           <div id="wk-days" aria-label="Hours per day, last 14 days"></div>
         </div>
         <div class="wk-card" id="wk-card-achievements">
-          <div class="ov-sect-head"><span>Medals<span class="beta-tag">Beta</span></span><span class="note" id="wk-achieve-summary"></span></div>
+          <div class="ov-sect-head"><span>Medals<span class="beta-tag">Beta</span></span><span class="note" id="wk-achieve-summary"></span><button id="wk-achieve-history-btn" class="wk-achieve-history-btn" type="button">History</button></div>
+          <div id="wk-achieve-lifetime" class="wk-achieve-lifetime"></div>
           <div id="wk-achieve-grid" class="wk-achieve-grid"></div>
         </div>
         <div class="wk-card" id="wk-card-history">
@@ -3017,11 +3029,14 @@ function blankState() {
     activity: {},
     medalProgress: {},
     bestStreak: 0,
-    overachieve: { challenge: null, record: 0, lastClearedWeek: null },
+    overachieve: { challenge: null, record: 0, lastClearedWeek: null, checkedThrough: null },
     restDays: {},
     restTokens: 0,
     lastGoalWeekAwarded: null,
+    goalTokenCheckedThrough: null,
     medalPrestige: {},
+    medalBest: {},
+    medalHistory: [],
     settings: {
       hidden: { railTabs: [], homeTiles: [], homeSections: [], workSections: [] },
       sessionCleanupFilters: { after: "", before: "", minMinutes: "", maxMinutes: "", labels: [] },
@@ -3097,6 +3112,15 @@ function normalizeState(s) {
   Object.keys(s.restDays).forEach(function (k) { if (!s.restDays[k]) delete s.restDays[k]; });
   s.restTokens = Math.max(0, +s.restTokens || 0);
   s.lastGoalWeekAwarded = typeof s.lastGoalWeekAwarded === "string" ? s.lastGoalWeekAwarded : null;
+  // checkpoint for the rest-token backfill scan below. If a token was
+  // already awarded before, resume right after that week — weeks up to and
+  // including it are already resolved, so re-scanning them risks a duplicate
+  // award. If none was ever awarded, there's nothing to duplicate, so it's
+  // safe to start from the earliest logged session instead — which means an
+  // existing save upgrading to this fix still gets its pre-existing gap
+  // recovered, not just gaps going forward.
+  s.goalTokenCheckedThrough = typeof s.goalTokenCheckedThrough === "string" ? s.goalTokenCheckedThrough :
+    (typeof s.lastGoalWeekAwarded === "string" ? weekKey(weekKeyToTs(s.lastGoalWeekAwarded) + 7 * 86400000) : (earliestSessionWeekKey(s.sessions) || weekKey()));
   safe("medalPrestige", function () {
     var mp = s.medalPrestige && typeof s.medalPrestige === "object" ? s.medalPrestige : {};
     var clean = {};
@@ -3110,10 +3134,43 @@ function normalizeState(s) {
     s.overachieve = {
       challenge: (typeof oa.challenge === "number" && oa.challenge > 0) ? oa.challenge : null,
       record: Math.max(0, +oa.record || 0),
-      lastClearedWeek: typeof oa.lastClearedWeek === "string" ? oa.lastClearedWeek : null
+      lastClearedWeek: typeof oa.lastClearedWeek === "string" ? oa.lastClearedWeek : null,
+      // same reasoning as goalTokenCheckedThrough above: resume right after
+      // the last known clear if there is one, otherwise from the earliest
+      // logged session — so an existing save's pre-existing gap gets
+      // recovered too, not just gaps going forward.
+      checkedThrough: typeof oa.checkedThrough === "string" ? oa.checkedThrough :
+        (typeof oa.lastClearedWeek === "string" ? weekKey(weekKeyToTs(oa.lastClearedWeek) + 7 * 86400000) : (earliestSessionWeekKey(s.sessions) || weekKey()))
     };
   });
-  if (!s.overachieve || typeof s.overachieve !== "object") s.overachieve = { challenge: null, record: 0, lastClearedWeek: null };
+  if (!s.overachieve || typeof s.overachieve !== "object") s.overachieve = { challenge: null, record: 0, lastClearedWeek: null, checkedThrough: weekKey() };
+  // volume and goal are recomputed live from session data (see medalTierValue),
+  // so an edited/deleted session could otherwise make an earned tier vanish.
+  // This is the same running-best protection bestStreak already has. Seeded
+  // from whatever the live value already qualifies for, so upgrading never
+  // shows a lower number than what's already been earned.
+  safe("medalBest", function () {
+    var mb = s.medalBest && typeof s.medalBest === "object" ? s.medalBest : {};
+    var clean = { volume: Math.max(0, +mb.volume || 0), goal: Math.max(0, +mb.goal || 0) };
+    clean.volume = Math.max(clean.volume, medalValue("volume", s));
+    clean.goal = Math.max(clean.goal, medalValue("goal", s));
+    s.medalBest = clean;
+  });
+  if (!s.medalBest || typeof s.medalBest !== "object") s.medalBest = { volume: 0, goal: 0 };
+  safe("medalHistory", function () {
+    s.medalHistory = Array.isArray(s.medalHistory) ? s.medalHistory.filter(function (h) {
+      return h && typeof h === "object" && MEDAL_DEFS.hasOwnProperty(h.key) && typeof h.ts === "number";
+    }).map(function (h) {
+      return {
+        key: h.key,
+        tier: Math.max(0, Math.floor(+h.tier || 0)),
+        prestige: Math.max(0, Math.floor(+h.prestige || 0)),
+        ts: +h.ts,
+        kind: h.kind === "prestige" ? "prestige" : "tier"
+      };
+    }) : [];
+  });
+  if (!Array.isArray(s.medalHistory)) s.medalHistory = [];
   safe("medalProgress", function () {
     var isNew = !(s.medalProgress && typeof s.medalProgress === "object");
     s.medalProgress = isNew ? {} : s.medalProgress;
@@ -3123,11 +3180,29 @@ function normalizeState(s) {
         // first run on this data, or migrating an old numeric-tier cache: record
         // whatever tier existing history already qualifies for, silently — no
         // flood of toasts for progress made before this shape existed.
-        s.medalProgress[key] = { prestige: medalPrestige(key, s), tier: medalTierFor(key, medalValue(key, s), s) };
+        s.medalProgress[key] = { prestige: medalPrestige(key, s), tier: medalTierFor(key, medalTierValue(key, s), s) };
       }
     });
   });
   if (!s.medalProgress || typeof s.medalProgress !== "object") s.medalProgress = {};
+  // an existing save upgrading to this fix has real earned tiers/prestige
+  // but an empty history log (nothing was ever recorded before this existed).
+  // Seed one entry per already-reached tier and prestige level so "medal
+  // history" doesn't read as empty for someone who's actually earned medals
+  // — the exact original date isn't known, so these are dated to now rather
+  // than left undated or guessed.
+  safe("medalHistorySeed", function () {
+    if (Array.isArray(s.medalHistory) && s.medalHistory.length === 0) {
+      var now = Date.now();
+      Object.keys(MEDAL_DEFS).forEach(function (key) {
+        var prog = s.medalProgress[key];
+        var tier = prog && typeof prog === "object" ? Math.max(0, Math.floor(+prog.tier || 0)) : 0;
+        var prestige = prog && typeof prog === "object" ? Math.max(0, Math.floor(+prog.prestige || 0)) : 0;
+        for (var t = 1; t <= tier; t++) s.medalHistory.push({ key: key, tier: t, prestige: prestige, ts: now, kind: "tier" });
+        for (var pp = 1; pp <= prestige; pp++) s.medalHistory.push({ key: key, tier: 0, prestige: pp, ts: now, kind: "prestige" });
+      });
+    }
+  });
   safe("settings", function () {
     var RAIL_KEYS = ["pages", "entries", "timelines", "work", "oracle"];
     var HOME_TILE_KEYS = ["continue", "pages", "entries", "timelines", "work", "oracle"];
@@ -6387,6 +6462,23 @@ function weekStartTs(ts) {
   return d.getTime();
 }
 function weekKey(ts) { return dayKey(weekStartTs(ts)); }
+/* inverse of weekKey — turns a "YYYY-MM-DD" week-start key back into a
+   timestamp, so a backfill scan can step forward week by week. Falls back to
+   the current week start if the key is missing or malformed. */
+function weekKeyToTs(k) {
+  var p = String(k || "").split("-").map(Number);
+  if (p.length !== 3 || !p.every(isFinite)) return weekStartTs();
+  return new Date(p[0], p[1] - 1, p[2]).getTime();
+}
+/* the week of the very first logged session — the earliest point it's safe
+   to start a backfill scan from when there's no prior "last credited week"
+   marker to resume after (nothing to double-credit if nothing was ever
+   credited). Falls back to the current week if there's no session history. */
+function earliestSessionWeekKey(sessions) {
+  if (!sessions || !sessions.length) return null;
+  var min = sessions.reduce(function (m, x) { return Math.min(m, +x.ts || Infinity); }, Infinity);
+  return isFinite(min) ? weekKey(min) : null;
+}
 function weekSecondsFor(ts) {
   var ws = weekStartTs(ts), we = ws + 7 * 86400000, n = 0;
   state.sessions.forEach(function (s) { if (s.ts >= ws && s.ts < we) n += s.seconds || 0; });
@@ -6474,10 +6566,17 @@ function cycleLegendaryComplete(key, p) {
   var base = MEDAL_DEFS[key].legendaryComplete;
   return p <= 0 ? base : roundClean(base * cyclePrestigeMultiplier(p));
 }
+/* each tier's threshold scales by the same ratio as the cycle's legendary-
+   complete target, so a prestige makes every tier proportionally harder.
+   Previously each threshold was independently snapped to the nearest 5 or 10
+   (roundClean) — a much coarser grid relative to a small number than a large
+   one, so early tiers scaled up far more than later ones. Overachiever's
+   "met" threshold (1) used to jump 5x on first prestige while "legendary"
+   (8) only jumped 2.5x. Ceiling the exact ratio keeps that scaling even. */
 function cycleThresholds(key, p) {
   if (p <= 0) return MEDAL_DEFS[key].thresholds.slice();
   var ratio = cycleLegendaryComplete(key, p) / MEDAL_DEFS[key].legendaryComplete;
-  return MEDAL_DEFS[key].thresholds.map(function (t) { return roundClean(t * ratio); });
+  return MEDAL_DEFS[key].thresholds.map(function (t) { return Math.max(t, Math.ceil(t * ratio)); });
 }
 /* total raw value already spent completing every prior prestige cycle */
 function medalBanked(key, s) {
@@ -6490,15 +6589,16 @@ function medalBanked(key, s) {
    already banked from earlier prestiges */
 function medalCycleValue(key, raw, s) { return Math.max(0, raw - medalBanked(key, s)); }
 function medalCanPrestige(key) {
-  var raw = medalValue(key);
+  var raw = medalTierValue(key);
   return medalCycleValue(key, raw) >= cycleLegendaryComplete(key, medalPrestige(key));
 }
 function doPrestigeMedal(key) {
   if (!medalCanPrestige(key)) return;
   var p = medalPrestige(key) + 1;
   state.medalPrestige[key] = p;
-  var tier = medalTierFor(key, medalValue(key));
+  var tier = medalTierFor(key, medalTierValue(key));
   state.medalProgress[key] = { prestige: p, tier: tier };
+  recordMedalHistory(key, tier, p, "prestige");
   persist();
   renderWorkTab();
   toast(MEDAL_DEFS[key].label + " prestiged to " + p + " — the extra carries over, shine's gone " + PRESTIGE_PALETTES[(p - 1) % PRESTIGE_PALETTES.length].name + ".");
@@ -6510,20 +6610,43 @@ function ensureOverachieveChallenge() {
     state.overachieve.challenge = Math.round(overachieveBaseline() * 1.25 * 2) / 2;
   }
 }
-/* checks the live current week against the standing challenge; once cleared,
-   the record ticks up and the bar is raised for next time. Doable by design:
-   the step is a modest slice of your own weekly goal, not a fixed jump. */
+/* checks the current week against the standing challenge; once cleared, the
+   record ticks up and the bar is raised for next time. Doable by design: the
+   step is a modest slice of your own weekly goal, not a fixed jump.
+   Before checking "now", this also walks forward through any fully-elapsed
+   weeks since the last check — previously this function only ever looked at
+   the current week, so a clear made while the app sat unopened for a week or
+   more (or several) was silently lost: by the time it reopened, "now" had
+   already moved past the week that cleared it. Weeks before this fix shipped
+   aren't backfilled (there's no per-week ledger to check them safely against
+   without risking a double-count), but nothing slips through from here on. */
 function checkOverachieveProgress() {
   ensureOverachieveChallenge();
-  var hrs = weekSeconds() / 3600;
+  var changed = false;
+  var curTs = weekStartTs();
+  var wTs = weekKeyToTs(state.overachieve.checkedThrough);
+  if (wTs > curTs) wTs = curTs;
+  while (wTs < curTs) {
+    var pastKey = weekKey(wTs);
+    var pastHrs = weekSecondsFor(wTs) / 3600;
+    if (pastHrs >= state.overachieve.challenge && state.overachieve.lastClearedWeek !== pastKey) {
+      state.overachieve.record++;
+      state.overachieve.lastClearedWeek = pastKey;
+      state.overachieve.challenge = Math.round((state.overachieve.challenge + overachieveStep()) * 2) / 2;
+      changed = true;
+    }
+    state.overachieve.checkedThrough = pastKey;
+    wTs += 7 * 86400000;
+  }
   var wk = weekKey();
+  var hrs = weekSeconds() / 3600;
   if (hrs >= state.overachieve.challenge && state.overachieve.lastClearedWeek !== wk) {
     state.overachieve.record++;
     state.overachieve.lastClearedWeek = wk;
     state.overachieve.challenge = Math.round((state.overachieve.challenge + overachieveStep()) * 2) / 2;
-    return true;
+    changed = true;
   }
-  return false;
+  return changed;
 }
 function medalValue(key, s) {
   s = s || state;
@@ -6546,6 +6669,53 @@ function medalValue(key, s) {
   }
   if (key === "overachieve") return (s.overachieve && s.overachieve.record) || 0;
   return 0;
+}
+/* streak and overachieve already can't lose progress from editing session
+   history — streak via bestStreak's running max, overachieve because its
+   value is a count of clears, not a recomputation. volume and goal have no
+   such protection: they're recomputed live from s.sessions, so deleting or
+   re-dating a past session can drop the raw value below a threshold you'd
+   already cleared, silently knocking the medal down a tier. This wraps
+   medalValue with the same running-best treatment for those two tracks, so
+   every medal keeps the same "only ever goes up" guarantee. Use this (not
+   medalValue) anywhere a medal's tier, prestige eligibility, or progress
+   display is computed. */
+function medalTierValue(key, s) {
+  s = s || state;
+  var raw = medalValue(key, s);
+  if (key === "volume" || key === "goal") {
+    if (!s.medalBest || typeof s.medalBest !== "object") s.medalBest = {};
+    var best = Math.max(+s.medalBest[key] || 0, raw);
+    s.medalBest[key] = best;
+    return best;
+  }
+  return raw;
+}
+/* medalBest (see above) protects against a real edit knocking a tier down,
+   but that means a data-entry mistake — logging "500" instead of "5" hours —
+   gets permanently banked the moment it's checked, even after the session is
+   corrected. This surfaces the gap between what's banked and what current
+   history actually supports, so it can be cleared deliberately rather than
+   staying silently, permanently inflated. */
+function medalBestDivergence(key) {
+  if (key !== "volume" && key !== "goal") return 0;
+  var live = medalValue(key);
+  var best = (state.medalBest && +state.medalBest[key]) || 0;
+  return best - live;
+}
+function resetMedalBest(key) {
+  if (!state.medalBest || typeof state.medalBest !== "object") state.medalBest = {};
+  state.medalBest[key] = medalValue(key);
+  persist();
+  renderWorkTab();
+  toast(MEDAL_DEFS[key].label + " reset to your current logged total.");
+}
+/* a dated log of every tier crossed and every prestige, newest first —
+   capped so years of daily use don't grow it without bound. */
+function recordMedalHistory(key, tier, prestige, kind) {
+  if (!Array.isArray(state.medalHistory)) state.medalHistory = [];
+  state.medalHistory.push({ key: key, tier: tier, prestige: prestige, ts: Date.now(), kind: kind || "tier" });
+  if (state.medalHistory.length > 300) state.medalHistory.splice(0, state.medalHistory.length - 300);
 }
 /* tier is based on THIS cycle's progress (raw minus banked) against THIS
    cycle's thresholds — so a prestiged medal always starts its climb again,
@@ -6674,8 +6844,29 @@ function flashMedalInGrid(key) {
   var cell = document.querySelector('.wk-medal-cell[data-medal="' + key + '"] svg');
   if (cell) cell.classList.add("medal-levelup");
 }
-/* a goal week cleared earns one rest token, once per week */
+/* a goal week cleared earns one rest token, once per week. Same backfill
+   reasoning as checkOverachieveProgress above: walks forward through any
+   fully-elapsed weeks since the last check first, so a token isn't lost just
+   because the app wasn't opened during the week it was earned, then checks
+   the current in-progress week live as before. */
 function checkGoalWeekTokenAward() {
+  var changed = false;
+  var curTs = weekStartTs();
+  var wTs = weekKeyToTs(state.goalTokenCheckedThrough);
+  if (wTs > curTs) wTs = curTs;
+  while (wTs < curTs) {
+    var pastKey = weekKey(wTs);
+    var pastGoalSet = state.weeklyGoals.hasOwnProperty(pastKey);
+    var pastGoal = pastGoalSet ? state.weeklyGoals[pastKey] : state.weeklyTarget;
+    var pastHrs = weekSecondsFor(wTs) / 3600;
+    if (pastGoal > 0 && pastHrs >= pastGoal && state.lastGoalWeekAwarded !== pastKey) {
+      state.restTokens = (state.restTokens || 0) + 1;
+      state.lastGoalWeekAwarded = pastKey;
+      changed = true;
+    }
+    state.goalTokenCheckedThrough = pastKey;
+    wTs += 7 * 86400000;
+  }
   var wk = weekKey();
   var goalSet = state.weeklyGoals.hasOwnProperty(wk);
   var goal = goalSet ? state.weeklyGoals[wk] : state.weeklyTarget;
@@ -6683,9 +6874,9 @@ function checkGoalWeekTokenAward() {
   if (goal > 0 && hrs >= goal && state.lastGoalWeekAwarded !== wk) {
     state.restTokens = (state.restTokens || 0) + 1;
     state.lastGoalWeekAwarded = wk;
-    return true;
+    changed = true;
   }
-  return false;
+  return changed;
 }
 /* call after anything that could move the needle (logging a session, editing a
    weekly goal, or just opening Work) — cheap, and idempotent when nothing changed */
@@ -6695,14 +6886,22 @@ function checkMedalLevelUps() {
   if (checkGoalWeekTokenAward()) changed = true;
   Object.keys(MEDAL_DEFS).forEach(function (key) {
     var p = medalPrestige(key);
-    var tier = medalTierFor(key, medalValue(key));
+    var tier = medalTierFor(key, medalTierValue(key));
     var prev = state.medalProgress[key];
     if (!prev || typeof prev !== "object") prev = { prestige: p, tier: 0 };
     if (prev.prestige === p && tier > prev.tier) {
+      // award and celebrate every tier passed through, not just the one
+      // landed on — a big jump (a long session logged at once, an import, a
+      // backfilled overachieve clear covering several missed weeks) can
+      // cross more than one tier in a single check, and previously only the
+      // final tier got a toast, silently skipping the ones in between.
+      for (var t = prev.tier + 1; t <= tier; t++) {
+        state.restTokens = (state.restTokens || 0) + 1;
+        if (!achievementsHidden()) queueMedalCelebration(key, t);
+        recordMedalHistory(key, t, p, "tier");
+      }
       state.medalProgress[key] = { prestige: p, tier: tier, completeSeen: prev.completeSeen };
       changed = true;
-      state.restTokens = (state.restTokens || 0) + 1;
-      if (!achievementsHidden()) queueMedalCelebration(key, tier);
     } else if (prev.prestige !== p) {
       state.medalProgress[key] = { prestige: p, tier: tier };
       changed = true;
@@ -6715,6 +6914,7 @@ function checkMedalLevelUps() {
     }
   });
   if (changed) scheduleSave();
+  return changed;
 }
 function medalTooltipHtml(key, tier) {
   var def = MEDAL_DEFS[key];
@@ -6755,7 +6955,7 @@ function renderAchievements() {
     var def = MEDAL_DEFS[key];
     var p = medalPrestige(key);
     if (p > 0) anyPrestige = true;
-    var raw = medalValue(key);
+    var raw = medalTierValue(key);
     var tier = medalTierFor(key, raw);
     var banked = medalBanked(key);
     var cv = medalCycleValue(key, raw);
@@ -6797,11 +6997,67 @@ function renderAchievements() {
       });
       cell.appendChild(pBtn);
     }
+    var diverge = medalBestDivergence(key);
+    if (diverge > 0.05) {
+      var curLive = medalValue(key);
+      var resetBtn = el("button", "wk-medal-reset", "Reset to current");
+      resetBtn.title = "Best-ever (" + Math.floor(raw) + " " + def.noun + ") is higher than your current logged total (" + Math.floor(curLive) + ") — likely from an edited or deleted session.";
+      resetBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        confirmModal(
+          def.label + " \u2014 reset best to current?",
+          "Your best-ever (" + Math.floor(raw) + " " + def.noun + ") is higher than what your session history currently supports (" + Math.floor(curLive) + "). This usually happens after editing or deleting a past session. Resetting may lower this medal's tier.",
+          "Reset",
+          function () { resetMedalBest(key); }
+        );
+      });
+      cell.appendChild(resetBtn);
+    }
     grid.appendChild(cell);
   });
   $("wk-achieve-teaser-note").textContent = earned ? earned + " of " + keys.length + " medal tracks started" : "Log work to start earning medals";
   $("wk-achieve-summary").textContent = earned + "/" + keys.length + " tracks in progress" + (anyPrestige ? " \u00b7 prestiged" : "");
+  var curVolume = medalValue("volume"), curGoalWeeks = medalValue("goal");
+  var bestVolume = (state.medalBest && state.medalBest.volume) || 0;
+  var bestGoalWeeks = (state.medalBest && state.medalBest.goal) || 0;
+  var lifetimeParts = [
+    (state.bestStreak || 0) + "-day best streak",
+    Math.floor(bestVolume) + "h best" + (Math.floor(curVolume) !== Math.floor(bestVolume) ? " (" + Math.floor(curVolume) + "h now)" : ""),
+    bestGoalWeeks + " goal " + (bestGoalWeeks === 1 ? "week" : "weeks") + " best" + (curGoalWeeks !== bestGoalWeeks ? " (" + curGoalWeeks + " now)" : ""),
+    ((state.overachieve && state.overachieve.record) || 0) + " challenges cleared"
+  ];
+  $("wk-achieve-lifetime").textContent = lifetimeParts.join(" \u00b7 ");
 }
+function medalHistoryLabel(entry) {
+  var def = MEDAL_DEFS[entry.key];
+  if (!def) return "";
+  if (entry.kind === "prestige") return def.label + " prestiged to " + entry.prestige;
+  var tierName = MEDAL_TIER_NAMES[entry.tier - 1] || "";
+  return def.label + " reached " + tierName + (entry.prestige > 0 ? " (P" + entry.prestige + ")" : "");
+}
+function showMedalHistoryModal() {
+  var items = (state.medalHistory || []).slice().sort(function (a, b) { return b.ts - a.ts; });
+  openModal("Medal history", items.length ? "" : "No medals earned yet \u2014 log some work to get started.");
+  if (items.length) {
+    var list = el("div");
+    list.style.cssText = "display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;margin-top:4px";
+    items.forEach(function (it) {
+      var row = el("div");
+      row.style.cssText = "display:flex;justify-content:space-between;gap:12px;font-size:12.5px;color:var(--ink)";
+      var label = el("span", null, medalHistoryLabel(it));
+      var date = el("span", null, new Date(it.ts).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }));
+      date.style.cssText = "color:var(--ink-mute);flex-shrink:0";
+      row.append(label, date);
+      list.appendChild(row);
+    });
+    $modal("modal-extra").appendChild(list);
+  }
+  var row = $modal("modal-row");
+  var close = el("button", "primary", "Close");
+  close.addEventListener("click", closeModal);
+  row.appendChild(close);
+}
+$("wk-achieve-history-btn").addEventListener("click", showMedalHistoryModal);
 function startStopWork(labelOverride) {
   if (state.runningSession) {
     var rs = state.runningSession;
@@ -7161,17 +7417,29 @@ function renderWeekHistory() {
     hist.appendChild(row);
   });
 }
+var medalLiveCheckTick = 0;
 setInterval(function () {
   if (!state.runningSession) return;
   // a hidden main tab normally means "don't bother updating" — except while a
   // pop-out is open, since the whole point is watching it from elsewhere.
   if (document.visibilityState === "hidden" && !Popout.anyOpen()) return;
   var sec = (Date.now() - state.runningSession.startTs) / 1000;
+  var onWorkTab = state.sel.tab === "work";
   var wkEl = $("wk-elapsed");
-  if (wkEl && state.sel.tab === "work") wkEl.textContent = fmtClock(sec);
+  if (wkEl && onWorkTab) wkEl.textContent = fmtClock(sec);
   var ntEl = $("nt-time");
   if (ntEl) ntEl.textContent = fmtClock(sec);
   Popout.renderPipTimer();
+  // previously a medal tier crossed mid-session didn't celebrate (or even
+  // visibly update) until the session was stopped or the tab re-rendered.
+  // Checked every 5s rather than every tick — checkMedalLevelUps recomputes
+  // the longest-streak-ever scan over full session history, which isn't
+  // worth doing every single second — and the grid is only rebuilt when
+  // something actually changed.
+  medalLiveCheckTick++;
+  if (medalLiveCheckTick % 5 === 0 && checkMedalLevelUps() && onWorkTab && !achievementsHidden()) {
+    renderAchievements();
+  }
 }, 1000);
 $("nt-main").addEventListener("click", function () { setTab("work"); });
 $("nt-stop").addEventListener("click", function () { startStopWork(); });
@@ -8076,7 +8344,7 @@ var SNAPSHOT_PARTS = [
   { key: "pages", label: "Pages & notebooks", fields: ["notebooks", "pages", "topics"] },
   { key: "entries", label: "Entries", fields: ["entries", "entryTypes", "tagPresets"] },
   { key: "timelines", label: "Timelines", fields: ["timelines"] },
-  { key: "work", label: "Work sessions & goals", fields: ["sessions", "weeklyTarget", "weeklyGoals", "restDays", "restTokens", "medalProgress", "bestStreak", "overachieve", "medalPrestige", "lastGoalWeekAwarded"] },
+  { key: "work", label: "Work sessions & goals", fields: ["sessions", "weeklyTarget", "weeklyGoals", "restDays", "restTokens", "medalProgress", "bestStreak", "overachieve", "medalPrestige", "lastGoalWeekAwarded", "goalTokenCheckedThrough", "medalBest", "medalHistory"] },
   { key: "settings", label: "Preferences", fields: ["settings"] }
 ];
 function snapshotCounts(s) {
@@ -9272,7 +9540,8 @@ function exportJSON() {
     tagPresets: state.tagPresets, settings: state.settings,
     medalProgress: state.medalProgress, bestStreak: state.bestStreak,
     overachieve: state.overachieve, restDays: state.restDays, restTokens: state.restTokens,
-    lastGoalWeekAwarded: state.lastGoalWeekAwarded, medalPrestige: state.medalPrestige,
+    lastGoalWeekAwarded: state.lastGoalWeekAwarded, goalTokenCheckedThrough: state.goalTokenCheckedThrough,
+    medalPrestige: state.medalPrestige, medalBest: state.medalBest, medalHistory: state.medalHistory,
     graphLaidOut: state.graphLaidOut
   };
   downloadText("notebook-export-" + new Date().toISOString().slice(0, 10) + ".json", JSON.stringify(payload, null, 2), "application/json");
@@ -9715,7 +9984,10 @@ function importNotebookData(data) {
   if (data.restDays && typeof data.restDays === "object") s.restDays = data.restDays;
   if (typeof data.restTokens === "number") s.restTokens = data.restTokens;
   if (typeof data.lastGoalWeekAwarded === "string") s.lastGoalWeekAwarded = data.lastGoalWeekAwarded;
+  if (typeof data.goalTokenCheckedThrough === "string") s.goalTokenCheckedThrough = data.goalTokenCheckedThrough;
   if (data.medalPrestige && typeof data.medalPrestige === "object") s.medalPrestige = data.medalPrestige;
+  if (data.medalBest && typeof data.medalBest === "object") s.medalBest = data.medalBest;
+  if (Array.isArray(data.medalHistory)) s.medalHistory = data.medalHistory;
   if (typeof data.graphLaidOut === "boolean") s.graphLaidOut = data.graphLaidOut;
   // the live session timer is deliberately not restored — resuming a running
   // clock from a past export would just show a huge, meaningless elapsed time
