@@ -1603,7 +1603,8 @@ body[data-tab="oracle"] #panel { display: none; }
   box-shadow: 0 24px 60px rgba(0,0,0,0.55);
   display: flex; flex-direction: column; overflow: hidden;
 }
-.onboard-scroll { overflow-y: auto; padding: 26px var(--pad) 22px; }
+.onboard-head { flex-shrink: 0; padding: 20px var(--pad) 0; }
+.onboard-scroll { overflow-y: auto; flex: 1; min-height: 120px; padding: 14px var(--pad) 22px; }
 .onboard-scroll h2 { font-family: var(--serif); font-size: 22px; color: var(--ink-hi); margin-bottom: 6px; }
 .onboard-lede { font-size: 12.5px; color: var(--ink-dim); line-height: 1.55; margin-bottom: 18px; }
 .onboard-callout {
@@ -1617,7 +1618,7 @@ body[data-tab="oracle"] #panel { display: none; }
 .onboard-list { margin: 8px 0 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--ink-dim); line-height: 1.75; }
 .onboard-list li { position: relative; padding-left: 16px; }
 .onboard-list li::before { content: "\2013"; position: absolute; left: 0; color: var(--ink-mute); }
-.onboard-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border); }
+.onboard-actions { flex-shrink: 0; display: flex; gap: 10px; justify-content: flex-end; padding: 16px var(--pad); border-top: 1px solid var(--border); }
 .onboard-actions button { padding: 9px 16px; border-radius: calc(8px * var(--radius-scale, 1)); border: 1px solid var(--border); font-size: 13px; color: var(--ink-dim); }
 .onboard-actions button:hover { color: var(--ink-hi); border-color: var(--ink-mute); }
 .onboard-actions button.primary { border-color: var(--sage-bd); color: var(--sage); font-weight: 600; }
@@ -1628,6 +1629,11 @@ body[data-tab="oracle"] #panel { display: none; }
 .onboard-progress { display: flex; gap: 6px; margin-bottom: 16px; }
 .onboard-progress span { height: 4px; flex: 1; border-radius: calc(2px * var(--radius-scale, 1)); background: var(--border); }
 .onboard-progress span.done, .onboard-progress span.current { background: var(--sage); }
+.onboard-callout-icon { display: flex; gap: 12px; align-items: flex-start; }
+.onboard-callout-icon svg { flex-shrink: 0; margin-top: 2px; }
+.onboard-callout.good .onboard-callout-icon svg { color: var(--sage); }
+.onboard-callout.warn .onboard-callout-icon svg { color: var(--red); }
+.onboard-footnote { font-size: 11.5px; color: var(--ink-mute); line-height: 1.55; margin-top: 14px; }
 .onboard-step { display: none; }
 .onboard-step.show { display: block; }
 #or-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 22px var(--pad) 70px; max-width: 660px; margin: 0 auto; width: 100%; }
@@ -2661,21 +2667,23 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
 
 <div id="onboard-overlay" class="onboard-overlay">
   <div id="onboard-panel" role="dialog" aria-modal="true" aria-label="Set up Notebook">
-    <div id="onboard-scroll" class="onboard-scroll">
+    <div class="onboard-head">
       <div class="onboard-import-row">
         <button type="button" id="onboard-import-btn" class="onboard-import-link">Have a save file? Import it instead</button>
         <input type="file" id="onboard-import-file" accept=".json,application/json" hidden>
       </div>
       <div class="onboard-progress" id="onboard-progress"></div>
+    </div>
 
+    <div id="onboard-scroll" class="onboard-scroll">
       <div id="onboard-steps"></div>
+    </div>
 
-      <div class="onboard-actions">
-        <button id="onboard-skip" class="foot-btn">Skip for now</button>
-        <div style="flex:1"></div>
-        <button id="onboard-back" class="foot-btn" style="display:none">Back</button>
-        <button id="onboard-next" class="primary">Next</button>
-      </div>
+    <div class="onboard-actions">
+      <button id="onboard-skip" class="foot-btn">Skip for now</button>
+      <div style="flex:1"></div>
+      <button id="onboard-back" class="foot-btn" style="display:none">Back</button>
+      <button id="onboard-next" class="primary">Next</button>
     </div>
   </div>
 </div>
@@ -2880,7 +2888,6 @@ function storageOK() {
   catch (e) { return false; }
 }
 var hasStorage = storageOK();
-if (!hasStorage) document.body.classList.add("no-storage");
 function lsGet(k) {
   if (hasStorage) { try { return localStorage.getItem(k); } catch (e) { return memStore[k] || null; } }
   return memStore[k] || null;
@@ -2965,6 +2972,17 @@ function loadBlob(key) {
     if (fromLs != null && hasIDB) idbSet(key, fromLs).catch(function () {});
     return fromLs;
   });
+}
+// Feature detection (`"indexedDB" in window`) isn't proof it actually works —
+// some private-browsing modes expose it but throw on first real use. This
+// does one real write+delete so the "can't save at all" banner is based on
+// truth rather than a guess.
+function idbSelfTest() {
+  if (!hasIDB) return Promise.resolve(false);
+  return idbSet("__nb_test__", "1")
+    .then(function () { return idbDelete("__nb_test__"); })
+    .then(function () { return true; })
+    .catch(function () { return false; });
 }
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
@@ -8932,20 +8950,13 @@ var ONBOARD_INTRO = {
   render: function (c) {
     var body = el("div");
     body.innerHTML =
-      '<p style="margin-bottom:16px;line-height:1.6;font-size:13.5px">Notebook is a quiet, local-first space for pages, a world bible, timelines, and a work timer \u2014 everything stays in this browser tab. Nothing is uploaded anywhere.</p>' +
-      '<div class="onboard-callout warn">' +
-      '<div class="onboard-callout-title">That also means it can be lost just as easily</div>' +
-      '<p>This includes the automatic snapshots you\u2019ll set up in a minute \u2014 they live here too, not somewhere safer. Your data can disappear from things like:</p>' +
-      '<ul class="onboard-list">' +
-      '<li>Clearing your browser\u2019s site data or cache</li>' +
-      '<li>Switching to a different browser or device</li>' +
-      '<li>Using a private/incognito window</li>' +
-      '<li>Reinstalling your browser or OS</li>' +
-      '</ul>' +
+      '<p style="margin-bottom:18px;line-height:1.6;font-size:13.5px">Everything you write here \u2014 pages, entries, timelines, sessions \u2014 stays on this device. No account, no server, nobody else ever sees it.</p>' +
+      '<div class="onboard-callout good onboard-callout-icon">' +
+      '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 2 4 6v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-4Z"/><path d="m9 12 2 2 4-4"/></svg>' +
+      '<div>' +
+      '<div class="onboard-callout-title">One habit worth building</div>' +
+      '<p>Local-first is sturdy, not indestructible \u2014 clearing your browser\u2019s data, switching devices, or opening a private window all start you over from nothing. A <b>JSON export</b> (<b>Preferences \u2192 Data</b>) is the one copy that actually leaves this browser, and it takes about two seconds. Make a habit of it after anything you\u2019d hate to lose.</p>' +
       '</div>' +
-      '<div class="onboard-callout good">' +
-      '<div class="onboard-callout-title">The fix: export regularly</div>' +
-      '<p>A JSON export \u2014 <b>Preferences \u2192 Data</b> \u2014 is the one copy that actually leaves this browser. It takes a few seconds and is worth making a habit of, especially after writing anything you\u2019d hate to lose.</p>' +
       '</div>';
     c.appendChild(body);
   }
@@ -8955,11 +8966,19 @@ var ONBOARD_OUTRO = {
   render: function (c) {
     var body = el("div");
     body.innerHTML =
-      '<p style="margin-bottom:16px;line-height:1.6;font-size:13.5px">Everything you just picked \u2014 and plenty more \u2014 lives in <b>Preferences</b>, including a way to run through this setup again.</p>' +
-      '<div class="onboard-callout good">' +
-      '<div class="onboard-callout-title">One last reminder</div>' +
-      '<p>This all lives in your browser \u2014 a JSON export in <b>Preferences \u2192 Data</b> is the only copy that leaves it. Worth doing once you\u2019ve written something you\u2019d hate to lose.</p>' +
-      '</div>';
+      '<p style="margin-bottom:18px;line-height:1.6;font-size:13.5px">Everything you just picked \u2014 and a lot more \u2014 lives in <b>Preferences</b>, including a way to run through this setup again whenever you like.</p>' +
+      '<div class="onboard-callout good onboard-callout-icon">' +
+      '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 19V6a2 2 0 0 1 2-2h9l5 5v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M9 9h4M9 13h6M9 17h6"/></svg>' +
+      '<div>' +
+      '<div class="onboard-callout-title">A few shortcuts to start with</div>' +
+      '<ul class="onboard-list">' +
+      '<li><b>Ctrl/Cmd + K</b> \u2014 search pages, entries, and timelines at once</li>' +
+      '<li><b>Ctrl/Cmd + N</b> \u2014 start a new page or entry</li>' +
+      '<li><b>Ctrl/Cmd + S</b> \u2014 save right now, no waiting</li>' +
+      '</ul>' +
+      '</div>' +
+      '</div>' +
+      '<p class="onboard-footnote">One last thing: it\u2019s all local to this browser, so a JSON export in <b>Preferences \u2192 Data</b> is your real backup \u2014 worth doing once you\u2019ve written something you\u2019d hate to lose.</p>';
     c.appendChild(body);
   }
 };
@@ -9260,7 +9279,6 @@ function exportJSON() {
   toast("Exported " + state.pages.length + " pages, " + state.entries.length + " entries, " + state.timelines.length + " timelines");
 }
 $("export-btn").addEventListener("click", exportJSON);
-if (!hasStorage) $("storage-banner").classList.add("visible");
 $("storage-banner-export").addEventListener("click", exportJSON);
 $("storage-banner-dismiss").addEventListener("click", function () { $("storage-banner").classList.remove("visible"); });
 if (nbRecovered) $("recovery-banner").classList.add("visible");
@@ -9974,9 +9992,14 @@ function boot() {
 // State lives in IndexedDB (falling back to/migrating from localStorage — see
 // loadBlob/loadStateAsync above); both loads run in parallel and boot() only
 // starts once both are in, so nothing renders against a placeholder state.
-Promise.all([loadStateAsync(), loadSnapshotsAsync()]).then(function (results) {
+Promise.all([loadStateAsync(), loadSnapshotsAsync(), idbSelfTest()]).then(function (results) {
   state = results[0];
   snapshotsCache = results[1];
+  var workingIdb = results[2];
+  if (!hasStorage && !workingIdb) {
+    document.body.classList.add("no-storage");
+    $("storage-banner").classList.add("visible");
+  }
   boot();
 }).catch(function (e) {
   console.error("Notebook: failed to load saved data, starting from a blank state", e);
