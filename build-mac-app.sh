@@ -2,14 +2,17 @@
 #
 # build-mac-app.sh
 #
-# Packages Notebook.html into a standalone macOS application (Notebook.app)
-# that opens the app in the user's default browser when double-clicked.
+# Packages Notebook.html into a standalone native macOS application
+# (Notebook.app) using a small Swift/WKWebView wrapper (main.swift) — a
+# real app window, not a browser tab.
 #
 # Usage:
 #   ./build-mac-app.sh
 #
-# Requires: macOS (uses sips/iconutil, which are Mac-only tools).
-# Run this from the root of the repo, alongside Notebook.html and icons/.
+# Requires: macOS with Xcode Command Line Tools installed (provides swiftc,
+# sips, iconutil). If you don't have them: xcode-select --install
+#
+# Run this from the repo root, alongside Notebook.html, icons/, and main.swift.
 #
 # Output: dist/Notebook.app  and  dist/Notebook-mac.zip
 
@@ -22,6 +25,12 @@ CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 
+if ! command -v swiftc >/dev/null 2>&1; then
+  echo "error: swiftc not found." >&2
+  echo "Install Xcode Command Line Tools first: xcode-select --install" >&2
+  exit 1
+fi
+
 echo "==> Cleaning previous build"
 rm -rf "$BUILD_DIR"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
@@ -32,15 +41,8 @@ if [ -d "icons" ]; then
   cp -r icons "$RESOURCES_DIR/"
 fi
 
-echo "==> Writing launcher"
-# This is the actual executable macOS runs when the app is opened.
-# It resolves its own location so the app works no matter where it's moved to.
-cat > "$MACOS_DIR/$APP_NAME" << 'LAUNCHER'
-#!/usr/bin/env bash
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../Resources" && pwd)"
-open "$DIR/Notebook.html"
-LAUNCHER
-chmod +x "$MACOS_DIR/$APP_NAME"
+echo "==> Compiling native wrapper (main.swift)"
+swiftc main.swift -O -o "$MACOS_DIR/$APP_NAME" -framework Cocoa -framework WebKit
 
 echo "==> Writing Info.plist"
 cat > "$CONTENTS_DIR/Info.plist" << PLIST
@@ -104,6 +106,6 @@ echo "  $APP_DIR"
 echo "  $BUILD_DIR/$APP_NAME-mac.zip"
 echo ""
 echo "NOTE: this app is unsigned. On first launch, macOS Gatekeeper will warn"
-echo "that it's from an unidentified developer. Users should right-click ->"
-echo "Open (or go to System Settings -> Privacy & Security -> Open Anyway)"
-echo "to get past that the first time."
+echo "that it's from an unidentified developer. Right-click -> Open (or"
+echo "System Settings -> Privacy & Security -> Open Anyway) to get past that"
+echo "the first time."
