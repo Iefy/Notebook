@@ -1,9 +1,4 @@
-# Notebook
-
-A quiet, local-first studio for your worlds — pages, a world bible, timelines, and a work timer, all living in a single HTML file with no server, no account, and nothing uploaded anywhere.
-
-## Features
-
+![Notebook](icons/banner.png)
 - **Pages** — rich-text notes grouped into notebooks, with in-line topic links and a back-bar to trace where you came from.
 - **Entries** — your world bible: characters, places, factions, concepts, and any custom type you define, each with attributes, sections, tags, and links to other entries.
 - **Timelines** — epochs and eras with dated events, a visual chart view, and a force-directed relationship **graph/map** of every entry sized by how connected it is.
