@@ -104,5 +104,4 @@ Everything you write — pages, entries, timelines, sessions — is stored **onl
 Needs a modern browser with IndexedDB support (all current Chrome, Firefox, Safari, Edge). PWA install/offline support additionally requires the app be served over `https://` or `localhost`, not opened directly as a local file.
 
 ## License
-
-_No license has been chosen yet — add a `LICENSE` file if you want to make this open source (MIT is a common, permissive default for personal projects like this)._
+   This project is licensed under the GNU GENERAL PUBLIC LICENSE Version 3 — see [LICENSE](LICENSE) for details.
