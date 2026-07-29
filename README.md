@@ -6,15 +6,15 @@
 - **Oracle** — draws two entries together and asks what connects them, for when you're stuck.
 - **Global search** — `Ctrl/Cmd + K` searches page titles/bodies, entry names/attributes/sections, and timeline/era/event text all at once.
 - **Snapshots & export** — automatic local restore points, plus one-click JSON export/import (including reading old Suitebook exports).
-- **Installable** — works as a PWA: install to your desktop/dock/home screen and it keeps working offline.
+- **Installable** — works as a PWA: install to your desktop/dock/home screen.
 
 ## Getting started
 
 ### Just want to use it
 
-Download `Notebook.html` and open it in any modern browser. That's it — everything runs client-side, no build step, no dependencies. <br>
+Download `Notebook.html` and open it in any modern browser — everything runs client-side, no build step, no dependencies. Some browsers are stricter about local storage APIs when the file is opened directly from disk rather than served; if you notice data not persisting, try the local hosting option below instead.
+<br>
 <sub>*[see browser support](#browser-support)*</sub>
-</div>
 
 ### Hosting it (for PWA install, or access from anywhere)
 
