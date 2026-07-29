@@ -783,6 +783,29 @@ body.saved-flash .save-rule::after { transform: scaleX(1); }
 }
 .snap-row:last-child { border-bottom: none; }
 .snap-row .foot-btn { margin-left: auto; padding: 5px 12px; min-height: 32px; }
+.snap-config-card {
+  display: flex; align-items: flex-end; gap: 20px; padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: calc(10px * var(--radius-scale, 1)); background: var(--surf2);
+}
+.snap-config-field { display: flex; flex-direction: column; gap: 5px; }
+.snap-config-field label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-mute); }
+.snap-config-field input {
+  width: 56px; background: var(--surf3); border: 1px solid var(--border); border-radius: calc(6px * var(--radius-scale, 1));
+  padding: 7px 9px; font-size: 13.5px; color: var(--ink-hi);
+}
+.snap-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; margin-bottom: 7px;
+  border: 1px solid var(--border); border-radius: calc(10px * var(--radius-scale, 1)); background: var(--surf2);
+}
+.snap-card:hover { border-color: var(--ink-mute); }
+.snap-card-icon {
+  width: 30px; height: 30px; border-radius: calc(8px * var(--radius-scale, 1));
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.snap-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; cursor: pointer; }
+.snap-card-title { font-size: 12.5px; color: var(--ink-hi); display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.snap-card-time { font-size: 10.5px; color: var(--ink-mute); }
 
 /* ════════════════════════════════════════════════════════════════
    MENUS, MODALS, TOAST
@@ -1573,6 +1596,27 @@ body[data-tab="oracle"] #panel { display: none; }
 .set-cat-btn .set-cat-desc { font-size: 11px; color: var(--ink-mute); font-weight: 400; }
 .set-cat-btn .set-cat-chev { color: var(--ink-mute); flex-shrink: 0; }
 .set-group-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-mute); margin: 2px 0 6px; }
+.set-tile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+.set-tile-grid .set-tile-full { grid-column: 1 / -1; }
+.set-tile {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left;
+  padding: 13px 12px; min-height: 0; border-radius: calc(10px * var(--radius-scale, 1));
+  border: 1px solid var(--border); background: var(--surf2); color: var(--ink);
+}
+.set-tile:hover { border-color: var(--ink-mute); background: var(--surf3); }
+.set-tile .set-cat-chev { display: none; }
+.set-tile-label { font-size: 13px; color: var(--ink-hi); }
+.set-tile-desc { font-size: 10.5px; color: var(--ink-mute); line-height: 1.35; font-weight: 400; }
+.set-cat-icon {
+  width: 28px; height: 28px; border-radius: calc(8px * var(--radius-scale, 1));
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.set-cat-btn:not(.set-tile) .set-cat-icon { margin-right: 2px; }
+.set-icon-sage { background: var(--sage-bg); color: var(--sage); }
+.set-icon-amber { background: rgba(194,158,106,0.16); color: var(--amber); }
+.set-icon-purple { background: rgba(163,135,156,0.16); color: var(--purple); }
+.set-icon-blue { background: rgba(139,156,179,0.16); color: var(--blue); }
+.set-icon-red { background: rgba(179,112,95,0.16); color: var(--red); }
 .set-stats {
   background: var(--surf2); border: 1px solid var(--border); border-radius: calc(8px * var(--radius-scale, 1));
   padding: 12px 13px; margin-bottom: 4px;
@@ -1615,7 +1659,23 @@ body[data-tab="oracle"] #panel { display: none; }
   display: flex; flex-direction: column; overflow: hidden;
 }
 .onboard-head { flex-shrink: 0; padding: 20px var(--pad) 0; }
-.onboard-scroll { overflow-y: auto; flex: 1; min-height: 120px; padding: 14px var(--pad) 22px; }
+.onboard-scroll-wrap { position: relative; flex: 1; min-height: 120px; display: flex; flex-direction: column; overflow: hidden; }
+.onboard-scroll { overflow-y: auto; flex: 1; min-height: 0; padding: 14px var(--pad) 22px; }
+/* fades in only when there's more content below the fold, and bobs gently
+   to read as "scroll" rather than a static decoration — this is the cue
+   that was missing: nothing in the panel previously hinted a step could
+   have more below than fit in view. */
+.onboard-scroll-cue {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 42px;
+  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px;
+  background: linear-gradient(to bottom, transparent, var(--surf) 70%);
+  color: var(--ink-mute); pointer-events: none;
+  opacity: 0; transition: opacity 0.2s ease;
+}
+.onboard-scroll-cue.show { opacity: 1; }
+.onboard-scroll-cue svg { animation: onboard-cue-bob 1.4s ease-in-out infinite; }
+@keyframes onboard-cue-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+@media (prefers-reduced-motion: reduce) { .onboard-scroll-cue svg { animation: none; } }
 .onboard-scroll h2 { font-family: var(--serif); font-size: 22px; color: var(--ink-hi); margin-bottom: 6px; }
 .onboard-lede { font-size: 12.5px; color: var(--ink-dim); line-height: 1.55; margin-bottom: 18px; }
 .onboard-callout {
@@ -2495,60 +2555,89 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
     <div id="settings-search-results" style="display:none"></div>
     <div id="settings-body">
       <div class="set-view" id="set-view-main" data-view="main">
-        <button class="set-cat-btn" id="redo-setup-btn">
-          <span class="set-cat-main"><span>Redo setup</span><span class="set-cat-desc">Go through the first-run picks again</span></span>
-          <span class="set-cat-chev">›</span>
-        </button>
-        <button class="set-cat-btn" data-goto="display">
-          <span class="set-cat-main"><span>Display</span><span class="set-cat-desc">Hide what you don't use</span></span>
-          <span class="set-cat-chev">›</span>
-        </button>
-        <button class="set-cat-btn" data-goto="style">
-          <span class="set-cat-main"><span>Style</span><span class="set-cat-desc">Accent color</span></span>
-          <span class="set-cat-chev">›</span>
-        </button>
-        <button class="set-cat-btn" data-goto="editor">
-          <span class="set-cat-main"><span>Editor</span><span class="set-cat-desc">Paste behaviour and typing shortcuts</span></span>
-          <span class="set-cat-chev">›</span>
-        </button>
-        <button class="set-cat-btn" data-goto="library">
-          <span class="set-cat-main"><span>Library</span><span class="set-cat-desc">Tags and entry types</span></span>
-          <span class="set-cat-chev">›</span>
-        </button>
-        <button class="set-cat-btn" data-goto="data">
-          <span class="set-cat-main"><span>Data</span><span class="set-cat-desc">Export, import, clean up</span></span>
-          <span class="set-cat-chev">›</span>
-        </button>
-        <button class="set-cat-btn" data-goto="snapshots">
-          <span class="set-cat-main"><span>Snapshots</span><span class="set-cat-desc">Restore points — automatic and manual</span></span>
-          <span class="set-cat-chev">›</span>
-        </button>
-        <button class="set-cat-btn" data-goto="popouts">
-          <span class="set-cat-main"><span>Pop-outs</span><span class="set-cat-desc">Floating window behaviour</span></span>
-          <span class="set-cat-chev">›</span>
-        </button>
+        <div class="set-group-title">Set up</div>
+        <div class="set-tile-grid">
+          <button class="set-cat-btn set-tile set-tile-full" id="redo-setup-btn">
+            <span class="set-cat-icon set-icon-sage"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg></span>
+            <span class="set-tile-label">Redo setup</span>
+            <span class="set-tile-desc">Go through the first-run picks again</span>
+          </button>
+        </div>
+        <div class="set-group-title" style="margin-top:16px">Appearance</div>
+        <div class="set-tile-grid">
+          <button class="set-cat-btn set-tile" data-goto="display">
+            <span class="set-cat-icon set-icon-amber"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></span>
+            <span class="set-tile-label">Display</span>
+            <span class="set-tile-desc">Hide what you don't use</span>
+          </button>
+          <button class="set-cat-btn set-tile" data-goto="style">
+            <span class="set-cat-icon set-icon-purple"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="14" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/></svg></span>
+            <span class="set-tile-label">Style</span>
+            <span class="set-tile-desc">Accent color</span>
+          </button>
+          <button class="set-cat-btn set-tile set-tile-full" data-goto="popouts">
+            <span class="set-cat-icon set-icon-blue"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7"/><path d="M21 3 10 14"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg></span>
+            <span class="set-tile-label">Pop-outs</span>
+            <span class="set-tile-desc">Floating window behaviour</span>
+          </button>
+        </div>
+        <div class="set-group-title" style="margin-top:16px">Content</div>
+        <div class="set-tile-grid">
+          <button class="set-cat-btn set-tile" data-goto="editor">
+            <span class="set-cat-icon set-icon-blue"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span>
+            <span class="set-tile-label">Editor</span>
+            <span class="set-tile-desc">Paste and typing shortcuts</span>
+          </button>
+          <button class="set-cat-btn set-tile" data-goto="library">
+            <span class="set-cat-icon set-icon-sage"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 12.1 12.4 3.9a2 2 0 0 0-1.4-.6H5a2 2 0 0 0-2 2v6a2 2 0 0 0 .6 1.4l8.2 8.2a2 2 0 0 0 2.8 0l6-6a2 2 0 0 0 0-2.8z"/><circle cx="8" cy="8" r="1.1" fill="currentColor" stroke="none"/></svg></span>
+            <span class="set-tile-label">Library</span>
+            <span class="set-tile-desc">Tags and entry types</span>
+          </button>
+        </div>
+        <div class="set-group-title" style="margin-top:16px">Data</div>
+        <div class="set-tile-grid">
+          <button class="set-cat-btn set-tile" data-goto="data">
+            <span class="set-cat-icon set-icon-red"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M4 19h16"/></svg></span>
+            <span class="set-tile-label">Data</span>
+            <span class="set-tile-desc">Export, import, clean up</span>
+          </button>
+          <button class="set-cat-btn set-tile" data-goto="snapshots">
+            <span class="set-cat-icon set-icon-amber"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></span>
+            <span class="set-tile-label">Snapshots</span>
+            <span class="set-tile-desc">Restore points</span>
+          </button>
+        </div>
       </div>
       <div class="set-view" id="set-view-display" data-view="display">
-        <button class="set-cat-btn" data-goto="display-rail">
-          <span class="set-cat-main"><span>Sidebar</span></span><span class="set-cat-chev">›</span>
-        </button>
-        <button class="set-cat-btn" data-goto="display-home">
-          <span class="set-cat-main"><span>Home</span></span><span class="set-cat-chev">›</span>
-        </button>
-        <button class="set-cat-btn" data-goto="display-work">
-          <span class="set-cat-main"><span>Work</span></span><span class="set-cat-chev">›</span>
-        </button>
+        <div class="set-tile-grid">
+          <button class="set-cat-btn set-tile" data-goto="display-rail">
+            <span class="set-cat-icon set-icon-amber"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/></svg></span>
+            <span class="set-tile-label">Sidebar</span>
+          </button>
+          <button class="set-cat-btn set-tile" data-goto="display-home">
+            <span class="set-cat-icon set-icon-amber"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span>
+            <span class="set-tile-label">Home</span>
+          </button>
+          <button class="set-cat-btn set-tile set-tile-full" data-goto="display-work">
+            <span class="set-cat-icon set-icon-amber"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>
+            <span class="set-tile-label">Work</span>
+          </button>
+        </div>
       </div>
       <div class="set-view" id="set-view-display-rail" data-view="display-rail">
         <div id="set-rail-toggles"></div>
       </div>
       <div class="set-view" id="set-view-display-home" data-view="display-home">
-        <button class="set-cat-btn" data-goto="display-home-tiles">
-          <span class="set-cat-main"><span>Tiles</span></span><span class="set-cat-chev">›</span>
-        </button>
-        <button class="set-cat-btn" data-goto="display-home-sections">
-          <span class="set-cat-main"><span>Sections</span></span><span class="set-cat-chev">›</span>
-        </button>
+        <div class="set-tile-grid">
+          <button class="set-cat-btn set-tile" data-goto="display-home-tiles">
+            <span class="set-cat-icon set-icon-amber"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg></span>
+            <span class="set-tile-label">Tiles</span>
+          </button>
+          <button class="set-cat-btn set-tile" data-goto="display-home-sections">
+            <span class="set-cat-icon set-icon-amber"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>
+            <span class="set-tile-label">Sections</span>
+          </button>
+        </div>
       </div>
       <div class="set-view" id="set-view-display-home-tiles" data-view="display-home-tiles">
         <div id="set-home-tiles-toggles"></div>
@@ -2564,8 +2653,8 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
         <div id="set-editor-toggles"></div>
         <div class="set-group-title" style="margin-top:18px">Typing</div>
         <div id="set-editor-typing-toggles"></div>
-        <div class="set-cat-desc" style="margin-top:10px;padding:0 2px">
-          Type <b>1.</b> or <b>-</b> then a space to start a list. Press <b>Tab</b> inside a list to nest an item as a sub-list, or <b>Shift+Tab</b> to lift it back out — numbering restarts at 1 for each sub-list, just like the top level.
+        <div class="set-note-banner" style="margin-top:12px">
+          <b>List shortcut:</b> type <b>1.</b> or <b>-</b> then a space to start a list. <b>Tab</b> nests the current item as a sub-list, <b>Shift+Tab</b> lifts it back out — numbering restarts at 1 for each sub-list.
         </div>
       </div>
       <div class="set-view" id="set-view-library" data-view="library">
@@ -2573,11 +2662,13 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
         <div id="set-tags-inline"></div>
         <div class="set-group-title" style="margin-top:18px">Entry types</div>
         <button class="set-cat-btn" data-goto="library-types">
+          <span class="set-cat-icon set-icon-sage"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg></span>
           <span class="set-cat-main"><span>Manage types</span><span class="set-cat-desc">Categories, colours, and custom traits</span></span>
           <span class="set-cat-chev">›</span>
         </button>
         <div class="set-group-title" style="margin-top:18px">Topics</div>
         <button class="set-cat-btn" data-goto="library-topics">
+          <span class="set-cat-icon set-icon-sage"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 12.1 12.4 3.9a2 2 0 0 0-1.4-.6H5a2 2 0 0 0-2 2v6a2 2 0 0 0 .6 1.4l8.2 8.2a2 2 0 0 0 2.8 0l6-6a2 2 0 0 0 0-2.8z"/><circle cx="8" cy="8" r="1.1" fill="currentColor" stroke="none"/></svg></span>
           <span class="set-cat-main"><span>Manage topics</span><span class="set-cat-desc">Rename, delete, and see where they're referenced</span></span>
           <span class="set-cat-chev">›</span>
         </button>
@@ -2593,13 +2684,16 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
         <div id="set-data-stats" class="set-stats"></div>
         <div class="set-group-title" style="margin-top:18px">Actions</div>
         <button class="set-cat-btn" id="export-btn">
+          <span class="set-cat-icon set-icon-red"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M4 19h16"/></svg></span>
           <span class="set-cat-main"><span>Export JSON</span><span class="set-cat-desc">Download a full backup file</span></span>
         </button>
         <button class="set-cat-btn" id="import-btn">
+          <span class="set-cat-icon set-icon-red"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><polyline points="7 14 12 9 17 14"/><path d="M4 19h16"/></svg></span>
           <span class="set-cat-main"><span>Import…</span><span class="set-cat-desc">Restore from a Notebook or Suitebook export</span></span>
         </button>
         <input type="file" id="import-file" accept=".json,application/json" hidden>
         <button class="set-cat-btn" data-goto="data-cleanup">
+          <span class="set-cat-icon set-icon-red"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg></span>
           <span class="set-cat-main"><span>Clean up…</span><span class="set-cat-desc">Selectively remove old data</span></span>
           <span class="set-cat-chev">›</span>
         </button>
@@ -2629,15 +2723,20 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
           Snapshots live in this browser only — clearing site data or switching devices loses them. For a copy that actually leaves the browser, use <b>Export JSON</b> in Preferences → Data.
         </div>
         <div class="set-group-title">Automatic</div>
-        <div class="set-row-plain">
-          <label for="set-snap-interval">Every</label>
-          <input type="number" id="set-snap-interval" min="1" max="120" style="width:56px">
-          <span>min, keep last</span>
-          <input type="number" id="set-snap-keep" min="1" max="50" style="width:52px">
+        <div class="snap-config-card">
+          <div class="snap-config-field">
+            <label for="set-snap-interval">Every (min)</label>
+            <input type="number" id="set-snap-interval" min="1" max="120">
+          </div>
+          <div class="snap-config-field">
+            <label for="set-snap-keep">Keep last</label>
+            <input type="number" id="set-snap-keep" min="1" max="50">
+          </div>
         </div>
-        <div class="set-cat-desc" style="padding:4px 2px 0">Pinned snapshots don't count against this limit — they're never auto-deleted.</div>
+        <div class="set-cat-desc" style="padding:6px 2px 0">Pinned snapshots don't count against this limit — they're never auto-deleted.</div>
         <div class="set-group-title" style="margin-top:16px">Manual</div>
         <button class="set-cat-btn" id="snap-take-now">
+          <span class="set-cat-icon set-icon-amber"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
           <span class="set-cat-main"><span>Take a snapshot now…</span><span class="set-cat-desc">Name it, optionally pin it so it's never auto-deleted</span></span>
         </button>
         <div class="set-group-title" style="margin-top:16px">Restore points</div>
@@ -2648,14 +2747,18 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
         <div class="set-cat-desc" style="padding:0 2px 12px">
           Pop-outs float a page above every other window, including other apps — handy for keeping the timer visible while you work elsewhere. Only Chrome, Edge, and Opera support this.
         </div>
-        <button class="set-cat-btn" data-goto="popouts-timer">
-          <span class="set-cat-main"><span>Timer</span><span class="set-cat-desc">Customize the pop-out timer</span></span>
-          <span class="set-cat-chev">›</span>
-        </button>
-        <button class="set-cat-btn" data-goto="popouts-pages">
-          <span class="set-cat-main"><span>Pages</span><span class="set-cat-desc">Customize the pop-out page list</span></span>
-          <span class="set-cat-chev">›</span>
-        </button>
+        <div class="set-tile-grid">
+          <button class="set-cat-btn set-tile" data-goto="popouts-timer">
+            <span class="set-cat-icon set-icon-blue"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="9" y1="2" x2="15" y2="2"/></svg></span>
+            <span class="set-tile-label">Timer</span>
+            <span class="set-tile-desc">Customize the pop-out timer</span>
+          </button>
+          <button class="set-cat-btn set-tile" data-goto="popouts-pages">
+            <span class="set-cat-icon set-icon-blue"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+            <span class="set-tile-label">Pages</span>
+            <span class="set-tile-desc">Customize the pop-out page list</span>
+          </button>
+        </div>
       </div>
       <div class="set-view" id="set-view-popouts-timer" data-view="popouts-timer">
         <div class="set-cat-desc" style="padding:0 2px 12px">This is what the pop-out timer looks like right now:</div>
@@ -2687,8 +2790,13 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
       <div class="onboard-progress" id="onboard-progress"></div>
     </div>
 
-    <div id="onboard-scroll" class="onboard-scroll">
-      <div id="onboard-steps"></div>
+    <div class="onboard-scroll-wrap">
+      <div id="onboard-scroll" class="onboard-scroll">
+        <div id="onboard-steps"></div>
+      </div>
+      <div id="onboard-scroll-cue" class="onboard-scroll-cue" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
     </div>
 
     <div class="onboard-actions">
@@ -3144,6 +3252,21 @@ function normalizeState(s) {
     };
   });
   if (!s.overachieve || typeof s.overachieve !== "object") s.overachieve = { challenge: null, record: 0, lastClearedWeek: null, checkedThrough: weekKey() };
+  // the initial challenge stretch was retuned from +25% to +15% (see
+  // ensureOverachieveChallenge) since +25% needed an unusually big week just
+  // to register a first clear. That only affects brand-new challenges, so
+  // this re-baselines an existing save's already-set challenge the same way
+  // — but only before any clear has ever landed (record === 0). Once a clear
+  // has happened, the challenge is a moving target shaped by real escalation
+  // history, and rewriting it after the fact would be arbitrary rather than
+  // a fix. (Doesn't call overachieveBaseline() here since that reads the
+  // live global `state`, which may not yet be this same object mid-import.)
+  safe("overachieveRetune", function () {
+    if (s.overachieve.record === 0 && typeof s.overachieve.challenge === "number") {
+      var baseline = Math.max(1, s.weeklyTarget || 5);
+      s.overachieve.challenge = Math.round(baseline * 1.15 * 2) / 2;
+    }
+  });
   // volume and goal are recomputed live from session data (see medalTierValue),
   // so an edited/deleted session could otherwise make an earned tier vanish.
   // This is the same running-best protection bestStreak already has. Seeded
@@ -6604,10 +6727,19 @@ function doPrestigeMedal(key) {
   toast(MEDAL_DEFS[key].label + " prestiged to " + p + " — the extra carries over, shine's gone " + PRESTIGE_PALETTES[(p - 1) % PRESTIGE_PALETTES.length].name + ".");
 }
 function overachieveBaseline() { return Math.max(1, state.weeklyTarget || 5); }
-function overachieveStep() { return Math.max(1, Math.round(overachieveBaseline() * 0.15 * 2) / 2); }
+/* the ratchet-up per clear — kept in the same ~10-15% range as the initial
+   stretch below, so escalation feels consistent rather than jumping harder
+   after the first clear than it did to get there. */
+function overachieveStep() { return Math.max(1, Math.round(overachieveBaseline() * 0.12 * 2) / 2); }
 function ensureOverachieveChallenge() {
   if (state.overachieve.challenge == null) {
-    state.overachieve.challenge = Math.round(overachieveBaseline() * 1.25 * 2) / 2;
+    // the first stretch above goal — was +25%, which for a 10h/week goal
+    // meant needing to beat it by 2.5h just to register your first clear,
+    // far steeper than "Exceeded" (+1h flat) in the weekly grading scale
+    // this is supposed to echo. +15% keeps it a genuine stretch (roughly in
+    // line with Exceeded/Crushed territory) without requiring an unusually
+    // big week just to get started.
+    state.overachieve.challenge = Math.round(overachieveBaseline() * 1.15 * 2) / 2;
   }
 }
 /* checks the current week against the standing challenge; once cleared, the
@@ -6670,33 +6802,33 @@ function medalValue(key, s) {
   if (key === "overachieve") return (s.overachieve && s.overachieve.record) || 0;
   return 0;
 }
-/* streak and overachieve already can't lose progress from editing session
-   history — streak via bestStreak's running max, overachieve because its
-   value is a count of clears, not a recomputation. volume and goal have no
-   such protection: they're recomputed live from s.sessions, so deleting or
-   re-dating a past session can drop the raw value below a threshold you'd
-   already cleared, silently knocking the medal down a tier. This wraps
-   medalValue with the same running-best treatment for those two tracks, so
-   every medal keeps the same "only ever goes up" guarantee. Use this (not
-   medalValue) anywhere a medal's tier, prestige eligibility, or progress
-   display is computed. */
+/* streak and overachieve are personal-bests by nature (longest streak ever,
+   most challenges ever cleared) — they're not meant to reflect "right now",
+   so they only ever go up. Volume and goal are the opposite: the medal is
+   meant to reflect what your actual session history currently supports, so
+   deleting or editing a session should change it immediately, the same as
+   it changes every other number in the app — no separate confirmation, no
+   stuck stale tier. This still quietly tracks a running best-ever per track
+   in the background (state.medalBest), but purely for the lifetime-stats
+   line below the grid — it never gates the tier, prestige eligibility, or
+   what the grid shows. See resetMedalBest for the one place that best-ever
+   number can be deliberately lowered, which is a niche, opt-in action, not
+   something that surfaces on every ordinary deletion. */
 function medalTierValue(key, s) {
   s = s || state;
   var raw = medalValue(key, s);
   if (key === "volume" || key === "goal") {
     if (!s.medalBest || typeof s.medalBest !== "object") s.medalBest = {};
-    var best = Math.max(+s.medalBest[key] || 0, raw);
-    s.medalBest[key] = best;
-    return best;
+    s.medalBest[key] = Math.max(+s.medalBest[key] || 0, raw);
   }
   return raw;
 }
-/* medalBest (see above) protects against a real edit knocking a tier down,
-   but that means a data-entry mistake — logging "500" instead of "5" hours —
-   gets permanently banked the moment it's checked, even after the session is
-   corrected. This surfaces the gap between what's banked and what current
-   history actually supports, so it can be cleared deliberately rather than
-   staying silently, permanently inflated. */
+/* the gap between the lifetime-best (see above) and what current session
+   history actually supports. Purely informational and purely a niche,
+   deliberate action (see showMedalHistoryModal) — this never surfaces
+   automatically in the medal grid itself, since after this change literally
+   any ordinary deletion could create a small, harmless gap here and a
+   constant nag button would be exactly the "meh" experience being fixed. */
 function medalBestDivergence(key) {
   if (key !== "volume" && key !== "goal") return 0;
   var live = medalValue(key);
@@ -6706,9 +6838,14 @@ function medalBestDivergence(key) {
 function resetMedalBest(key) {
   if (!state.medalBest || typeof state.medalBest !== "object") state.medalBest = {};
   state.medalBest[key] = medalValue(key);
+}
+/* the one place medalBest can be deliberately lowered — reached only from
+   the niche History modal (see below), never surfaced automatically. */
+function resetAllMedalBests() {
+  ["volume", "goal"].forEach(resetMedalBest);
   persist();
   renderWorkTab();
-  toast(MEDAL_DEFS[key].label + " reset to your current logged total.");
+  toast("Lifetime bests synced to your current totals.");
 }
 /* a dated log of every tier crossed and every prestige, newest first —
    capped so years of daily use don't grow it without bound. */
@@ -6997,22 +7134,6 @@ function renderAchievements() {
       });
       cell.appendChild(pBtn);
     }
-    var diverge = medalBestDivergence(key);
-    if (diverge > 0.05) {
-      var curLive = medalValue(key);
-      var resetBtn = el("button", "wk-medal-reset", "Reset to current");
-      resetBtn.title = "Best-ever (" + Math.floor(raw) + " " + def.noun + ") is higher than your current logged total (" + Math.floor(curLive) + ") — likely from an edited or deleted session.";
-      resetBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        confirmModal(
-          def.label + " \u2014 reset best to current?",
-          "Your best-ever (" + Math.floor(raw) + " " + def.noun + ") is higher than what your session history currently supports (" + Math.floor(curLive) + "). This usually happens after editing or deleting a past session. Resetting may lower this medal's tier.",
-          "Reset",
-          function () { resetMedalBest(key); }
-        );
-      });
-      cell.appendChild(resetBtn);
-    }
     grid.appendChild(cell);
   });
   $("wk-achieve-teaser-note").textContent = earned ? earned + " of " + keys.length + " medal tracks started" : "Log work to start earning medals";
@@ -7035,22 +7156,92 @@ function medalHistoryLabel(entry) {
   var tierName = MEDAL_TIER_NAMES[entry.tier - 1] || "";
   return def.label + " reached " + tierName + (entry.prestige > 0 ? " (P" + entry.prestige + ")" : "");
 }
-function showMedalHistoryModal() {
+function medalHistoryMonthLabel(ts) { return new Date(ts).toLocaleDateString(undefined, { month: "long", year: "numeric" }); }
+var medalHistoryFilter = "all";
+/* month-grouped, newest first, with a small tier-colored badge per row so a
+   long history (this can grow to 300 entries) stays scannable rather than
+   turning into a wall of identical-looking text lines. */
+function renderMedalHistoryList(container) {
+  container.innerHTML = "";
   var items = (state.medalHistory || []).slice().sort(function (a, b) { return b.ts - a.ts; });
-  openModal("Medal history", items.length ? "" : "No medals earned yet \u2014 log some work to get started.");
-  if (items.length) {
-    var list = el("div");
-    list.style.cssText = "display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;margin-top:4px";
-    items.forEach(function (it) {
-      var row = el("div");
-      row.style.cssText = "display:flex;justify-content:space-between;gap:12px;font-size:12.5px;color:var(--ink)";
-      var label = el("span", null, medalHistoryLabel(it));
-      var date = el("span", null, new Date(it.ts).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }));
-      date.style.cssText = "color:var(--ink-mute);flex-shrink:0";
-      row.append(label, date);
-      list.appendChild(row);
+  if (medalHistoryFilter !== "all") items = items.filter(function (it) { return it.key === medalHistoryFilter; });
+  if (!items.length) {
+    var empty = el("div", null, medalHistoryFilter === "all" ? "No medals earned yet \u2014 log some work to get started." : "Nothing yet for this track.");
+    empty.style.cssText = "font-size:12.5px;color:var(--ink-mute);padding:8px 2px";
+    container.appendChild(empty);
+    return;
+  }
+  var lastMonth = null;
+  items.forEach(function (it) {
+    var month = medalHistoryMonthLabel(it.ts);
+    if (month !== lastMonth) {
+      var head = el("div", null, month);
+      head.style.cssText = "font-size:10.5px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-mute);margin:" + (lastMonth === null ? "2px" : "12px") + " 0 4px;padding:0 2px";
+      container.appendChild(head);
+      lastMonth = month;
+    }
+    var row = el("div");
+    row.style.cssText = "display:flex;align-items:center;gap:9px;padding:5px 2px;font-size:12.5px;color:var(--ink)";
+    var badge = el("div");
+    badge.style.cssText = "flex-shrink:0;display:flex;width:16px";
+    badge.innerHTML = it.kind === "prestige" ? medalSvg(4, 16, it.prestige) : medalSvg(it.tier, 16, it.prestige);
+    var label = el("span", null, medalHistoryLabel(it));
+    label.style.flex = "1";
+    var date = el("span", null, new Date(it.ts).toLocaleDateString(undefined, { month: "short", day: "numeric" }));
+    date.style.cssText = "color:var(--ink-mute);flex-shrink:0;font-size:11px";
+    row.append(badge, label, date);
+    container.appendChild(row);
+  });
+}
+function buildMedalHistoryFilters(container, onChange) {
+  container.innerHTML = "";
+  container.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px";
+  ["all"].concat(Object.keys(MEDAL_DEFS)).forEach(function (k) {
+    var chip = el("button", "wk-medal-reset", k === "all" ? "All" : MEDAL_DEFS[k].label);
+    chip.style.cssText = "margin-top:0;font-size:10.5px;padding:4px 9px" +
+      (medalHistoryFilter === k ? ";border-color:var(--sage-bd);color:var(--sage);background:var(--sage-bg)" : "");
+    chip.addEventListener("click", function () {
+      medalHistoryFilter = k;
+      buildMedalHistoryFilters(container, onChange);
+      onChange();
     });
-    $modal("modal-extra").appendChild(list);
+    container.appendChild(chip);
+  });
+}
+function showMedalHistoryModal() {
+  medalHistoryFilter = "all";
+  openModal("Medal history", "");
+  var extra = $modal("modal-extra");
+  var hasAny = (state.medalHistory || []).length > 0;
+  var list = el("div");
+  list.style.cssText = "max-height:44vh;overflow-y:auto";
+  if (hasAny) {
+    var filterWrap = el("div");
+    extra.appendChild(filterWrap);
+    buildMedalHistoryFilters(filterWrap, function () { renderMedalHistoryList(list); });
+  }
+  extra.appendChild(list);
+  renderMedalHistoryList(list);
+  // niche, deliberate action — only reachable here, never surfaced in the
+  // grid itself, and only shown at all when there's an actual gap to close.
+  var diverge = Math.max(medalBestDivergence("volume"), medalBestDivergence("goal"));
+  if (diverge > 0.05) {
+    var note = el("div");
+    note.style.cssText = "margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--ink-mute)";
+    note.textContent = "Your recorded lifetime-best hours or goal-weeks is higher than what your current session history supports — this doesn't affect your earned medals, only the lifetime-stats line.";
+    var syncBtn = el("button", "wk-medal-reset", "Sync lifetime bests to current");
+    syncBtn.style.marginTop = "8px";
+    syncBtn.addEventListener("click", function () {
+      confirmModal(
+        "Sync lifetime bests to current?",
+        "Lowers your recorded best-ever hours and/or goal-weeks to match what your session history currently supports.",
+        "Sync",
+        resetAllMedalBests
+      );
+    });
+    note.appendChild(el("br"));
+    note.appendChild(syncBtn);
+    extra.appendChild(note);
   }
   var row = $modal("modal-row");
   var close = el("button", "primary", "Close");
@@ -8367,18 +8558,26 @@ function renderSnapshotsList() {
     sl.appendChild(el("div", "empty", "Restore points appear here as you work (every " + state.settings.snapshots.intervalMin + " min, last " + state.settings.snapshots.keep + " kept) — or take one manually above."));
     return;
   }
+  var pinIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M8 7a4 4 0 1 1 8 0c0 2-1.5 3-1.5 5h-5C9.5 10 8 9 8 7z"/><path d="M6 12h12"/></svg>';
   snaps.forEach(function (s) {
-    var wrap = el("div", "snap-row-wrap");
-    var row = el("button", "snap-row");
-    row.style.cssText = "width:100%;text-align:left;cursor:pointer";
-    var labelSpan = el("span", null, s.label || "");
-    if (s.pinned) labelSpan.appendChild(el("span", "snap-pin-tag", "📌 Pinned"));
-    row.append(el("span", null, new Date(s.ts).toLocaleString()), labelSpan);
-    row.addEventListener("click", function () { openSnapshotViewer(s); });
+    var card = el("div", "snap-card");
+    var icon = el("div", "snap-card-icon set-icon-amber");
+    icon.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>';
+    var body = el("div", "snap-card-body");
+    var title = el("div", "snap-card-title");
+    title.appendChild(el("span", null, s.label || ""));
+    if (s.pinned) {
+      var pinTag = el("span", "snap-pin-tag");
+      pinTag.innerHTML = pinIcon + "<span>Pinned</span>";
+      title.appendChild(pinTag);
+    }
+    var time = el("div", "snap-card-time", new Date(s.ts).toLocaleString());
+    body.append(title, time);
+    body.addEventListener("click", function () { openSnapshotViewer(s); });
     var pinBtn = el("button", "snap-icon-btn" + (s.pinned ? " pinned" : ""));
     pinBtn.setAttribute("aria-label", s.pinned ? "Unpin snapshot" : "Pin snapshot so it's never auto-deleted");
     pinBtn.title = s.pinned ? "Unpin" : "Pin — keep this one no matter what";
-    pinBtn.textContent = "📌";
+    pinBtn.innerHTML = pinIcon;
     pinBtn.addEventListener("click", function (e) {
       e.stopPropagation();
       setSnapshotPinned(s.id, !s.pinned);
@@ -8396,8 +8595,8 @@ function renderSnapshotsList() {
         toast("Snapshot deleted");
       });
     });
-    wrap.append(row, pinBtn, delBtn);
-    sl.appendChild(wrap);
+    card.append(icon, body, pinBtn, delBtn);
+    sl.appendChild(card);
   });
 }
 $("set-snap-interval").addEventListener("change", function () {
@@ -9279,7 +9478,21 @@ function renderOnboardStep() {
   $("onboard-skip").style.display = isLast ? "none" : "";
   $("onboard-next").textContent = isLast ? "Start writing" : (isFirst ? "Get started" : "Next");
   $("onboard-scroll").scrollTop = 0;
+  updateOnboardScrollCue();
 }
+/* shows a fading chevron whenever the current step's content overflows the
+   panel — hides itself once scrolled within a few pixels of the bottom, and
+   comes back if scrolled back up, so it always reflects "is there more". */
+function updateOnboardScrollCue() {
+  var box = $("onboard-scroll"), cue = $("onboard-scroll-cue");
+  if (!box || !cue) return;
+  var hasMore = box.scrollHeight - box.scrollTop - box.clientHeight > 4;
+  cue.classList.toggle("show", hasMore);
+}
+$("onboard-scroll").addEventListener("scroll", updateOnboardScrollCue);
+window.addEventListener("resize", function () {
+  if ($("onboard-overlay").classList.contains("show")) updateOnboardScrollCue();
+});
 function openOnboarding() {
   onboardStep = 0;
   renderOnboardStep();
@@ -9670,37 +9883,51 @@ function buildCleanupUI(container) {
   go.addEventListener("click", function () {
     var picked = items.filter(function (it) { return it.count && checks[it.key].checked; });
     if (!picked.length) { toast("Nothing selected."); return; }
-    takeSnapshot("Before cleanup");
-    var labels = [];
-    picked.forEach(function (it) {
+    var previewLines = picked.map(function (it) {
       if (it.key === "sessions") {
-        if (filterActive) {
-          var keepIds = {};
-          matchSessions.forEach(function (s) { keepIds[s.id] = true; });
-          var before = state.sessions.length;
-          state.sessions = state.sessions.filter(function (s) { return !keepIds[s.id]; });
-          labels.push((before - state.sessions.length) + " work session" + ((before - state.sessions.length) === 1 ? "" : "s"));
-        } else {
-          labels.push(state.sessions.length + " work session" + (state.sessions.length === 1 ? "" : "s"));
-          state.sessions = [];
-        }
+        return matchSessions.length + " work session" + (matchSessions.length === 1 ? "" : "s") + (filterActive ? " matching your filters" : "");
       }
-      if (it.key === "goals") { state.weeklyGoals = {}; labels.push("weekly goals"); }
-      if (it.key === "activity") { state.activity = {}; labels.push("activity history"); }
-      if (it.key === "topics") {
-        orphanTopics.forEach(function (t) { deleteTopic(t); });
-        labels.push(orphanTopics.length + " orphaned topic" + (orphanTopics.length === 1 ? "" : "s"));
-      }
-      if (it.key === "snapshots") { lsSet(SNAP_KEY, "[]"); labels.push("snapshots"); }
-      if (it.key === "graphpos") { state.graphPos = {}; labels.push("map layout"); }
+      return it.count + " " + it.label.toLowerCase();
     });
-    persist();
-    renderAll();
-    buildCleanupUI(container);
-    toast("Cleaned up " + labels.join(", "));
+    confirmModal(
+      "Clean up " + picked.length + " item" + (picked.length === 1 ? "" : "s") + "?",
+      "This permanently removes: " + previewLines.join(", ") + ". A snapshot is taken first so this can be undone from Snapshots \u2014 but the removal itself can't be undone directly.",
+      "Remove",
+      function () { performCleanup(picked, matchSessions, orphanTopics, filterActive, container); }
+    );
   });
   goRow.appendChild(go);
   container.appendChild(goRow);
+}
+function performCleanup(picked, matchSessions, orphanTopics, filterActive, container) {
+  takeSnapshot("Before cleanup");
+  var labels = [];
+  picked.forEach(function (it) {
+    if (it.key === "sessions") {
+      if (filterActive) {
+        var keepIds = {};
+        matchSessions.forEach(function (s) { keepIds[s.id] = true; });
+        var before = state.sessions.length;
+        state.sessions = state.sessions.filter(function (s) { return !keepIds[s.id]; });
+        labels.push((before - state.sessions.length) + " work session" + ((before - state.sessions.length) === 1 ? "" : "s"));
+      } else {
+        labels.push(state.sessions.length + " work session" + (state.sessions.length === 1 ? "" : "s"));
+        state.sessions = [];
+      }
+    }
+    if (it.key === "goals") { state.weeklyGoals = {}; labels.push("weekly goals"); }
+    if (it.key === "activity") { state.activity = {}; labels.push("activity history"); }
+    if (it.key === "topics") {
+      orphanTopics.forEach(function (t) { deleteTopic(t); });
+      labels.push(orphanTopics.length + " orphaned topic" + (orphanTopics.length === 1 ? "" : "s"));
+    }
+    if (it.key === "snapshots") { lsSet(SNAP_KEY, "[]"); labels.push("snapshots"); }
+    if (it.key === "graphpos") { state.graphPos = {}; labels.push("map layout"); }
+  });
+  persist();
+  renderAll();
+  buildCleanupUI(container);
+  toast("Cleaned up " + labels.join(", "));
 }
 
 /* html → plain-ish markdown for Suitebook prose */
