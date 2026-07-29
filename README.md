@@ -45,6 +45,29 @@ Once it's loading from an `https://` or `localhost` URL:
 - **Android Chrome** — "Add to Home Screen" / install banner.
 - **iOS Safari** — Share → "Add to Home Screen" (iOS doesn't support the automatic prompt, but the icon and name still apply).
 
+### Download for Mac
+
+Notebook also ships as a native standalone Mac app — a real app window (not a browser tab), built with a small Swift/WKWebView wrapper around `Notebook.html`.
+
+**To build it yourself** (currently the only way to get it — no pre-built download has been published yet):
+
+1. Make sure you have Xcode Command Line Tools installed: `xcode-select --install`
+2. From the repo root, run:
+   ```
+   ./build-mac-app.sh
+   ```
+3. This produces `dist/Notebook.app` and `dist/Notebook-mac.zip`. Drag `Notebook.app` to your Applications folder.
+
+If a maintainer has since published a build, check the [Releases](../../releases) page first for a ready-made `Notebook-mac.zip` — that saves you the build step.
+
+**Important — leave the app where you first put it.** Notebook.app stores its data (via the browser engine it embeds) tied to its own file path. As long as it stays in `/Applications` (or wherever you first ran it from), your data persists normally across launches, same as any other Mac app. If you move or rename the `.app` later, it will appear to start empty — the old data isn't deleted, it's just no longer reachable from the new location.
+
+If you do need to move or rename it, **export your data first**: `Preferences → Data → Export JSON` in the app, before you move anything. Once relocated, open the app from its new location and use `Preferences → Data → Import JSON` to bring everything back. This is the same export/import feature described in [Data & privacy](#data--privacy) below — it works just as well as a "carry my data across the move" step as it does for backups.
+
+Since the app isn't signed by an Apple developer account, macOS Gatekeeper will flag it as from an "unidentified developer" the first time you open it — right-click the app → **Open** (or **System Settings → Privacy & Security → Open Anyway**) to get past that one-time warning.
+
+<sub>Maintainers: run `./build-mac-app.sh` on macOS to regenerate `dist/Notebook.app` and `dist/Notebook-mac.zip`, then attach the zip to a new Release so users don't have to build it themselves.</sub>
+
 ## Data & privacy
 
 Everything you write — pages, entries, timelines, sessions — is stored **only in your browser**, primarily in IndexedDB (with a localStorage fallback for older browsers). Nothing is sent to a server, because there is no server. That also means:
@@ -52,6 +75,7 @@ Everything you write — pages, entries, timelines, sessions — is stored **onl
 - Clearing your browser's site data, switching browsers/devices, or using a private window all start you over from nothing.
 - The only copy that leaves the browser is a **JSON export** (`Preferences → Data → Export JSON`). Get in the habit of exporting after anything you'd hate to lose.
 - Automatic **snapshots** (`Preferences → Snapshots`) protect against in-app mistakes (accidental deletes, bad edits) but live in the same browser storage — they are not a substitute for exporting.
+- The Mac app has its own version of this caveat too — see [Download for Mac](#download-for-mac) above regarding moving the `.app`.
 
 ## Keyboard shortcuts
 
@@ -72,6 +96,8 @@ Everything you write — pages, entries, timelines, sessions — is stored **onl
 | `manifest.json` | PWA metadata (name, icons, colors) for installability |
 | `sw.js` | Service worker — caches the app shell for offline use |
 | `icons/` | App icons (regular + maskable, 192px/512px) |
+| `main.swift` | Native window/WKWebView wrapper used by the Mac app |
+| `build-mac-app.sh` | Compiles `main.swift` and packages everything into `Notebook.app` (see [Download for Mac](#download-for-mac)) |
 
 ## Browser support
 
