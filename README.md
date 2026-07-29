@@ -13,7 +13,7 @@
 ### Just want to use it
 
 Download `Notebook.html` and open it in any modern browser. That's it — everything runs client-side, no build step, no dependencies. <br>
-<a href="#browser-support" style="color:gray; text-decoration:none;">see browser support</a>
+<sub>*[see browser support](#browser-support)*</sub>
 </div>
 
 ### Hosting it (for PWA install, or access from anywhere)
