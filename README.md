@@ -18,7 +18,7 @@ Download `Notebook.html` and open it in any modern browser — everything runs c
 
 ### Hosting it (for PWA install, or access from anywhere)
 
-To install Notebook as an app (rather than just opening the file), it needs to be served from a real web origin — `https://` or `localhost`. Plain `file://` won't support the service worker.
+To install Notebook as an app (rather than just opening the file), it needs to be served from a real web origin — `https://` or `localhost`. Plain `file://` won't support the service worker. For Mac see [Download for Mac](#download-for-mac) below.
 
 Keep these together in one folder:
 
@@ -47,7 +47,7 @@ Once it's loading from an `https://` or `localhost` URL:
 
 ### Download for Mac
 
-Notebook also ships as a native standalone Mac app — a real app window (not a browser tab), built with a small Swift/WKWebView wrapper around `Notebook.html`.
+Notebook also ships as an *optional* native standalone Mac app — a real app window (not a browser tab), built with a small Swift/WKWebView wrapper around `Notebook.html`.
 
 **To build it yourself** (currently the only way to get it — no pre-built download has been published yet):
 
