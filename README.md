@@ -12,7 +12,9 @@
 
 ### Just want to use it
 
-Download `Notebook.html` and open it in any modern browser. That's it — everything runs client-side, no build step, no dependencies.
+Download `Notebook.html` and open it in any modern browser. That's it — everything runs client-side, no build step, no dependencies. <br>
+<a href="#browser-support" style="color:gray; text-decoration:none;">see browser support</a>
+</div>
 
 ### Hosting it (for PWA install, or access from anywhere)
 
@@ -32,7 +34,7 @@ icons/
 ```
 
 **Free hosting options:**
-- **GitHub Pages** — push this repo, then enable it under *Settings → Pages* (source: deploy from branch, `main`, root). Your app will be at `https://<username>.github.io/<repo>/Notebook.html`.
+<!-- - **GitHub Pages** — push this repo, then enable it under *Settings → Pages* (source: deploy from branch, `main`, root). Your app will be at `https://iefy.github.io/<repo>/Notebook.html`. -->
 - **Netlify / Cloudflare Pages** — drag-and-drop the folder onto their dashboard.
 - **Local testing** — run `python3 -m http.server 8000` in the folder and open `http://localhost:8000/Notebook.html`. Localhost counts as secure, so install/offline both work here too.
 
