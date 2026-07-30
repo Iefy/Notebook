@@ -760,6 +760,36 @@ body.saved-flash .save-rule::after { transform: scaleX(1); }
 .act-cell.a1 { background: #2a3833; }
 .act-cell.a2 { background: #3d5a51; }
 .act-cell.a3 { background: var(--sage); }
+.hub-restweek { display: flex; gap: 8px; }
+.hrw-day {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 9px 4px 8px;
+  border: 1px solid var(--border); border-radius: calc(9px * var(--radius-scale, 1));
+  background: var(--surf2);
+  cursor: pointer;
+  transition: border-color 0.14s, transform 0.08s, background 0.14s;
+}
+.hrw-day:hover { border-color: var(--ink-mute); transform: translateY(-2px); }
+.hrw-day:active { transform: translateY(0); }
+.hrw-day .hrw-lbl { font-size: 10px; letter-spacing: 0.04em; color: var(--ink-mute); text-transform: uppercase; }
+.hrw-day .hrw-mark {
+  width: 26px; height: 26px; display: grid; place-items: center;
+  border-radius: 50%; color: var(--ink-dim); font-size: 12px; font-weight: 600;
+  background: var(--surf3); border: 1px solid transparent;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.hrw-day.is-today { border-color: var(--ink-mute); }
+.hrw-day.is-rest .hrw-mark { background: repeating-linear-gradient(135deg, var(--sage) 0 3px, transparent 3px 6px); color: var(--ink-hi); border-color: var(--sage); font-weight: 700; }
+.hrw-day.is-rest .hrw-lbl { color: var(--sage); font-weight: 600; }
+.hrw-day.is-worked .hrw-mark { background: var(--blue); color: var(--bg); border-color: var(--blue); }
+.hrw-day.is-future { opacity: 0.55; cursor: default; }
+.hrw-day.is-future:hover { border-color: var(--border); transform: none; }
+.hub-restweek-legend { display: flex; gap: 14px; margin-top: 8px; font-size: 11px; color: var(--ink-mute); }
+.hub-restweek-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.hub-restweek-legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.hub-restweek-legend i.rest { background: var(--sage); }
+.hub-restweek-legend i.worked { background: var(--blue); }
 .ov-rows { display: flex; flex-direction: column; gap: 2px; }
 .ov-row {
   display: flex; align-items: center; gap: 9px;
@@ -1198,6 +1228,8 @@ body.timing #wk-toggle { border-color: #4a342e; color: var(--red); }
 .wk-day .bar { width: 100%; max-width: 26px; background: var(--sage-bd); border-radius: calc(3px * var(--radius-scale, 1)) 3px 0 0; min-height: 2px; }
 .wk-day.today .bar { background: var(--sage); }
 .wk-day .dl { font-size: 8.5px; color: var(--ink-mute); }
+.wk-day.rest .bar { background: repeating-linear-gradient(135deg, var(--sage) 0 3px, transparent 3px 6px); opacity: 0.9; }
+.wk-day.rest .dl { color: var(--sage); font-weight: 600; }
 .wk-lblrow { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 12.5px; }
 .wk-lblrow .nm { width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
 .wk-lblrow .bar { flex: 1; height: 7px; background: var(--surf2); border-radius: calc(4px * var(--radius-scale, 1)); overflow: hidden; }
@@ -2455,6 +2487,11 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
         <h1 class="hub-title" id="hub-title">Welcome back</h1>
         <p class="hub-sub" id="hub-sub"></p>
         <div class="hub-tiles" id="hub-tiles"></div>
+        <div class="ov-sect" id="home-sect-restweek">
+          <div class="ov-sect-head"><span>Calendar<span class="beta-tag">Beta</span></span><span class="note" id="hub-restweek-note"></span></div>
+          <div class="hub-restweek" id="hub-restweek"></div>
+          <div class="hub-restweek-legend"><span><i class="rest"></i>Rest day</span><span><i class="worked"></i>Worked</span></div>
+        </div>
         <div class="ov-sect" id="home-sect-activity">
           <div class="ov-sect-head"><span>Activity</span><span class="note" id="ov-streak"></span></div>
           <div id="activity-grid" aria-label="Editing activity, last 12 weeks"></div>
@@ -3353,7 +3390,7 @@ function normalizeState(s) {
   safe("settings", function () {
     var RAIL_KEYS = ["pages", "entries", "timelines", "work", "oracle"];
     var HOME_TILE_KEYS = ["continue", "pages", "entries", "timelines", "work", "oracle"];
-    var HOME_SECTION_KEYS = ["activity", "pinned", "recent"];
+    var HOME_SECTION_KEYS = ["restweek", "activity", "pinned", "recent"];
     var WORK_SECTION_KEYS = ["goal", "history", "bylabel", "sessions", "achievements"];
     function cleanList(arr, allowed) {
       return Array.isArray(arr) ? arr.filter(function (k) { return allowed.indexOf(k) > -1; }) : [];
@@ -7481,17 +7518,17 @@ function renderWorkTab() {
     var d = new Date(wStart); d.setDate(d.getDate() + i);
     var v = byDay[dayKey(d.getTime())] || 0;
     max = Math.max(max, v);
-    seq.push({ d: d, v: v, today: dayKey(d.getTime()) === dayKey() });
+    seq.push({ d: d, v: v, today: dayKey(d.getTime()) === dayKey(), rest: isRestedDay(dayKey(d.getTime())) });
   }
   seq.forEach(function (o) {
     var dk = dayKey(o.d.getTime());
     var active = wkFilter && wkFilter.type === "day" && wkFilter.value === dk;
-    var col = el("div", "wk-day" + (o.today ? " today" : "") + (active ? " sel" : ""));
+    var col = el("div", "wk-day" + (o.today ? " today" : "") + (active ? " sel" : "") + (o.rest ? " rest" : ""));
     var bar = el("div", "bar");
-    bar.style.height = Math.max(3, o.v / max * 100) + "%";
+    bar.style.height = o.rest ? "16%" : Math.max(3, o.v / max * 100) + "%";
     col.append(bar, el("span", "dl", String(o.d.getDate())));
     col.addEventListener("mouseenter", function () {
-      showTip(bar, "<b>" + o.d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }) + "</b><br>" + (o.v ? fmtDur(o.v) : "No time logged"));
+      showTip(bar, "<b>" + o.d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }) + "</b><br>" + (o.rest ? "Rest day" : o.v ? fmtDur(o.v) : "No time logged"));
     });
     col.addEventListener("mouseleave", hideTip);
     col.addEventListener("click", function () {
@@ -8216,9 +8253,62 @@ function goContinue() {
   if (le.kind === "entry") { setTab("entries", true); openEntry(le.id); }
   else { setTab("pages", true); openPage(le.id); }
 }
+/* Mon..Sun labels for the this-week rest strip — matches weekStartTs' Monday start. */
+var HRW_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+function renderHubRestWeek() {
+  var wrap = $("hub-restweek");
+  wrap.innerHTML = "";
+  var todayKey = dayKey();
+  var ws = weekStartTs();
+  var restCount = 0, workedCount = 0;
+  var seq = [];
+  for (var i = 0; i < 7; i++) {
+    var ts = ws + i * 86400000;
+    var k = dayKey(ts);
+    var rested = isRestedDay(k);
+    var worked = !rested && dayHasWork(k);
+    if (rested) restCount++;
+    if (worked) workedCount++;
+    seq.push({ i: i, ts: ts, k: k, rested: rested, worked: worked, today: k === todayKey, future: k > todayKey });
+  }
+  seq.forEach(function (o) {
+    var cls = "hrw-day" + (o.rested ? " is-rest" : "") + (o.worked ? " is-worked" : "") + (o.today ? " is-today" : "") + (o.future ? " is-future" : "");
+    var cell = el(o.future ? "div" : "button", cls);
+    if (!o.future) cell.type = "button";
+    var d = new Date(o.ts);
+    cell.appendChild(el("span", "hrw-lbl", HRW_LABELS[o.i]));
+    cell.appendChild(el("span", "hrw-mark", String(d.getDate())));
+    var dateLabel = d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+    var tipHtml = "<b>" + dateLabel + "</b><br>" + (o.rested ? "Rest day" : o.worked ? "Worked" : o.future ? "Not yet here" : "Nothing logged");
+    cell.addEventListener("mouseenter", function () { showTip(cell, tipHtml); });
+    cell.addEventListener("mouseleave", hideTip);
+    if (!o.future) {
+      cell.addEventListener("click", function () {
+        hideTip();
+        wkWeekOffset = 0;
+        wkFilter = { type: "day", value: o.k, label: d.toLocaleDateString() };
+        setTab("work");
+      });
+    }
+    wrap.appendChild(cell);
+  });
+  var bits = [];
+  if (restCount) bits.push(restCount + " rest day" + (restCount === 1 ? "" : "s"));
+  if (workedCount) bits.push(workedCount + " worked");
+  $("hub-restweek-note").textContent = bits.length ? bits.join(" · ") : "Nothing logged this week yet";
+}
 function renderHub() {
   var h = new Date().getHours();
-  $("hub-title").textContent = h < 5 ? "Burning the midnight oil" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  var restToday = isRestedDay(dayKey());
+  var slot = h < 5 ? "night" : h < 12 ? "morning" : h < 18 ? "afternoon" : "evening";
+  var greetings = {
+    night: restToday ? "Resting through the night" : "Burning the midnight oil",
+    morning: restToday ? "Good morning \u2014 today's a rest day" : "Good morning",
+    afternoon: restToday ? "Good afternoon \u2014 a rest day" : "Good afternoon",
+    evening: restToday ? "Good evening \u2014 resting today" : "Good evening"
+  };
+  $("hub-title").textContent = greetings[slot];
+  renderHubRestWeek();
   var le = lastEdited();
   var total = state.entries.length + state.pages.length + state.timelines.length;
   $("hub-sub").textContent = total
@@ -8259,6 +8349,7 @@ function renderHub() {
     wrap.appendChild(tile);
   });
   var hiddenSections = state.settings.hidden.homeSections || [];
+  $("home-sect-restweek").style.display = hiddenSections.indexOf("restweek") > -1 ? "none" : "";
   $("home-sect-activity").style.display = hiddenSections.indexOf("activity") > -1 ? "none" : "";
   $("home-sect-pinned").style.display = hiddenSections.indexOf("pinned") > -1 ? "none" : "";
   $("home-sect-recent").style.display = hiddenSections.indexOf("recent") > -1 ? "none" : "";
@@ -8812,6 +8903,7 @@ var HOME_TILE_ITEMS = [
   { key: "oracle", label: "Oracle", desc: "A shortcut tile to connection prompts. On: shown on Home. Off: the tile disappears from Home; Oracle itself is unaffected if it's still in your sidebar.", beta: true }
 ];
 var HOME_SECTION_ITEMS = [
+  { key: "restweek", label: "Calendar", desc: "A Mon\u2013Sun strip showing which days this week you've worked, rested, or neither. On: shown on Home, below the tiles. Off: hidden from Home; rest days and sessions are unaffected \u2014 track them from the Work page instead.", beta: true },
   { key: "activity", label: "Activity", desc: "A heat-grid showing which days you've edited something in Notebook, like a habit tracker. On: shown on Home, below the tiles. Off: the grid is hidden; your activity history is still tracked in the background, just not displayed.", recommended: true },
   { key: "pinned", label: "Pinned", desc: "A list of anything you've pinned — across pages and entries — for quick access. On: shown on Home when you have at least one pinned item. Off: hidden from Home; pinned items stay pinned, you'd just open them from their own room instead." },
   { key: "recent", label: "Recent", desc: "Your most recently edited pages and entries, so you can jump back into whatever you touched last. On: shown on Home. Off: hidden from Home; everything is still reachable from its own room, just not surfaced here.", recommended: true }
