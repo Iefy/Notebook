@@ -70,6 +70,10 @@ select { background: var(--surf2); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+/* calm mode: same blanket suppression as reduced-motion, but as a deliberate
+   style choice rather than an OS accessibility setting — independent of it,
+   so someone can want the plainer feel without asking their OS for it. */
+html.calm *, html.calm *::before, html.calm *::after { transition: none !important; animation: none !important; }
 
 #app { display: flex; height: 100%; height: 100dvh; }
 
@@ -2717,6 +2721,23 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
         <div class="set-group-title" style="margin-top:18px">Density</div>
         <div class="set-cat-desc" style="padding:0 2px 8px">How tightly packed lists, cards, and buttons feel.</div>
         <div id="set-density-options" class="style-option-row"></div>
+        <div class="set-group-title" style="margin-top:18px">Background</div>
+        <div id="set-bgtone-options" class="style-option-row"></div>
+        <div class="set-group-title" style="margin-top:18px">Heading font</div>
+        <div id="set-headingfont-options" class="style-option-row"></div>
+        <div class="set-group-title" style="margin-top:18px">Motion</div>
+        <div id="set-calm-row"></div>
+        <div class="set-group-title" style="margin-top:18px">Presets</div>
+        <div class="set-cat-desc" style="padding:0 2px 12px">Save just these style choices to a small file, separate from a full backup — handy for carrying your look over to a new save.</div>
+        <button class="set-cat-btn" id="style-export-btn">
+          <span class="set-cat-icon set-icon-purple"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M4 19h16"/></svg></span>
+          <span class="set-cat-main"><span>Export style preset…</span><span class="set-cat-desc">Choose exactly what to include</span></span>
+        </button>
+        <button class="set-cat-btn" id="style-import-btn">
+          <span class="set-cat-icon set-icon-purple"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><polyline points="7 14 12 9 17 14"/><path d="M4 19h16"/></svg></span>
+          <span class="set-cat-main"><span>Import style preset…</span><span class="set-cat-desc">Apply a previously exported look</span></span>
+        </button>
+        <input type="file" id="style-import-file" accept=".json,application/json" hidden>
       </div>
       <div class="set-view" id="set-view-snapshots" data-view="snapshots">
         <div class="set-note-banner">
@@ -3154,6 +3175,9 @@ function blankState() {
       accent: DEFAULT_ACCENT,
       density: "cozy",
       cornerStyle: "soft",
+      bgTone: "ink",
+      headingFont: "classic",
+      calmMode: false,
       snapshots: { intervalMin: 10, keep: 5 },
       popoutTimerShowTotal: true,
       popoutTimerShowLabel: true,
@@ -3349,6 +3373,9 @@ function normalizeState(s) {
       accent: /^#[0-9a-fA-F]{6}$/.test(st.accent) ? st.accent : DEFAULT_ACCENT,
       density: ["cozy", "compact"].indexOf(st.density) > -1 ? st.density : "cozy",
       cornerStyle: ["sharp", "soft", "round"].indexOf(st.cornerStyle) > -1 ? st.cornerStyle : "soft",
+      bgTone: ["ink", "slate", "midnight", "black"].indexOf(st.bgTone) > -1 ? st.bgTone : "ink",
+      headingFont: ["classic", "modern", "sans"].indexOf(st.headingFont) > -1 ? st.headingFont : "classic",
+      calmMode: !!st.calmMode,
       snapshots: {
         intervalMin: Math.min(120, Math.max(1, Math.floor(+((st.snapshots && st.snapshots.intervalMin)) || 10))),
         keep: Math.min(50, Math.max(1, Math.floor(+((st.snapshots && st.snapshots.keep)) || 5)))
@@ -3371,7 +3398,7 @@ function normalizeState(s) {
     };
   });
   if (!s.settings || typeof s.settings !== "object") {
-    s.settings = { hidden: { railTabs: [], homeTiles: [], homeSections: [], workSections: [] }, pastePlainText: false, autoListShortcuts: true, autoLinkUrls: true, accent: DEFAULT_ACCENT, density: "cozy", cornerStyle: "soft", snapshots: { intervalMin: 10, keep: 5 }, popoutTimerShowTotal: true, popoutTimerShowLabel: true, popoutTimerShowGoal: true, popoutTimerSize: "cozy", popoutPagesShowSearch: true, popoutPagesShowNotebooks: true, popoutPagesSize: "cozy", onboarded: true, sessionCleanupFilters: { after: "", before: "", minMinutes: "", maxMinutes: "", labels: [] } };
+    s.settings = { hidden: { railTabs: [], homeTiles: [], homeSections: [], workSections: [] }, pastePlainText: false, autoListShortcuts: true, autoLinkUrls: true, accent: DEFAULT_ACCENT, density: "cozy", cornerStyle: "soft", bgTone: "ink", headingFont: "classic", calmMode: false, snapshots: { intervalMin: 10, keep: 5 }, popoutTimerShowTotal: true, popoutTimerShowLabel: true, popoutTimerShowGoal: true, popoutTimerSize: "cozy", popoutPagesShowSearch: true, popoutPagesShowNotebooks: true, popoutPagesSize: "cozy", onboarded: true, sessionCleanupFilters: { after: "", before: "", minMinutes: "", maxMinutes: "", labels: [] } };
   }
   if (!Array.isArray(s.entryTypes) || !s.entryTypes.length) {
     s.entryTypes = TYPE_PRESETS.map(function (t) { return { key: t.key, label: t.label, color: t.color, tags: [] }; });
@@ -3727,6 +3754,9 @@ var Popout = (function () {
       pipRoot.style.setProperty("--radius", CORNER_RADII[state.settings.cornerStyle] || CORNER_RADII.soft);
       pipRoot.style.setProperty("--radius-scale", CORNER_SCALES[state.settings.cornerStyle] || CORNER_SCALES.soft);
       pipRoot.style.setProperty("--pad", DENSITY_PAD[state.settings.density] || DENSITY_PAD.cozy);
+      Object.keys(BG_TONES[state.settings.bgTone] || BG_TONES.ink).forEach(function (k) { pipRoot.style.setProperty(k, (BG_TONES[state.settings.bgTone] || BG_TONES.ink)[k]); });
+      pipRoot.style.setProperty("--serif", HEADING_FONTS[state.settings.headingFont] || HEADING_FONTS.classic);
+      pipRoot.classList.toggle("calm", !!state.settings.calmMode);
       pipWindow.document.title = "Pages — Notebook";
       pipWindow.document.body.style.cssText = "background:var(--bg);margin:0;height:100%;overflow:hidden";
 
@@ -3775,6 +3805,9 @@ var Popout = (function () {
       pipRoot.style.setProperty("--radius", CORNER_RADII[state.settings.cornerStyle] || CORNER_RADII.soft);
       pipRoot.style.setProperty("--radius-scale", CORNER_SCALES[state.settings.cornerStyle] || CORNER_SCALES.soft);
       pipRoot.style.setProperty("--pad", DENSITY_PAD[state.settings.density] || DENSITY_PAD.cozy);
+      Object.keys(BG_TONES[state.settings.bgTone] || BG_TONES.ink).forEach(function (k) { pipRoot.style.setProperty(k, (BG_TONES[state.settings.bgTone] || BG_TONES.ink)[k]); });
+      pipRoot.style.setProperty("--serif", HEADING_FONTS[state.settings.headingFont] || HEADING_FONTS.classic);
+      pipRoot.classList.toggle("calm", !!state.settings.calmMode);
       pipWindow.document.title = "Timer — Notebook";
       var pd = pipWindow.document;
       pd.body.style.cssText = "background:var(--bg);margin:0;height:100%;overflow:hidden";
@@ -6903,7 +6936,7 @@ function medalSvg(tier, size, prestige) {
   var palette = prestige > 0 ? PRESTIGE_PALETTES[(prestige - 1) % PRESTIGE_PALETTES.length] : null;
   var stops = palette ? palette.stops[tier - 1] : MEDAL_GRADIENT_STOPS[tier - 1];
   var dur = MEDAL_GRAD_DUR[tier - 1] / (palette ? 1.4 : 1);
-  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var reduceMotion = (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) || !!state.settings.calmMode;
   var s = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 44 44" class="medal-svg medal-tier-' + tier + '" aria-hidden="true">';
   s += '<defs><linearGradient id="grad-' + uid + '" gradientUnits="userSpaceOnUse" x1="6" y1="6" x2="38" y2="38">' +
     (dur && !reduceMotion ? '<animateTransform attributeName="gradientTransform" type="rotate" from="0 22 22" to="360 22 22" dur="' + dur + 's" repeatCount="indefinite"/>' : "") +
@@ -6933,6 +6966,7 @@ function medalSvg(tier, size, prestige) {
 }
 /* small firework of dots scaled by tier — more, and further-flying, sparks the higher the tier */
 function spawnMedalSparks(container, tier) {
+  if (state.settings.calmMode) return;
   var n = 2 + tier * 2;
   for (var i = 0; i < n; i++) {
     var sp = document.createElement("span");
@@ -8812,6 +8846,25 @@ function applyHiddenSettings() {
 var CORNER_RADII = { sharp: "2px", soft: "6px", round: "14px" };
 var CORNER_SCALES = { sharp: "0.35", soft: "1", round: "1.8" };
 var DENSITY_PAD = { cozy: "14px", compact: "9px" };
+/* each tone is a full palette swap — not just --bg, since the surface/ink
+   ramp all needs to stay in proportion to each other for contrast to hold.
+   "ink" is the original warm near-black; the others keep the same structure
+   (bg darkest, ink-hi lightest) with a different hue lean. */
+var BG_TONES = {
+  ink: { "--bg": "#100f0d", "--surf": "#161512", "--surf2": "#1d1b18", "--surf3": "#242220", "--border": "#2b2823", "--ink": "#cfc8b9", "--ink-hi": "#f0e9d8", "--ink-dim": "#8e897c", "--ink-mute": "#5a564d" },
+  slate: { "--bg": "#0e1013", "--surf": "#14171b", "--surf2": "#1a1e23", "--surf3": "#21262c", "--border": "#282e35", "--ink": "#c8ccd1", "--ink-hi": "#eef1f4", "--ink-dim": "#868d96", "--ink-mute": "#565d66" },
+  midnight: { "--bg": "#0a0e1a", "--surf": "#11172a", "--surf2": "#171e34", "--surf3": "#1e2740", "--border": "#2a3350", "--ink": "#c7cde0", "--ink-hi": "#eef0fa", "--ink-dim": "#8890ab", "--ink-mute": "#565d75" },
+  black: { "--bg": "#000000", "--surf": "#0a0a0a", "--surf2": "#121212", "--surf3": "#1a1a1a", "--border": "#262626", "--ink": "#c9c9c9", "--ink-hi": "#f2f2f2", "--ink-dim": "#8a8a8a", "--ink-mute": "#565656" }
+};
+var BG_TONE_NAMES = { ink: "Ink", slate: "Slate", midnight: "Midnight", black: "True black" };
+/* three --serif stacks — all system/web-safe, no font loading required.
+   "sans" reuses the --sans stack so headings drop the serif voice entirely. */
+var HEADING_FONTS = {
+  classic: '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif',
+  modern: 'Charter, Georgia, Cambria, "Times New Roman", serif',
+  sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif'
+};
+var HEADING_FONT_NAMES = { classic: "Classic", modern: "Modern", sans: "Sans" };
 function forEachStyleRoot(fn) {
   fn(document.documentElement);
   var pipDoc = Popout.activeDoc && Popout.activeDoc();
@@ -8825,10 +8878,19 @@ function applyCornerStyle(key) {
   });
 }
 function applyDensity(key) { forEachStyleRoot(function (r) { r.style.setProperty("--pad", DENSITY_PAD[key] || DENSITY_PAD.cozy); }); }
+function applyBgTone(key) {
+  var vars = BG_TONES[key] || BG_TONES.ink;
+  forEachStyleRoot(function (r) { Object.keys(vars).forEach(function (k) { r.style.setProperty(k, vars[k]); }); });
+}
+function applyHeadingFont(key) { forEachStyleRoot(function (r) { r.style.setProperty("--serif", HEADING_FONTS[key] || HEADING_FONTS.classic); }); }
+function applyCalmMode(on) { forEachStyleRoot(function (r) { r.classList.toggle("calm", !!on); }); }
 function applyAllStyle() {
   applyAccent(state.settings.accent);
   applyCornerStyle(state.settings.cornerStyle);
   applyDensity(state.settings.density);
+  applyBgTone(state.settings.bgTone);
+  applyHeadingFont(state.settings.headingFont);
+  applyCalmMode(state.settings.calmMode);
 }
 function toggleLabelEl(it) {
   if (!it.desc) {
@@ -8885,6 +8947,9 @@ var EDITOR_PASTE_ITEMS = [
 var EDITOR_TYPING_ITEMS = [
   { key: "autoListShortcuts", label: "Auto-format lists as you type", desc: "On (default): typing \u201c1.\u201d or \u201c-\u201d then a space instantly turns that line into a list, no toolbar needed. Off: typing those characters just leaves them as plain text — you'd need to select the text and click the list button in the toolbar to make a list instead.", recommended: true },
   { key: "autoLinkUrls", label: "Turn typed web addresses into links", desc: "On (default): finish typing a web address and it becomes a clickable link automatically. Off: typed addresses stay as plain text — you'd need to select it and use the toolbar's link button to make it clickable.", recommended: true }
+];
+var STYLE_BOOL_ITEMS = [
+  { key: "calmMode", label: "Calm mode", desc: "Turns off medal sparkle bursts, spin, and other flourish animations app-wide — independent of your OS's reduce-motion setting.", onChange: function (v) { applyCalmMode(v); } }
 ];
 function renderEditorSettings() {
   buildBoolToggleGroup($("set-editor-toggles"), EDITOR_PASTE_ITEMS);
@@ -8944,7 +9009,133 @@ function renderStyleSettings() {
     });
     densityWrap.appendChild(b);
   });
+
+  var bgWrap = $("set-bgtone-options");
+  bgWrap.innerHTML = "";
+  Object.keys(BG_TONES).forEach(function (key) {
+    var b = el("button", "style-option" + (state.settings.bgTone === key ? " on" : ""));
+    var demo = el("span", "swatch-demo");
+    demo.style.background = BG_TONES[key]["--surf2"];
+    demo.style.border = "1px solid " + BG_TONES[key]["--border"];
+    b.append(demo, el("span", null, BG_TONE_NAMES[key]));
+    b.addEventListener("click", function () {
+      state.settings.bgTone = key;
+      applyBgTone(key);
+      persist();
+      renderStyleSettings();
+    });
+    bgWrap.appendChild(b);
+  });
+
+  var hfWrap = $("set-headingfont-options");
+  hfWrap.innerHTML = "";
+  Object.keys(HEADING_FONTS).forEach(function (key) {
+    var b = el("button", "style-option" + (state.settings.headingFont === key ? " on" : ""));
+    var demo = el("span", null, "Aa");
+    demo.style.cssText = "font-family:" + HEADING_FONTS[key] + ";font-size:20px;color:var(--ink-hi)";
+    b.append(demo, el("span", null, HEADING_FONT_NAMES[key]));
+    b.addEventListener("click", function () {
+      state.settings.headingFont = key;
+      applyHeadingFont(key);
+      persist();
+      renderStyleSettings();
+    });
+    hfWrap.appendChild(b);
+  });
+
+  buildBoolToggleGroup($("set-calm-row"), STYLE_BOOL_ITEMS);
 }
+/* a separate, small export just for the visual choices — distinct from the
+   full JSON backup — so a look can be carried over to a different save
+   without dragging its data along. Selective on both ends: exporting lets
+   you leave settings out, importing lets you skip any you don't want from
+   someone else's (or your own older) preset. */
+var STYLE_PRESET_FIELDS = [
+  { key: "accent", label: "Accent color" },
+  { key: "cornerStyle", label: "Corner style" },
+  { key: "density", label: "Density" },
+  { key: "bgTone", label: "Background tone" },
+  { key: "headingFont", label: "Heading font" },
+  { key: "calmMode", label: "Calm mode" }
+];
+function exportStylePresetModal() {
+  openModal("Export style preset", "Choose what to include:");
+  var extra = $modal("modal-extra");
+  var checks = {};
+  STYLE_PRESET_FIELDS.forEach(function (f) {
+    var row = el("label", "set-row");
+    var cb = el("input"); cb.type = "checkbox"; cb.checked = true;
+    checks[f.key] = cb;
+    row.append(cb, el("span", null, f.label));
+    extra.appendChild(row);
+  });
+  var row = $modal("modal-row");
+  var cancel = el("button", null, "Cancel");
+  cancel.addEventListener("click", closeModal);
+  var go = el("button", "primary", "Export");
+  go.addEventListener("click", function () {
+    var picked = STYLE_PRESET_FIELDS.filter(function (f) { return checks[f.key].checked; });
+    if (!picked.length) { toast("Nothing selected."); return; }
+    var style = {};
+    picked.forEach(function (f) { style[f.key] = state.settings[f.key]; });
+    var payload = { app: "notebook-style-preset", version: 1, exportedAt: new Date().toISOString(), style: style };
+    closeModal();
+    downloadText("notebook-style-" + new Date().toISOString().slice(0, 10) + ".json", JSON.stringify(payload, null, 2), "application/json");
+    toast("Style preset exported (" + picked.length + " setting" + (picked.length === 1 ? "" : "s") + ")");
+  });
+  row.append(cancel, go);
+}
+function importStylePresetModal(style) {
+  var available = STYLE_PRESET_FIELDS.filter(function (f) { return style.hasOwnProperty(f.key); });
+  if (!available.length) { toast("That file didn't contain any recognizable style settings."); return; }
+  openModal("Import style preset", "Choose what to apply:");
+  var extra = $modal("modal-extra");
+  var checks = {};
+  available.forEach(function (f) {
+    var row = el("label", "set-row");
+    var cb = el("input"); cb.type = "checkbox"; cb.checked = true;
+    checks[f.key] = cb;
+    row.append(cb, el("span", null, f.label + " — " + style[f.key]));
+    extra.appendChild(row);
+  });
+  var row = $modal("modal-row");
+  var cancel = el("button", null, "Cancel");
+  cancel.addEventListener("click", closeModal);
+  var go = el("button", "primary", "Apply");
+  go.addEventListener("click", function () {
+    var picked = available.filter(function (f) { return checks[f.key].checked; });
+    if (!picked.length) { toast("Nothing selected."); return; }
+    picked.forEach(function (f) {
+      var v = style[f.key];
+      if (f.key === "accent" && /^#[0-9a-fA-F]{6}$/.test(v)) { state.settings.accent = v; applyAccent(v); }
+      else if (f.key === "cornerStyle" && CORNER_RADII.hasOwnProperty(v)) { state.settings.cornerStyle = v; applyCornerStyle(v); }
+      else if (f.key === "density" && DENSITY_PAD.hasOwnProperty(v)) { state.settings.density = v; applyDensity(v); }
+      else if (f.key === "bgTone" && BG_TONES.hasOwnProperty(v)) { state.settings.bgTone = v; applyBgTone(v); }
+      else if (f.key === "headingFont" && HEADING_FONTS.hasOwnProperty(v)) { state.settings.headingFont = v; applyHeadingFont(v); }
+      else if (f.key === "calmMode") { state.settings.calmMode = !!v; applyCalmMode(!!v); }
+    });
+    persist();
+    closeModal();
+    renderStyleSettings();
+    toast("Applied " + picked.length + " style setting" + (picked.length === 1 ? "" : "s") + ".");
+  });
+  row.append(cancel, go);
+}
+$("style-export-btn").addEventListener("click", exportStylePresetModal);
+$("style-import-btn").addEventListener("click", function () { $("style-import-file").click(); });
+$("style-import-file").addEventListener("change", function () {
+  var f = this.files[0];
+  this.value = "";
+  if (!f) return;
+  var reader = new FileReader();
+  reader.onload = function () {
+    var data;
+    try { data = JSON.parse(reader.result); } catch (e) { toast("That file isn't valid JSON."); return; }
+    if (!data || typeof data.style !== "object" || !data.style) { toast("That doesn't look like a style preset file."); return; }
+    importStylePresetModal(data.style);
+  };
+  reader.readAsText(f);
+});
 // Builds a live, real (not mocked) miniature of the pop-out timer widget so
 // you can see exactly what you're customizing without opening a real
 // pop-out — reuses the same markup/classes as the actual thing, and uses
@@ -9248,7 +9439,7 @@ var SETTINGS_CATEGORIES = [
   },
   {
     key: "style", title: "Make it feel like yours",
-    lede: "Accent, corners, and spacing — all live in Preferences → Style if you want to revisit them.",
+    lede: "Accent, corners, spacing, background, and motion — all live in Preferences → Style if you want to revisit them.",
     render: function (c) {
       c.appendChild(el("div", "set-group-title", "Accent"));
       var wrap = el("div", "accent-swatches"); c.appendChild(wrap);
@@ -9304,6 +9495,43 @@ var SETTINGS_CATEGORIES = [
         });
       }
       paintDensity();
+
+      var bgTitle = el("div", "set-group-title", "Background"); bgTitle.style.marginTop = "16px";
+      c.appendChild(bgTitle);
+      var bgRow = el("div", "style-option-row"); c.appendChild(bgRow);
+      function paintBgTone() {
+        bgRow.innerHTML = "";
+        Object.keys(BG_TONES).forEach(function (key) {
+          var b = el("button", "style-option" + (state.settings.bgTone === key ? " on" : ""));
+          var demo = el("span", "swatch-demo");
+          demo.style.background = BG_TONES[key]["--surf2"];
+          demo.style.border = "1px solid " + BG_TONES[key]["--border"];
+          b.append(demo, el("span", null, BG_TONE_NAMES[key]));
+          b.addEventListener("click", function () { state.settings.bgTone = key; applyBgTone(key); persist(); paintBgTone(); });
+          bgRow.appendChild(b);
+        });
+      }
+      paintBgTone();
+
+      var hfTitle = el("div", "set-group-title", "Heading font"); hfTitle.style.marginTop = "16px";
+      c.appendChild(hfTitle);
+      var hfRow = el("div", "style-option-row"); c.appendChild(hfRow);
+      function paintHeadingFont() {
+        hfRow.innerHTML = "";
+        Object.keys(HEADING_FONTS).forEach(function (key) {
+          var b = el("button", "style-option" + (state.settings.headingFont === key ? " on" : ""));
+          var demo = el("span", null, "Aa");
+          demo.style.cssText = "font-family:" + HEADING_FONTS[key] + ";font-size:20px;color:var(--ink-hi)";
+          b.append(demo, el("span", null, HEADING_FONT_NAMES[key]));
+          b.addEventListener("click", function () { state.settings.headingFont = key; applyHeadingFont(key); persist(); paintHeadingFont(); });
+          hfRow.appendChild(b);
+        });
+      }
+      paintHeadingFont();
+
+      var motionTitle = el("div", "set-group-title", "Motion"); motionTitle.style.marginTop = "16px";
+      c.appendChild(motionTitle);
+      buildBoolToggleGroup(c.appendChild(el("div")), STYLE_BOOL_ITEMS);
     }
   },
   {
@@ -9381,16 +9609,18 @@ var SETTINGS_CATEGORIES = [
     key: "snapshots", title: "How should autosave work?",
     lede: "Notebook quietly saves restore points as you work, in case you ever want to roll back. You can always take one manually too, from Preferences → Snapshots.",
     render: function (c) {
-      var row = el("div", "set-row-plain");
-      row.appendChild(el("label", null, "Every"));
-      var intervalI = el("input"); intervalI.type = "number"; intervalI.min = "1"; intervalI.max = "120"; intervalI.style.width = "56px";
+      var card = el("div", "snap-config-card"); c.appendChild(card);
+      var intervalField = el("label", "snap-config-field");
+      intervalField.appendChild(el("span", null, "Every (min)"));
+      var intervalI = el("input"); intervalI.type = "number"; intervalI.min = "1"; intervalI.max = "120";
       intervalI.value = state.settings.snapshots.intervalMin;
-      row.appendChild(intervalI);
-      row.appendChild(el("span", null, "min, keep last"));
-      var keepI = el("input"); keepI.type = "number"; keepI.min = "1"; keepI.max = "50"; keepI.style.width = "52px";
+      intervalField.appendChild(intervalI);
+      var keepField = el("label", "snap-config-field");
+      keepField.appendChild(el("span", null, "Keep last"));
+      var keepI = el("input"); keepI.type = "number"; keepI.min = "1"; keepI.max = "50";
       keepI.value = state.settings.snapshots.keep;
-      row.appendChild(keepI);
-      c.appendChild(row);
+      keepField.appendChild(keepI);
+      card.append(intervalField, keepField);
       intervalI.addEventListener("change", function () {
         state.settings.snapshots.intervalMin = Math.min(120, Math.max(1, Math.floor(+this.value) || 10));
         this.value = state.settings.snapshots.intervalMin;
