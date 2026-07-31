@@ -92,6 +92,7 @@ html.calm *, html.calm *::before, html.calm *::after { transition: none !importa
   padding-top: max(12px, env(safe-area-inset-top));
   padding-left: env(safe-area-inset-left);
 }
+#rail-pages-slot { display: contents; }
 #rail .mark {
   font-family: var(--serif);
   color: var(--sage);
@@ -783,13 +784,131 @@ body.saved-flash .save-rule::after { transform: scaleX(1); }
 .cal-day.is-rest .cal-mark { background: repeating-linear-gradient(135deg, var(--sage) 0 3px, transparent 3px 6px); color: var(--ink-hi); border-color: var(--sage); font-weight: 700; }
 .cal-day.is-rest .cal-lbl { color: var(--sage); font-weight: 600; }
 .cal-day.is-worked .cal-mark { background: var(--blue); color: var(--bg); border-color: var(--blue); }
-.cal-day.is-future { opacity: 0.55; cursor: default; }
-.cal-day.is-future:hover { border-color: var(--border); transform: none; }
+.cal-day.is-future { opacity: 0.7; }
 .hub-calendar-legend { display: flex; gap: 14px; margin-top: 8px; font-size: 11px; color: var(--ink-mute); }
 .hub-calendar-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .hub-calendar-legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .hub-calendar-legend i.rest { background: var(--sage); }
 .hub-calendar-legend i.worked { background: var(--blue); }
+.hub-calendar-legend i.planned { background: var(--amber); }
+.cal-day-dots { display: flex; gap: 3px; margin-top: 2px; }
+
+/* ── Calendar tab ── */
+#cal-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 18px var(--pad) 60px; max-width: 720px; }
+@media (min-width: 1180px) {
+  #cal-scroll {
+    max-width: 1180px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-content: start;
+  }
+  #cal-scroll .cal-header { grid-column: 1 / -1; grid-row: 1; }
+  #cal-scroll .wk-card { margin-top: 0; }
+  #cal-grid-card { grid-column: 1; grid-row: 2 / 4; }
+  #cal-detail-card { grid-column: 2; grid-row: 2; }
+  #cal-tasks-card { grid-column: 2; grid-row: 3; }
+}
+.cal-weekday-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin: 14px 0 6px; }
+.cal-weekday-row span { text-align: center; font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-mute); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.cal-cell {
+  position: relative;
+  aspect-ratio: 1 / 1; min-height: 44px;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 3px;
+  padding: 6px 3px 4px;
+  border: 1px solid var(--border); border-radius: calc(8px * var(--radius-scale, 1));
+  background: var(--surf2); color: inherit; cursor: pointer;
+  transition: border-color 0.14s, transform 0.08s, background 0.14s;
+}
+.cal-cell:hover { border-color: var(--ink-mute); transform: translateY(-1px); }
+.cal-cell.is-outside { opacity: 0.4; }
+.cal-cell.is-today { border-color: var(--sage); }
+.cal-cell.is-selected { background: var(--surf3); border-color: var(--ink-mute); }
+.cal-cell-date { font-size: 12.5px; color: var(--ink-hi); font-weight: 600; }
+.cal-cell-status { width: 100%; height: 5px; border-radius: 2px; background: var(--surf3); margin-top: 1px; }
+.cal-cell.is-rest .cal-cell-status { background: repeating-linear-gradient(135deg, var(--sage) 0 3px, transparent 3px 6px); }
+.cal-cell.is-rest .cal-cell-date { color: var(--sage); }
+.cal-cell.is-worked .cal-cell-status { background: var(--blue); }
+.cal-cell.is-worked .cal-cell-date { color: var(--blue); }
+.cal-cell-dots { display: flex; gap: 2px; flex-wrap: wrap; justify-content: center; margin-top: auto; }
+.cal-cell-add {
+  position: absolute; top: 3px; right: 3px;
+  width: 15px; height: 15px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 11px; line-height: 1; color: var(--ink-mute);
+  background: var(--surf3); border: 1px solid var(--border);
+  opacity: 0.4; cursor: pointer;
+  transition: opacity 0.12s, color 0.12s, border-color 0.12s;
+}
+.cal-cell:hover .cal-cell-add, .cal-cell-add:focus { opacity: 1; color: var(--ink-hi); border-color: var(--ink-mute); }
+.cal-plan-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--amber); }
+.cal-plan-dot.done { background: var(--ink-mute); opacity: 0.5; }
+.cal-plan-dot.overdue { background: var(--red); }
+.cal-plan-bar { width: 12px; height: 5px; border-radius: 2px; background: var(--amber); }
+.cal-plan-bar.done { background: var(--ink-mute); opacity: 0.5; }
+.cal-plan-bar.overdue { background: var(--red); }
+.cal-plan-more { font-size: 8.5px; color: var(--ink-mute); }
+#cal-detail-card { margin-top: 18px; }
+#cal-detail-card .ov-sect-head { align-items: center; }
+.cal-plan-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.cal-plan-row.overdue .cal-plan-title { color: var(--red); }
+.cal-plan-row:last-child { border-bottom: none; }
+.cal-plan-check {
+  width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--ink-mute);
+  background: transparent; flex-shrink: 0; margin-top: 1px; cursor: pointer;
+  display: grid; place-items: center; color: transparent;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.cal-plan-check:hover { border-color: var(--sage); }
+.cal-plan-check svg { width: 13px; height: 13px; }
+.cal-plan-check.checked { background: var(--sage); border-color: var(--sage); color: var(--bg); }
+.cal-plan-row.checked .cal-plan-title { color: var(--ink-mute); text-decoration: line-through; text-decoration-color: var(--ink-mute); }
+.cal-plan-row.checked .cal-plan-detail { opacity: 0.6; }
+.cal-task-group-lbl {
+  font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700;
+  color: var(--ink-mute); margin: 14px 0 2px;
+}
+.cal-task-group-lbl:first-child { margin-top: 0; }
+.cal-plan-main { flex: 1; min-width: 0; }
+.cal-plan-title { font-size: 13.5px; color: var(--ink-hi); font-weight: 600; }
+.cal-plan-detail { font-size: 12px; color: var(--ink-dim); margin-top: 2px; white-space: pre-wrap; }
+.cal-plan-meta { font-size: 11px; color: var(--ink-mute); margin-top: 4px; }
+.cal-plan-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.cal-plan-actions .foot-btn { padding: 5px 10px; min-height: 30px; font-size: 11px; }
+.cal-plan-form { display: flex; flex-direction: column; gap: 16px; margin-top: 8px; }
+.cal-field { display: flex; flex-direction: column; gap: 5px; }
+.cal-field-lbl { font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-mute); font-weight: 700; }
+.cal-field-hint { font-size: 11px; color: var(--ink-mute); }
+.cal-field-row { display: flex; gap: 10px; }
+.cal-field-row .cal-field { flex: 1; min-width: 0; }
+.cal-plan-form input[type="text"],
+.cal-plan-form input[type="date"],
+.cal-plan-form input[type="number"],
+.cal-plan-form textarea,
+.cal-plan-form select {
+  width: 100%; background: var(--surf3); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 9px 11px; font-size: 14px; color: var(--ink-hi);
+}
+.cal-plan-form input:focus, .cal-plan-form textarea:focus, .cal-plan-form select:focus { border-color: var(--ink-mute); }
+.cal-plan-form textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
+.cal-plan-section { display: flex; flex-direction: column; gap: 10px; padding-top: 4px; border-top: 1px solid var(--border); }
+.cal-form-check {
+  display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--ink-dim);
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surf3); cursor: pointer;
+}
+.cal-form-check input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--sage); cursor: pointer; }
+.cal-weekday-picker { display: flex; gap: 6px; flex-wrap: wrap; }
+.cal-wd-box {
+  display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--ink-dim);
+  border: 1px solid var(--border); border-radius: 7px; padding: 6px 9px; background: var(--surf3); cursor: pointer;
+}
+.cal-wd-box input[type="checkbox"] { accent-color: var(--sage); cursor: pointer; }
+.cal-link-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cal-link-chip { font-size: 12px; color: var(--ink-hi); background: var(--surf3); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; }
+.cal-link-search { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.cal-link-results { max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+
 .ov-rows { display: flex; flex-direction: column; gap: 2px; }
 .ov-row {
   display: flex; align-items: center; gap: 9px;
@@ -1170,8 +1289,8 @@ body[data-tab="timelines"].tl-chart #view-tlchart { display: flex; flex-directio
 #view-graph.no-nodes #graph-empty { display: flex; }
 
 /* ── Work / time tracking ── */
-body[data-tab="work"] #view-work { display: flex; }
-body[data-tab="work"] #panel { display: none; }
+/* Work tab's #view-work / #panel display rule is auto-generated by
+   registerPageStyles() from the PAGES registry — see rail-nav JS. */
 #wk-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 18px var(--pad) 60px; max-width: 760px; }
 @media (min-width: 1180px) {
   #wk-scroll {
@@ -1283,6 +1402,7 @@ body.timing #wk-toggle { border-color: #4a342e; color: var(--red); }
 .wk-weeknav button:hover:not(:disabled) { color: var(--ink-hi); border-color: var(--ink-mute); }
 .wk-weeknav button:disabled { opacity: 0.35; cursor: default; }
 .wk-weeklabel { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.wk-weeknav .foot-btn { width: auto; height: auto; flex-shrink: 0; }
 .wk-weeklabel .t { font-size: 14.5px; color: var(--ink-hi); font-weight: 600; }
 .wk-weeklabel .note { font-size: 11px; color: var(--ink-dim); }
 .wk-goal-banner {
@@ -1484,8 +1604,8 @@ body[data-tab="hub"] #panel { display: none; }
 .hub-foot button:hover { color: var(--ink-hi); border-color: var(--ink-mute); }
 
 /* ── Oracle ── */
-body[data-tab="oracle"] #view-oracle { display: flex; }
-body[data-tab="oracle"] #panel { display: none; }
+/* Oracle & Calendar tabs' #view-X / #panel display rules are auto-generated
+   by registerPageStyles() from the PAGES registry — see rail-nav JS. */
 
 /* ── Settings (pop-out drawer, available from any page) ── */
 /* ── Global search — command-palette style, searches across pages, entries and timelines ── */
@@ -1680,6 +1800,14 @@ body[data-tab="oracle"] #panel { display: none; }
   color: var(--sage); background: var(--sage-bg); border: 1px solid var(--sage-bd);
   border-radius: calc(5px * var(--radius-scale, 1)); padding: 1px 5px; margin-left: 6px; vertical-align: 1px;
 }
+/* Apply .dbl-clickable to anything that opens/acts on double-click, so the
+   cursor itself hints at the behavior. Toggled off app-wide by the
+   "Double-click cursor hint" preference (STYLE_BOOL_ITEMS / applyDblClickCursor),
+   which adds .no-dblclick-cursor to <html> to fall back to a plain pointer. */
+.dbl-clickable {
+  cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M3 2 L3 18 L7.5 14.3 L10.3 20.5 L13 19.2 L10.2 13.2 L16 12.7 Z" fill="white" stroke="black" stroke-width="1.3" stroke-linejoin="round"/><circle cx="20" cy="5" r="2" fill="black"/><circle cx="20" cy="11" r="2" fill="black"/></svg>') 3 2, pointer;
+}
+html.no-dblclick-cursor .dbl-clickable { cursor: pointer; }
 #view-oracle { flex: 1; min-height: 0; flex-direction: column; }
 .onboard-overlay {
   position: fixed; inset: 0; z-index: 95;
@@ -1963,7 +2091,9 @@ button.tagchip:hover { border-color: var(--ink-mute); color: var(--ink-hi); }
   .rail-btn .lbl { display: block; font-size: 8.5px; }
   #panel { width: 100%; border-right: none; flex: 1; }
   #main { display: none; }
-  body[data-tab="work"] #main, body[data-tab="hub"] #main, body[data-tab="oracle"] #main { display: flex; flex: 1; }
+  body[data-tab="hub"] #main { display: flex; flex: 1; }
+  /* Work/Oracle/Calendar (and any future PAGES entry) get this same rule
+     auto-injected by registerPageStyles() — see rail-nav JS. */
   body[data-tab="timelines"].tl-graph #main, body[data-tab="timelines"].tl-chart #main { display: flex; flex: 1; }
   #now-timing { bottom: calc(58px + env(safe-area-inset-bottom)); right: 12px; }
   body.mobile-editor #panel { display: none !important; }
@@ -2128,14 +2258,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="22"/><circle cx="12" cy="6" r="2.2" fill="currentColor" stroke="none"/><circle cx="12" cy="13" r="2.2" fill="currentColor" stroke="none"/><circle cx="12" cy="20" r="2.2" fill="currentColor" stroke="none"/></svg>
       <span class="lbl">Timelines</span>
     </button>
-    <button class="rail-btn" data-tab="work" aria-label="Work sessions" data-tip="Work">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
-      <span class="lbl">Work</span>
-    </button>
-    <button class="rail-btn" data-tab="oracle" aria-label="Oracle" data-tip="Oracle — connection prompts">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>
-      <span class="lbl">Oracle</span>
-    </button>
+    <div id="rail-pages-slot"></div>
     <button class="rail-btn" id="gsearch-open-btn" aria-label="Search everything" data-tip="Search everything (Ctrl+K)">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
       <span class="lbl">Search</span>
@@ -2490,7 +2613,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
         <div class="ov-sect" id="home-sect-calendar">
           <div class="ov-sect-head"><span>Calendar<span class="beta-tag">Beta</span></span><span class="note" id="hub-calendar-note"></span></div>
           <div class="hub-calendar" id="hub-calendar"></div>
-          <div class="hub-calendar-legend"><span><i class="rest"></i>Rest day</span><span><i class="worked"></i>Worked</span></div>
+          <div class="hub-calendar-legend"><span><i class="rest"></i>Rest day</span><span><i class="worked"></i>Worked</span><span><i class="planned"></i>Planned</span></div>
         </div>
         <div class="ov-sect" id="home-sect-activity">
           <div class="ov-sect-head"><span>Activity</span><span class="note" id="ov-streak"></span></div>
@@ -2525,6 +2648,37 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
         <div class="or-history" id="or-history" style="display:none">
           <div class="ov-sect-head"><span>Recent draws</span></div>
           <div id="or-hist-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-calendar">
+      <div id="cal-scroll">
+        <div class="cal-header">
+          <h2>Calendar<span class="beta-tag" style="letter-spacing:normal">Beta</span></h2>
+          <p class="or-lede">Rest days, worked days, and anything you've planned — one-off or recurring, with links to your entries.</p>
+        </div>
+        <div class="wk-card" id="cal-grid-card">
+          <div class="wk-weeknav">
+            <button id="cal-month-prev" aria-label="Previous month">‹</button>
+            <div class="wk-weeklabel">
+              <span class="t" id="cal-month-title"></span>
+            </div>
+            <button class="foot-btn" id="cal-month-today" style="min-height:30px;padding:5px 10px;font-size:11px">Today</button>
+            <button id="cal-month-next" aria-label="Next month">›</button>
+          </div>
+          <div class="cal-weekday-row"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+          <div id="cal-grid" class="cal-grid"></div>
+        </div>
+        <div class="wk-card" id="cal-detail-card">
+          <div class="ov-sect-head"><span id="cal-detail-title">Day</span><button class="foot-btn" id="cal-add-plan-btn" style="min-height:30px;padding:5px 10px;font-size:11px">+ New plan</button></div>
+          <div class="note" id="cal-detail-daystatus"></div>
+          <div id="cal-detail-plans" style="margin-top:8px"></div>
+        </div>
+        <div class="wk-card" id="cal-tasks-card">
+          <div class="ov-sect-head"><span>Tasks</span><button class="foot-btn" id="cal-add-task-btn" style="min-height:30px;padding:5px 10px;font-size:11px">+ New task</button></div>
+          <div class="note" id="cal-tasks-note"></div>
+          <div id="cal-tasks-list" style="margin-top:8px"></div>
         </div>
       </div>
     </section>
@@ -2762,7 +2916,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
         <div id="set-bgtone-options" class="style-option-row"></div>
         <div class="set-group-title" style="margin-top:18px">Heading font</div>
         <div id="set-headingfont-options" class="style-option-row"></div>
-        <div class="set-group-title" style="margin-top:18px">Motion</div>
+        <div class="set-group-title" style="margin-top:18px">Motion & interaction</div>
         <div id="set-calm-row"></div>
         <div class="set-group-title" style="margin-top:18px">Presets</div>
         <div class="set-cat-desc" style="padding:0 2px 12px">Save just these style choices to a small file, separate from a full backup — handy for carrying your look over to a new save.</div>
@@ -3198,6 +3352,7 @@ function blankState() {
     overachieve: { challenge: null, record: 0, lastClearedWeek: null, checkedThrough: null },
     restDays: {},
     restTokens: 0,
+    plans: [],
     lastGoalWeekAwarded: null,
     goalTokenCheckedThrough: null,
     medalPrestige: {},
@@ -3215,6 +3370,7 @@ function blankState() {
       bgTone: "ink",
       headingFont: "classic",
       calmMode: false,
+      dblClickCursor: true,
       snapshots: { intervalMin: 10, keep: 5 },
       popoutTimerShowTotal: true,
       popoutTimerShowLabel: true,
@@ -3280,6 +3436,38 @@ function normalizeState(s) {
   s.restDays = s.restDays && typeof s.restDays === "object" ? s.restDays : {};
   Object.keys(s.restDays).forEach(function (k) { if (!s.restDays[k]) delete s.restDays[k]; });
   s.restTokens = Math.max(0, +s.restTokens || 0);
+  safe("plans", function () {
+    s.plans = (Array.isArray(s.plans) ? s.plans : []).map(function (p) {
+      var rec = null;
+      if (p.recurrence && typeof p.recurrence === "object") {
+        var freq = ["weekly", "monthly", "every_n_days"].indexOf(p.recurrence.freq) > -1 ? p.recurrence.freq : null;
+        if (freq) {
+          rec = { freq: freq, until: typeof p.recurrence.until === "string" ? p.recurrence.until : null };
+          if (freq === "weekly") rec.weekdays = Array.isArray(p.recurrence.weekdays) && p.recurrence.weekdays.length
+            ? p.recurrence.weekdays.filter(function (n) { return n >= 0 && n <= 6; }) : [new Date(p.date || Date.now()).getDay()];
+          if (freq === "every_n_days") rec.n = Math.max(1, Math.floor(+p.recurrence.n || 1));
+        }
+      }
+      var exceptions = {};
+      if (p.exceptions && typeof p.exceptions === "object") {
+        Object.keys(p.exceptions).forEach(function (k) { if (p.exceptions[k] === "skip") exceptions[k] = "skip"; });
+      }
+      return {
+        id: String(p.id || uid()),
+        title: String(p.title || "").slice(0, 200),
+        detail: String(p.detail || "").slice(0, 4000),
+        date: typeof p.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(p.date) ? p.date : dayKey(),
+        recurrence: rec,
+        exceptions: exceptions,
+        isTask: !!p.isTask,
+        doneDates: Array.isArray(p.doneDates) ? p.doneDates.filter(function (d) { return typeof d === "string"; }) : [],
+        linkedEntryId: typeof p.linkedEntryId === "string" ? p.linkedEntryId : null,
+        color: typeof p.color === "string" ? p.color : null,
+        durationDays: Math.max(0, Math.min(365, Math.floor(+p.durationDays || 0))),
+        createdAt: +p.createdAt || Date.now()
+      };
+    }).filter(function (p) { return p.title || p.detail; });
+  });
   s.lastGoalWeekAwarded = typeof s.lastGoalWeekAwarded === "string" ? s.lastGoalWeekAwarded : null;
   // checkpoint for the rest-token backfill scan below. If a token was
   // already awarded before, resume right after that week — weeks up to and
@@ -3388,7 +3576,7 @@ function normalizeState(s) {
     }
   });
   safe("settings", function () {
-    var RAIL_KEYS = ["pages", "entries", "timelines", "work", "oracle"];
+    var RAIL_KEYS = ["pages", "entries", "timelines"].concat(PAGES.filter(function (p) { return p.tab !== false; }).map(function (p) { return p.key; }));
     var HOME_TILE_KEYS = ["continue", "pages", "entries", "timelines", "work", "oracle"];
     var HOME_SECTION_KEYS = ["calendar", "activity", "pinned", "recent"];
     var WORK_SECTION_KEYS = ["goal", "history", "bylabel", "sessions", "achievements"];
@@ -3413,6 +3601,7 @@ function normalizeState(s) {
       bgTone: ["ink", "slate", "midnight", "black"].indexOf(st.bgTone) > -1 ? st.bgTone : "ink",
       headingFont: ["classic", "modern", "sans"].indexOf(st.headingFont) > -1 ? st.headingFont : "classic",
       calmMode: !!st.calmMode,
+      dblClickCursor: st.dblClickCursor !== false,
       snapshots: {
         intervalMin: Math.min(120, Math.max(1, Math.floor(+((st.snapshots && st.snapshots.intervalMin)) || 10))),
         keep: Math.min(50, Math.max(1, Math.floor(+((st.snapshots && st.snapshots.keep)) || 5)))
@@ -3435,7 +3624,7 @@ function normalizeState(s) {
     };
   });
   if (!s.settings || typeof s.settings !== "object") {
-    s.settings = { hidden: { railTabs: [], homeTiles: [], homeSections: [], workSections: [] }, pastePlainText: false, autoListShortcuts: true, autoLinkUrls: true, accent: DEFAULT_ACCENT, density: "cozy", cornerStyle: "soft", bgTone: "ink", headingFont: "classic", calmMode: false, snapshots: { intervalMin: 10, keep: 5 }, popoutTimerShowTotal: true, popoutTimerShowLabel: true, popoutTimerShowGoal: true, popoutTimerSize: "cozy", popoutPagesShowSearch: true, popoutPagesShowNotebooks: true, popoutPagesSize: "cozy", onboarded: true, sessionCleanupFilters: { after: "", before: "", minMinutes: "", maxMinutes: "", labels: [] } };
+    s.settings = { hidden: { railTabs: [], homeTiles: [], homeSections: [], workSections: [] }, pastePlainText: false, autoListShortcuts: true, autoLinkUrls: true, accent: DEFAULT_ACCENT, density: "cozy", cornerStyle: "soft", bgTone: "ink", headingFont: "classic", calmMode: false, dblClickCursor: true, snapshots: { intervalMin: 10, keep: 5 }, popoutTimerShowTotal: true, popoutTimerShowLabel: true, popoutTimerShowGoal: true, popoutTimerSize: "cozy", popoutPagesShowSearch: true, popoutPagesShowNotebooks: true, popoutPagesSize: "cozy", onboarded: true, sessionCleanupFilters: { after: "", before: "", minMinutes: "", maxMinutes: "", labels: [] } };
   }
   if (!Array.isArray(s.entryTypes) || !s.entryTypes.length) {
     s.entryTypes = TYPE_PRESETS.map(function (t) { return { key: t.key, label: t.label, color: t.color, tags: [] }; });
@@ -4017,6 +4206,93 @@ function setTab(tab, keepDetail) {
   scheduleSave();
   renderAll();
 }
+
+/* ════════════════ PAGE REGISTRY ════════════════
+   Single source of truth for every "room" that behaves like Work / Calendar /
+   Oracle — a simple full-view tab (as opposed to Pages/Entries/Timelines,
+   which share the master-detail #panel layout and their own dedicated
+   wiring). Add a page here and it automatically:
+     - gets a rail nav button (icon + label + tooltip)
+     - becomes a valid tab (boot()'s tab-validity check)
+     - gets a hideable entry in Preferences → Sidebar (and therefore in
+       onboarding's "What's in your sidebar?" step too, for free, since both
+       read RAIL_TOGGLE_ITEMS)
+     - gets a Home tile with a live stat line — unless `homeTile: false`
+     - gets its show/hide CSS rule auto-injected (see registerPageStyles())
+     - gets its render function called by renderAll()
+   Opt out of any single piece by setting that flag explicitly (e.g.
+   `homeTile: false`, or `tab: false` for a page that shouldn't be
+   rail-navigable at all) — nothing here requires touching this list's
+   consumers, only this list. */
+var PAGES = [
+  {
+    key: "work", label: "Work", recommended: true,
+    railIcon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>',
+    railTip: "Work",
+    railDesc: "A session timer, a weekly hour goal, and medals for streaks and hours. On: appears in the sidebar, and the timer pop-out button still works either way. Off: hidden from the sidebar; your logged sessions are kept.",
+    tileGlyph: "◷",
+    tileDesc: "A shortcut tile to the session timer, showing this week's hours. On: shown on Home. Off: the tile disappears from Home; Work itself is unaffected if it's still in your sidebar.",
+    stat: function () {
+      var curGoalSet = state.weeklyGoals.hasOwnProperty(weekKey());
+      var curGoal = curGoalSet ? state.weeklyGoals[weekKey()] : null;
+      var wkHours = weekSeconds() / 3600;
+      return {
+        desc: curGoalSet ? "Track sessions against your weekly goal" : "New week — set a goal in Work",
+        num: wkHours.toFixed(1) + "h", unit: curGoalSet ? "of " + curGoal + "h goal" : "this week",
+        nudge: !curGoalSet && (state.sessions.length > 0 || Object.keys(state.weeklyGoals).length > 0)
+      };
+    },
+    render: function () { renderWorkTab(); }
+  },
+  {
+    key: "calendar", label: "Calendar", beta: true, homeTile: false,
+    railIcon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="16" rx="2"/><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/></svg>',
+    railTip: "Calendar — plans, rest & work days",
+    railDesc: "A full month view of rest days, worked days, and any plans you've added \u2014 with recurring plans and links to entries. On: appears in the sidebar. Off: hidden from the sidebar; your plans and rest days are untouched.",
+    // No Home tile: Calendar already has its own richer "This week" strip as
+    // a Home section (see HOME_SECTION_ITEMS) instead of a plain shortcut tile.
+    render: function () { renderCalendarTab(); }
+  },
+  {
+    key: "oracle", label: "Oracle", beta: true,
+    railIcon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>',
+    railTip: "Oracle — connection prompts",
+    railDesc: "Draws two entries together and asks what connects them — a prompt generator for building relationships in your world. On: appears in the sidebar. Off: hidden from the sidebar; nothing is lost, it's just out of the way until you want it.",
+    tileGlyph: "✶",
+    tileDesc: "A shortcut tile to connection prompts. On: shown on Home. Off: the tile disappears from Home; Oracle itself is unaffected if it's still in your sidebar.",
+    stat: function () {
+      return { desc: "Draw a prompt for what connects two things", num: oracleReady() ? "Ready" : state.entries.length, unit: oracleReady() ? "" : "need 2+" };
+    },
+    render: function () { renderOracle(); }
+  }
+];
+(function renderRailPages() {
+  var slot = $("rail-pages-slot");
+  if (!slot) return;
+  var keys = [];
+  PAGES.filter(function (p) { return p.tab !== false; }).forEach(function (p) {
+    keys.push(p.key);
+    var btn = el("button", "rail-btn");
+    btn.dataset.tab = p.key;
+    btn.setAttribute("aria-label", p.label);
+    btn.setAttribute("data-tip", p.railTip || p.label);
+    btn.innerHTML = (p.railIcon || "") + '<span class="lbl">' + p.label + "</span>";
+    slot.appendChild(btn);
+  });
+  // Auto-generate each page's show/hide CSS (full-view #view-KEY + hiding the
+  // split #panel, plus the mobile two-column #main rule) so a new PAGES entry
+  // never needs its own hand-written stylesheet lines.
+  var css = keys.map(function (k) {
+    return 'body[data-tab="' + k + '"] #view-' + k + '{display:flex}body[data-tab="' + k + '"] #panel{display:none}';
+  }).join("") + "@media (max-width:767px){" + keys.map(function (k) {
+    return 'body[data-tab="' + k + '"] #main{display:flex;flex:1}';
+  }).join("") + "}";
+  var styleEl = document.createElement("style");
+  styleEl.id = "page-registry-styles";
+  styleEl.textContent = css;
+  document.head.appendChild(styleEl);
+})();
+
 document.querySelectorAll(".rail-btn, .mark").forEach(function (b) {
   if (b.dataset && b.dataset.tab) b.addEventListener("click", function () { setTab(b.dataset.tab); });
 });
@@ -6545,6 +6821,10 @@ function renderGraphTab() {
   }
   c.addEventListener("pointerup", up);
   c.addEventListener("pointercancel", up);
+  c.addEventListener("pointermove", function (ev) {
+    if (gDragNode || gPanStart || gPinch) return;
+    c.classList.toggle("dbl-clickable", !!graphHit(pos(ev).x, pos(ev).y));
+  });
   c.addEventListener("wheel", function (ev) {
     ev.preventDefault();
     var p = pos(ev);
@@ -8260,41 +8540,52 @@ function renderHubCalendar() {
   wrap.innerHTML = "";
   var todayKey = dayKey();
   var ws = weekStartTs();
-  var restCount = 0, workedCount = 0;
+  var restCount = 0, workedCount = 0, plannedCount = 0;
   var seq = [];
   for (var i = 0; i < 7; i++) {
     var ts = ws + i * 86400000;
     var k = dayKey(ts);
     var rested = isRestedDay(k);
     var worked = !rested && dayHasWork(k);
+    var instances = planInstancesForDay(k);
     if (rested) restCount++;
     if (worked) workedCount++;
-    seq.push({ i: i, ts: ts, k: k, rested: rested, worked: worked, today: k === todayKey, future: k > todayKey });
+    if (instances.length) plannedCount++;
+    seq.push({ i: i, ts: ts, k: k, rested: rested, worked: worked, instances: instances, today: k === todayKey, future: k > todayKey });
   }
   seq.forEach(function (o) {
     var cls = "cal-day" + (o.rested ? " is-rest" : "") + (o.worked ? " is-worked" : "") + (o.today ? " is-today" : "") + (o.future ? " is-future" : "");
-    var cell = el(o.future ? "div" : "button", cls);
-    if (!o.future) cell.type = "button";
+    var cell = el("button", cls);
+    cell.type = "button";
     var d = new Date(o.ts);
     cell.appendChild(el("span", "cal-lbl", CAL_LABELS[o.i]));
     cell.appendChild(el("span", "cal-mark", String(d.getDate())));
+    if (o.instances.length) {
+      var dots = el("div", "cal-day-dots");
+      o.instances.slice(0, 3).forEach(function (inst) {
+        var done = inst.plan.doneDates.indexOf(inst.occStart) > -1;
+        var dot = el("span", "cal-plan-dot" + (done ? " done" : ""));
+        if (inst.plan.color) dot.style.background = inst.plan.color;
+        dots.appendChild(dot);
+      });
+      cell.appendChild(dots);
+    }
     var dateLabel = d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
-    var tipHtml = "<b>" + dateLabel + "</b><br>" + (o.rested ? "Rest day" : o.worked ? "Worked" : o.future ? "Not yet here" : "Nothing logged");
+    var planNames = o.instances.slice(0, 4).map(function (inst) { return inst.plan.title || "(untitled)"; }).join(", ");
+    var statusText = o.future ? "Upcoming" : (o.rested ? "Rest day" : o.worked ? "Worked" : "Nothing logged");
+    var tipHtml = "<b>" + dateLabel + "</b><br>" + statusText + (planNames ? "<br>" + planNames : "");
     cell.addEventListener("mouseenter", function () { showTip(cell, tipHtml); });
     cell.addEventListener("mouseleave", hideTip);
-    if (!o.future) {
-      cell.addEventListener("click", function () {
-        hideTip();
-        wkWeekOffset = 0;
-        wkFilter = { type: "day", value: o.k, label: d.toLocaleDateString() };
-        setTab("work");
-      });
-    }
+    cell.addEventListener("click", function () {
+      hideTip();
+      openCalendarOnDay(o.k);
+    });
     wrap.appendChild(cell);
   });
   var bits = [];
   if (restCount) bits.push(restCount + " rest day" + (restCount === 1 ? "" : "s"));
   if (workedCount) bits.push(workedCount + " worked");
+  if (plannedCount) bits.push(plannedCount + " planned");
   $("hub-calendar-note").textContent = bits.length ? bits.join(" · ") : "Nothing logged this week yet";
 }
 function renderHub() {
@@ -8314,22 +8605,16 @@ function renderHub() {
   $("hub-sub").textContent = total
     ? state.entries.length + " entries · " + state.pages.length + " pages · " + countEras() + " eras across " + state.timelines.length + " timeline" + (state.timelines.length === 1 ? "" : "s")
     : "An empty world, waiting. Start anywhere.";
-  var curWkKey = weekKey();
-  var curGoalSet = state.weeklyGoals.hasOwnProperty(curWkKey);
-  var curGoal = curGoalSet ? state.weeklyGoals[curWkKey] : null;
-  var wkHours = weekSeconds() / 3600;
-  var wkNudge = !curGoalSet && (state.sessions.length > 0 || Object.keys(state.weeklyGoals).length > 0);
   var tiles = [
     { key: "continue", tab: null, accent: true, glyph: "↺", label: "Continue", desc: le ? "Back to your last edit" : "Nothing edited yet — jump in",
       num: le ? (le.name.length > 16 ? le.name.slice(0, 15) + "…" : le.name) : "—", unit: le ? le.kind : "", go: goContinue },
     { key: "pages", tab: "pages", glyph: "✎", label: "Pages", desc: "Notes, lore, and long-form writing", num: state.pages.length, unit: state.pages.length === 1 ? "page" : "pages" },
     { key: "entries", tab: "entries", glyph: "❧", label: "Entries", desc: "Your world bible — people, places, powers", num: state.entries.length, unit: state.entries.length === 1 ? "entry" : "entries" },
-    { key: "timelines", tab: "timelines", glyph: "│", label: "Timelines", desc: "Epochs, eras, and the relationship map", num: countEras(), unit: countEras() === 1 ? "era" : "eras" },
-    { key: "work", tab: "work", glyph: "◷", label: "Work",
-      desc: curGoalSet ? "Track sessions against your weekly goal" : "New week — set a goal in Work",
-      num: wkHours.toFixed(1) + "h", unit: curGoalSet ? "of " + curGoal + "h goal" : "this week", nudge: wkNudge },
-    { key: "oracle", tab: "oracle", glyph: "✶", label: "Oracle", desc: "Draw a prompt for what connects two things", num: oracleReady() ? "Ready" : state.entries.length, unit: oracleReady() ? "" : "need 2+", beta: true }
-  ];
+    { key: "timelines", tab: "timelines", glyph: "│", label: "Timelines", desc: "Epochs, eras, and the relationship map", num: countEras(), unit: countEras() === 1 ? "era" : "eras" }
+  ].concat(PAGES.filter(function (p) { return p.tab !== false && p.homeTile !== false; }).map(function (p) {
+    var s = p.stat ? p.stat() : {};
+    return { key: p.key, tab: p.key, glyph: p.tileGlyph, label: p.label, beta: p.beta, desc: s.desc, num: s.num, unit: s.unit, nudge: s.nudge };
+  }));
   var hiddenTiles = state.settings.hidden.homeTiles || [];
   var wrap = $("hub-tiles");
   wrap.innerHTML = "";
@@ -8356,7 +8641,511 @@ function renderHub() {
   renderHubStats();
 }
 
-/* ════════════════ ORACLE ════════════════ */
+/* ════════════════ CALENDAR ════════════════ */
+var calViewTs = monthStartTs(Date.now());
+var calSelectedDay = dayKey();
+var CAL_WD_NATIVE = [1, 2, 3, 4, 5, 6, 0]; // Mon..Sun, paired with CAL_LABELS
+
+function monthStartTs(ts) {
+  var d = new Date(ts);
+  return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+}
+function dayKeyToTs(k) {
+  var p = k.split("-").map(Number);
+  return new Date(p[0], p[1] - 1, p[2], 12, 0, 0).getTime();
+}
+/* Jumps the Calendar tab to the month containing `k` and selects that day —
+   used by the Home calendar strip so tapping a day there opens its detail here. */
+function openCalendarOnDay(k) {
+  calViewTs = monthStartTs(dayKeyToTs(k));
+  calSelectedDay = k;
+  setTab("calendar");
+}
+/* Full Mon-start month grid for `viewTs`, including the leading/trailing days
+   from adjacent months needed to fill whole weeks. */
+function calMonthDays(viewTs) {
+  var d = new Date(viewTs);
+  var y = d.getFullYear(), m = d.getMonth();
+  var first = new Date(y, m, 1);
+  var last = new Date(y, m + 1, 0);
+  var firstDow = (first.getDay() + 6) % 7;
+  var lastDow = (last.getDay() + 6) % 7;
+  var totalDays = firstDow + last.getDate() + (6 - lastDow);
+  var days = [];
+  for (var i = 0; i < totalDays; i++) {
+    var dt = new Date(y, m, 1 - firstDow + i);
+    days.push({ ts: dt.getTime(), inMonth: dt.getMonth() === m });
+  }
+  return days;
+}
+/* Does `plan` land on day key `k`? Handles one-off dates, the three
+   recurrence rules, an optional end date, and per-instance skip exceptions. */
+function addDaysToKey(k, n) { return dayKey(dayKeyToTs(k) + n * 86400000); }
+function isValidOccurrenceStart(plan, k) {
+  if (k < plan.date) return false;
+  if (!plan.recurrence) return k === plan.date;
+  var rec = plan.recurrence;
+  if (rec.until && k > rec.until) return false;
+  if (rec.freq === "weekly") {
+    var dow = (new Date(dayKeyToTs(k)).getDay() + 6) % 7;
+    var wants = (rec.weekdays && rec.weekdays.length ? rec.weekdays : [new Date(dayKeyToTs(plan.date)).getDay()])
+      .map(function (n) { return (n + 6) % 7; });
+    return wants.indexOf(dow) > -1;
+  }
+  if (rec.freq === "monthly") {
+    return new Date(dayKeyToTs(k)).getDate() === new Date(dayKeyToTs(plan.date)).getDate();
+  }
+  if (rec.freq === "every_n_days") {
+    var diff = Math.round((dayKeyToTs(k) - dayKeyToTs(plan.date)) / 86400000);
+    return diff >= 0 && diff % Math.max(1, rec.n || 1) === 0;
+  }
+  return false;
+}
+/* Which occurrence (identified by its start-date key) of `plan` covers day
+   `k`? Multi-day plans (durationDays > 0) can cover a day even though the
+   occurrence itself started earlier — walk backwards from k through the
+   plan's span length looking for a valid, non-skipped start. Returns null if
+   no occurrence covers k. */
+function occurrenceStartForDay(plan, k) {
+  var duration = Math.max(0, plan.durationDays || 0);
+  for (var offset = 0; offset <= duration; offset++) {
+    var cand = addDaysToKey(k, -offset);
+    if (isValidOccurrenceStart(plan, cand) && !(plan.exceptions && plan.exceptions[cand] === "skip")) return cand;
+  }
+  return null;
+}
+function planOccursOn(plan, k) { return occurrenceStartForDay(plan, k) !== null; }
+/* Every plan instance touching day `k`, with the resolved occurrence start
+   (the canonical key for done/skip state) and whether k is the first/last
+   day of that instance's span. */
+function planInstancesForDay(k) {
+  return state.plans.map(function (p) {
+    var start = occurrenceStartForDay(p, k);
+    if (!start) return null;
+    var duration = Math.max(0, p.durationDays || 0);
+    return { plan: p, occStart: start, duration: duration, isStart: start === k, isEnd: addDaysToKey(start, duration) === k };
+  }).filter(Boolean);
+}
+function plansForDay(k) { return planInstancesForDay(k).map(function (inst) { return inst.plan; }); }
+function recurrenceLabel(rec) {
+  if (rec.freq === "weekly") {
+    var names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    return "Weekly on " + (rec.weekdays || []).map(function (n) { return names[n]; }).join(", ");
+  }
+  if (rec.freq === "monthly") return "Monthly";
+  if (rec.freq === "every_n_days") return "Every " + rec.n + " day" + (rec.n === 1 ? "" : "s");
+  return "Repeats";
+}
+function renderCalendarTab() {
+  var todayKey = dayKey();
+  $("cal-month-title").textContent = new Date(calViewTs).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  var grid = $("cal-grid");
+  grid.innerHTML = "";
+  calMonthDays(calViewTs).forEach(function (day) {
+    var k = dayKey(day.ts);
+    var isPast = k <= todayKey;
+    var rested = isPast && isRestedDay(k);
+    var worked = isPast && !rested && dayHasWork(k);
+    var instances = planInstancesForDay(k);
+    var cls = "cal-cell dbl-clickable" + (day.inMonth ? "" : " is-outside") + (k === todayKey ? " is-today" : "")
+      + (k === calSelectedDay ? " is-selected" : "") + (rested ? " is-rest" : "") + (worked ? " is-worked" : "");
+    var cell = el("button", cls);
+    cell.type = "button";
+    cell.setAttribute("aria-label", new Date(day.ts).toLocaleDateString());
+    cell.appendChild(el("span", "cal-cell-date", String(new Date(day.ts).getDate())));
+    if (rested || worked) cell.appendChild(el("span", "cal-cell-status"));
+    if (instances.length) {
+      var dots = el("div", "cal-cell-dots");
+      instances.slice(0, 4).forEach(function (inst) {
+        var p = inst.plan;
+        var done = p.doneDates.indexOf(inst.occStart) > -1;
+        var overdue = p.isTask && !done && addDaysToKey(inst.occStart, inst.duration) < todayKey;
+        var mark = el("span", (inst.duration > 0 ? "cal-plan-bar" : "cal-plan-dot") + (done ? " done" : "") + (overdue ? " overdue" : ""));
+        if (p.color) mark.style.background = p.color;
+        dots.appendChild(mark);
+      });
+      if (instances.length > 4) dots.appendChild(el("span", "cal-plan-more", "+" + (instances.length - 4)));
+      cell.appendChild(dots);
+    }
+    var addBtn = el("span", "cal-cell-add", "+");
+    addBtn.setAttribute("role", "button");
+    addBtn.setAttribute("tabindex", "0");
+    addBtn.setAttribute("aria-label", "Add a plan for this day");
+    addBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      calSelectedDay = k;
+      hideTip();
+      openPlanModal(null, k);
+    });
+    cell.appendChild(addBtn);
+    var dateLabel = new Date(day.ts).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+    var statusText = !isPast ? (k === todayKey ? "Today" : "Upcoming") : (rested ? "Rest day" : worked ? "Worked" : "Nothing logged");
+    var planNames = instances.slice(0, 4).map(function (inst) { return (inst.plan.title || "(untitled)") + (inst.duration > 0 ? " (multi-day)" : ""); }).join(", ") + (instances.length > 4 ? "\u2026" : "");
+    var tipHtml = "<b>" + dateLabel + "</b><br>" + statusText + (planNames ? "<br>" + planNames : "");
+    cell.addEventListener("mouseenter", function () { showTip(cell, tipHtml); });
+    cell.addEventListener("mouseleave", hideTip);
+    cell.addEventListener("click", function () { calSelectedDay = k; hideTip(); renderCalendarTab(); });
+    cell.addEventListener("dblclick", function () {
+      calSelectedDay = k;
+      hideTip();
+      openPlanModal(null, k);
+    });
+    grid.appendChild(cell);
+  });
+  renderCalDetail();
+  renderCalTasks();
+}
+function renderCalDetail() {
+  var k = calSelectedDay;
+  var card = $("cal-detail-card");
+  if (!k) { card.style.display = "none"; return; }
+  card.style.display = "";
+  var todayKey = dayKey();
+  $("cal-detail-title").textContent = new Date(dayKeyToTs(k)).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+  var rested = isRestedDay(k), worked = !rested && dayHasWork(k);
+  $("cal-detail-daystatus").textContent = k > todayKey ? "Upcoming" : rested ? "Rest day" : worked ? "Worked that day" : "Nothing logged that day";
+  var list = $("cal-detail-plans");
+  list.innerHTML = "";
+  var instances = planInstancesForDay(k);
+  if (!instances.length) { list.appendChild(el("div", "empty", "No plans for this day yet.")); return; }
+  instances.forEach(function (inst) {
+    var p = inst.plan, occStart = inst.occStart;
+    var done = p.doneDates.indexOf(occStart) > -1;
+    var overdue = p.isTask && !done && addDaysToKey(occStart, inst.duration) < todayKey;
+    var row = el("div", "cal-plan-row" + (overdue ? " overdue" : "") + (done ? " checked" : ""));
+    if (p.isTask) {
+      var cb = el("button", "cal-plan-check" + (done ? " checked" : ""));
+      cb.setAttribute("aria-label", "Toggle done");
+      cb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+      cb.addEventListener("click", function () { togglePlanDone(p.id, occStart); });
+      row.appendChild(cb);
+    }
+    var main = el("div", "cal-plan-main");
+    main.appendChild(el("div", "cal-plan-title", p.title || "(untitled plan)"));
+    if (p.detail) main.appendChild(el("div", "cal-plan-detail", p.detail));
+    var metaParts = [];
+    if (overdue) { var odSpan = el("span", null, "Overdue"); odSpan.style.color = "var(--red)"; metaParts.push(odSpan); }
+    if (inst.duration > 0) {
+      var spanLabel = new Date(dayKeyToTs(occStart)).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+        + " \u2013 " + new Date(dayKeyToTs(addDaysToKey(occStart, inst.duration))).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      metaParts.push(document.createTextNode("Spans " + spanLabel));
+    }
+    if (p.recurrence) metaParts.push(document.createTextNode(recurrenceLabel(p.recurrence)));
+    if (p.linkedEntryId) { var linked = entById(p.linkedEntryId); if (linked) metaParts.push(document.createTextNode("linked: " + linked.name)); }
+    if (metaParts.length) {
+      var metaEl = el("div", "cal-plan-meta");
+      metaParts.forEach(function (node, i) {
+        if (i > 0) metaEl.appendChild(document.createTextNode(" \u00b7 "));
+        metaEl.appendChild(node);
+      });
+      main.appendChild(metaEl);
+    }
+    row.appendChild(main);
+    var actions = el("div", "cal-plan-actions");
+    var editBtn = el("button", "foot-btn", "Edit");
+    editBtn.addEventListener("click", function () { openPlanModal(p, occStart); });
+    var delBtn = el("button", "foot-btn", "Delete");
+    delBtn.addEventListener("click", function () { confirmDeletePlan(p, occStart); });
+    actions.append(editBtn, delBtn);
+    row.appendChild(actions);
+    list.appendChild(row);
+  });
+}
+/* All task-plan instances whose occurrence start falls within [startTs,
+   endTs] — used for the Tasks list so tasks can be reviewed and checked off
+   without first hunting down which day they're on. Bounded window keeps
+   open-ended recurring tasks from generating occurrences forever. */
+function taskInstancesInRange(startTs, endTs) {
+  var out = [];
+  state.plans.filter(function (p) { return p.isTask; }).forEach(function (p) {
+    for (var ts = startTs; ts <= endTs; ts += 86400000) {
+      var k = dayKey(ts);
+      if (isValidOccurrenceStart(p, k) && !(p.exceptions && p.exceptions[k] === "skip")) {
+        out.push({ plan: p, occStart: k, duration: Math.max(0, p.durationDays || 0) });
+      }
+    }
+  });
+  return out;
+}
+function renderCalTasks() {
+  var todayKey = dayKey();
+  var todayTs = dayKeyToTs(todayKey);
+  var instances = taskInstancesInRange(todayTs - 60 * 86400000, todayTs + 180 * 86400000);
+  var overdue = [], dueToday = [], upcoming = [], done = [];
+  instances.forEach(function (inst) {
+    var dueEnd = addDaysToKey(inst.occStart, inst.duration);
+    var isDone = inst.plan.doneDates.indexOf(inst.occStart) > -1;
+    if (isDone) { done.push(inst); return; }
+    if (dueEnd < todayKey) overdue.push(inst);
+    else if (inst.occStart <= todayKey && dueEnd >= todayKey) dueToday.push(inst);
+    else upcoming.push(inst);
+  });
+  overdue.sort(function (a, b) { return a.occStart < b.occStart ? -1 : 1; });
+  upcoming.sort(function (a, b) { return a.occStart < b.occStart ? -1 : 1; });
+  done.sort(function (a, b) { return a.occStart > b.occStart ? -1 : 1; });
+  var list = $("cal-tasks-list");
+  list.innerHTML = "";
+  var pendingCount = overdue.length + dueToday.length + upcoming.length;
+  $("cal-tasks-note").textContent = pendingCount
+    ? pendingCount + " open task" + (pendingCount === 1 ? "" : "s") + (overdue.length ? " \u00b7 " + overdue.length + " overdue" : "")
+    : "No open tasks \u2014 add one, or add a plan and mark it as a task.";
+  function group(label, items) {
+    if (!items.length) return;
+    list.appendChild(el("div", "cal-task-group-lbl", label));
+    items.forEach(function (inst) { list.appendChild(taskRowEl(inst)); });
+  }
+  function taskRowEl(inst) {
+    var p = inst.plan, occStart = inst.occStart;
+    var done2 = p.doneDates.indexOf(occStart) > -1;
+    var dueEnd = addDaysToKey(occStart, inst.duration);
+    var overdue2 = !done2 && dueEnd < todayKey;
+    var row = el("div", "cal-plan-row" + (overdue2 ? " overdue" : "") + (done2 ? " checked" : ""));
+    var cb = el("button", "cal-plan-check" + (done2 ? " checked" : ""));
+    cb.setAttribute("aria-label", "Toggle done");
+    cb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+    cb.addEventListener("click", function () { togglePlanDone(p.id, occStart); });
+    row.appendChild(cb);
+    var main = el("div", "cal-plan-main");
+    main.appendChild(el("div", "cal-plan-title", p.title || "(untitled task)"));
+    var dateLbl = new Date(dayKeyToTs(occStart)).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+      + (inst.duration > 0 ? "\u2013" + new Date(dayKeyToTs(dueEnd)).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "");
+    var metaEl = el("div", "cal-plan-meta");
+    var metaBits = [dateLbl];
+    if (p.recurrence) metaBits.push(recurrenceLabel(p.recurrence));
+    if (p.linkedEntryId) { var linked = entById(p.linkedEntryId); if (linked) metaBits.push("linked: " + linked.name); }
+    metaEl.textContent = metaBits.join(" \u00b7 ");
+    main.appendChild(metaEl);
+    row.appendChild(main);
+    var actions = el("div", "cal-plan-actions");
+    var jumpBtn = el("button", "foot-btn", "View");
+    jumpBtn.addEventListener("click", function () {
+      calViewTs = monthStartTs(dayKeyToTs(occStart));
+      calSelectedDay = occStart;
+      renderCalendarTab();
+    });
+    var editBtn = el("button", "foot-btn", "Edit");
+    editBtn.addEventListener("click", function () { openPlanModal(p, occStart); });
+    var delBtn = el("button", "foot-btn", "Delete");
+    delBtn.addEventListener("click", function () { confirmDeletePlan(p, occStart); });
+    actions.append(jumpBtn, editBtn, delBtn);
+    row.appendChild(actions);
+    return row;
+  }
+  group("Overdue", overdue);
+  group("Today", dueToday);
+  group("Upcoming", upcoming);
+  if (done.length) group("Completed", done.slice(0, 10));
+}
+$("cal-add-task-btn").addEventListener("click", function () { openPlanModal(null, calSelectedDay || dayKey(), true); });
+
+function togglePlanDone(id, k) {
+  var p = state.plans.find(function (x) { return x.id === id; });
+  if (!p) return;
+  var i = p.doneDates.indexOf(k);
+  if (i > -1) p.doneDates.splice(i, 1); else p.doneDates.push(k);
+  persist(); renderCalendarTab();
+}
+function confirmDeletePlan(p, k) {
+  if (p.recurrence) {
+    openModal("Delete this plan", "\u201c" + (p.title || "Untitled") + "\u201d repeats. What would you like to remove?");
+    var row = $modal("modal-row");
+    var cancel = el("button", null, "Cancel");
+    cancel.addEventListener("click", closeModal);
+    var skipOne = el("button", null, "Just this day");
+    skipOne.addEventListener("click", function () {
+      p.exceptions = p.exceptions || {};
+      p.exceptions[k] = "skip";
+      persist(); closeModal(); renderCalendarTab();
+      toast("Skipped that occurrence.");
+    });
+    var delAll = el("button", "danger", "Delete entire series");
+    delAll.addEventListener("click", function () {
+      state.plans = state.plans.filter(function (x) { return x.id !== p.id; });
+      persist(); closeModal(); renderCalendarTab();
+      toast("Plan deleted.");
+    });
+    row.append(cancel, skipOne, delAll);
+  } else {
+    confirmModal("Delete this plan", "Delete \u201c" + (p.title || "Untitled") + "\u201d? This can't be undone.", "Delete", function () {
+      state.plans = state.plans.filter(function (x) { return x.id !== p.id; });
+      persist(); renderCalendarTab();
+      toast("Plan deleted.");
+    });
+  }
+}
+function openPlanModal(existing, defaultDateKey, presetTask) {
+  var isEdit = !!existing;
+  openModal(isEdit ? "Edit plan" : "New plan", "");
+  var extra = $modal("modal-extra");
+  var form = el("div", "cal-plan-form");
+  function field(labelText, inputEl) {
+    var wrap = el("div", "cal-field");
+    wrap.appendChild(el("label", "cal-field-lbl", labelText));
+    wrap.appendChild(inputEl);
+    return wrap;
+  }
+
+  var titleInp = el("input"); titleInp.type = "text"; titleInp.placeholder = "e.g. Finish chapter 3";
+  titleInp.value = existing ? existing.title : "";
+
+  var detailInp = el("textarea"); detailInp.placeholder = "Notes (optional)"; detailInp.rows = 3;
+  detailInp.value = existing ? existing.detail : "";
+
+  var dateInp = el("input"); dateInp.type = "date";
+  dateInp.value = existing ? existing.date : (defaultDateKey || dayKey());
+
+  var spanEndInp = el("input"); spanEndInp.type = "date";
+  spanEndInp.value = existing && existing.durationDays ? addDaysToKey(existing.date, existing.durationDays) : "";
+
+  var taskRow = el("label", "cal-form-check");
+  var taskCb = el("input"); taskCb.type = "checkbox"; taskCb.checked = existing ? !!existing.isTask : !!presetTask;
+  taskRow.append(taskCb, document.createTextNode("Track as a task, with a done / not done checkbox"));
+
+  var repeatSel = el("select");
+  [["none", "Doesn't repeat"], ["weekly", "Weekly"], ["monthly", "Monthly"], ["every_n_days", "Every N days"]].forEach(function (o) {
+    var opt = el("option", null, o[1]); opt.value = o[0]; repeatSel.appendChild(opt);
+  });
+  repeatSel.value = existing && existing.recurrence ? existing.recurrence.freq : "none";
+
+  var weeklyWrap = el("div", "cal-weekday-picker");
+  var wdBoxes = [];
+  var existingWds = existing && existing.recurrence && existing.recurrence.weekdays;
+  CAL_WD_NATIVE.forEach(function (nativeDow, idx) {
+    var lbl = el("label", "cal-wd-box");
+    var cb = el("input"); cb.type = "checkbox"; cb.value = String(nativeDow);
+    cb.checked = existingWds ? existingWds.indexOf(nativeDow) > -1 : (nativeDow === new Date(dayKeyToTs(dateInp.value)).getDay());
+    lbl.append(cb, document.createTextNode(CAL_LABELS[idx]));
+    wdBoxes.push(cb);
+    weeklyWrap.appendChild(lbl);
+  });
+
+  var nInp = el("input"); nInp.type = "number"; nInp.min = "1";
+  nInp.value = existing && existing.recurrence && existing.recurrence.freq === "every_n_days" ? existing.recurrence.n : 2;
+
+  var untilInp = el("input"); untilInp.type = "date";
+  untilInp.value = existing && existing.recurrence && existing.recurrence.until ? existing.recurrence.until : "";
+
+  var weeklyField = field("Repeats on", weeklyWrap);
+  var everyNField = field("Every N days", nInp);
+  var untilField = field("Ends on (optional)", untilInp);
+  function syncRepeatUI() {
+    weeklyField.style.display = repeatSel.value === "weekly" ? "flex" : "none";
+    everyNField.style.display = repeatSel.value === "every_n_days" ? "flex" : "none";
+    untilField.style.display = repeatSel.value === "none" ? "none" : "flex";
+  }
+  repeatSel.addEventListener("change", syncRepeatUI);
+  syncRepeatUI();
+
+  var linkedId = existing ? existing.linkedEntryId : null;
+  var linkSearchOpen = false;
+  var linkWrap = el("div", "cal-link-row");
+  function renderLinkWrap() {
+    linkWrap.innerHTML = "";
+    if (linkSearchOpen) {
+      var searchWrap = el("div", "cal-link-search");
+      var inp = el("input"); inp.type = "text"; inp.placeholder = "Filter by name\u2026"; inp.setAttribute("aria-label", "Filter entries");
+      var listBox = el("div", "cal-link-results");
+      function fill() {
+        var q = inp.value.trim().toLowerCase();
+        listBox.innerHTML = "";
+        var opts = state.entries.filter(function (e) { return !q || (e.name || "").toLowerCase().indexOf(q) > -1; }).slice(0, 20);
+        if (!opts.length) { listBox.appendChild(el("div", "empty", "No matching entries.")); return; }
+        opts.forEach(function (e) {
+          var pr = el("button", "pick-row");
+          var dot = el("span", "type-dot"); dot.style.background = typeByKey(e.type).color;
+          pr.append(dot, el("span", null, e.name || "Unnamed"));
+          pr.addEventListener("click", function () { linkedId = e.id; linkSearchOpen = false; renderLinkWrap(); });
+          listBox.appendChild(pr);
+        });
+      }
+      inp.addEventListener("input", fill);
+      var cancelSearch = el("button", "foot-btn", "Cancel");
+      cancelSearch.addEventListener("click", function () { linkSearchOpen = false; renderLinkWrap(); });
+      searchWrap.append(inp, listBox, cancelSearch);
+      linkWrap.appendChild(searchWrap);
+      fill();
+      inp.focus();
+    } else if (linkedId) {
+      var linked = entById(linkedId);
+      linkWrap.append(el("span", "cal-link-chip", linked ? linked.name : "(missing entry)"));
+      var unlink = el("button", "foot-btn", "Unlink");
+      unlink.addEventListener("click", function () { linkedId = null; renderLinkWrap(); });
+      linkWrap.appendChild(unlink);
+    } else {
+      var linkBtn = el("button", "foot-btn", "Link an entry\u2026");
+      linkBtn.addEventListener("click", function () { linkSearchOpen = true; renderLinkWrap(); });
+      linkWrap.appendChild(linkBtn);
+    }
+  }
+  renderLinkWrap();
+
+  var dateRow = el("div", "cal-field-row");
+  dateRow.append(field("Start date", dateInp), field("Through (optional)", spanEndInp));
+
+  var scheduleSection = el("div", "cal-plan-section");
+  scheduleSection.append(field("Repeat", repeatSel), weeklyField, everyNField, untilField);
+
+  var linkSection = el("div", "cal-plan-section");
+  linkSection.append(el("div", "cal-field-lbl", "Linked entry"), linkWrap);
+
+  form.append(field("Title", titleInp), field("Notes", detailInp), dateRow, taskRow, scheduleSection, linkSection);
+  extra.append(form);
+
+  var row = $modal("modal-row");
+  var cancel = el("button", null, "Cancel");
+  cancel.addEventListener("click", closeModal);
+  var save = el("button", "primary", isEdit ? "Save" : "Add plan");
+  save.addEventListener("click", function () {
+    var title = titleInp.value.trim();
+    var detail = detailInp.value.trim();
+    if (!title && !detail) { toast("Give the plan a title or some detail."); return; }
+    var date = dateInp.value || dayKey();
+    var durationDays = 0;
+    if (spanEndInp.value && spanEndInp.value > date) {
+      durationDays = Math.round((dayKeyToTs(spanEndInp.value) - dayKeyToTs(date)) / 86400000);
+    }
+    var rec = null;
+    if (repeatSel.value === "weekly") {
+      var chosen = wdBoxes.filter(function (cb) { return cb.checked; }).map(function (cb) { return +cb.value; });
+      rec = { freq: "weekly", weekdays: chosen.length ? chosen : [new Date(dayKeyToTs(date)).getDay()], until: untilInp.value || null };
+    } else if (repeatSel.value === "monthly") {
+      rec = { freq: "monthly", until: untilInp.value || null };
+    } else if (repeatSel.value === "every_n_days") {
+      rec = { freq: "every_n_days", n: Math.max(1, Math.floor(+nInp.value || 1)), until: untilInp.value || null };
+    }
+    if (existing) {
+      existing.title = title; existing.detail = detail; existing.date = date; existing.durationDays = durationDays;
+      existing.recurrence = rec; existing.isTask = taskCb.checked; existing.linkedEntryId = linkedId;
+      if (!rec) existing.exceptions = {};
+    } else {
+      state.plans.push({
+        id: uid(), title: title, detail: detail, date: date, durationDays: durationDays, recurrence: rec, exceptions: {},
+        isTask: taskCb.checked, doneDates: [], linkedEntryId: linkedId, color: null, createdAt: Date.now()
+      });
+    }
+    persist(); closeModal(); renderCalendarTab();
+    toast(isEdit ? "Plan updated." : "Plan added.");
+  });
+  row.append(cancel, save);
+}
+$("cal-month-prev").addEventListener("click", function () {
+  var d = new Date(calViewTs);
+  calViewTs = new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime();
+  renderCalendarTab();
+});
+$("cal-month-next").addEventListener("click", function () {
+  var d = new Date(calViewTs);
+  calViewTs = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+  renderCalendarTab();
+});
+$("cal-month-today").addEventListener("click", function () {
+  calViewTs = monthStartTs(Date.now());
+  calSelectedDay = dayKey();
+  renderCalendarTab();
+});
+$("cal-add-plan-btn").addEventListener("click", function () { openPlanModal(null, calSelectedDay); });
+
+
 var ORACLE_CLOSERS = ["Where do those meet?", "What does that cost them?", "Who gives way first?", "What happens the day they cross?", "What is the unspoken thing between them?", "Which one bends?", "What do they want from each other?"];
 var ORACLE_TYPE_PROMPTS = {
   "character::character": ["Put these two in a room. Who speaks first, and who refuses to?", "They want different things from the same moment."],
@@ -8661,13 +9450,14 @@ var SNAPSHOT_PARTS = [
   { key: "entries", label: "Entries", fields: ["entries", "entryTypes", "tagPresets"] },
   { key: "timelines", label: "Timelines", fields: ["timelines"] },
   { key: "work", label: "Work sessions & goals", fields: ["sessions", "weeklyTarget", "weeklyGoals", "restDays", "restTokens", "medalProgress", "bestStreak", "overachieve", "medalPrestige", "lastGoalWeekAwarded", "goalTokenCheckedThrough", "medalBest", "medalHistory"] },
+  { key: "calendar", label: "Calendar plans", fields: ["plans"] },
   { key: "settings", label: "Preferences", fields: ["settings"] }
 ];
 function snapshotCounts(s) {
   return {
     notebooks: (s.notebooks || []).length, pages: (s.pages || []).length,
     entries: (s.entries || []).length, timelines: (s.timelines || []).length,
-    sessions: (s.sessions || []).length
+    sessions: (s.sessions || []).length, plans: (s.plans || []).length
   };
 }
 function renderSnapshotsSettings() {
@@ -8890,20 +9680,20 @@ function openSnapshotViewer(snap) {
 var RAIL_TOGGLE_ITEMS = [
   { key: "pages", label: "Pages", desc: "Rich-text notes grouped into notebooks — your main writing space. On: appears as a room in the sidebar. Off: the room disappears from the sidebar, but nothing you've written is deleted — turn it back on any time to see it again.", recommended: true },
   { key: "entries", label: "Entries", desc: "Your world bible — characters, places, factions, and more, with attributes and links between them. On: appears in the sidebar. Off: hidden from the sidebar; your entries are untouched and come back the moment you re-enable it.", recommended: true },
-  { key: "timelines", label: "Timelines", desc: "Epochs and eras with dated events, plus a visual relationship map. On: appears in the sidebar. Off: hidden from the sidebar; your timelines still exist and reappear when you turn this back on.", recommended: true },
-  { key: "work", label: "Work", desc: "A session timer, a weekly hour goal, and medals for streaks and hours. On: appears in the sidebar, and the timer pop-out button still works either way. Off: hidden from the sidebar; your logged sessions are kept.", recommended: true },
-  { key: "oracle", label: "Oracle", desc: "Draws two entries together and asks what connects them — a prompt generator for building relationships in your world. On: appears in the sidebar. Off: hidden from the sidebar; nothing is lost, it's just out of the way until you want it.", beta: true }
-];
+  { key: "timelines", label: "Timelines", desc: "Epochs and eras with dated events, plus a visual relationship map. On: appears in the sidebar. Off: hidden from the sidebar; your timelines still exist and reappear when you turn this back on.", recommended: true }
+].concat(PAGES.filter(function (p) { return p.tab !== false; }).map(function (p) {
+  return { key: p.key, label: p.label, desc: p.railDesc, beta: p.beta, recommended: p.recommended };
+}));
 var HOME_TILE_ITEMS = [
   { key: "continue", label: "Continue", desc: "A tile that jumps straight back to whatever page, entry, or timeline you last had open — skips having to hunt for it. On: shown on Home. Off: the tile disappears; you can still reach anything from its own room.", recommended: true },
   { key: "pages", label: "Pages", desc: "A shortcut tile to your notes, showing how many you have. On: shown on Home. Off: the tile disappears from Home; Pages itself is unaffected if it's still in your sidebar." },
   { key: "entries", label: "Entries", desc: "A shortcut tile to your world bible, showing how many entries you have. On: shown on Home. Off: the tile disappears from Home; Entries itself is unaffected if it's still in your sidebar." },
-  { key: "timelines", label: "Timelines", desc: "A shortcut tile to your timelines, showing your era count. On: shown on Home. Off: the tile disappears from Home; Timelines itself is unaffected if it's still in your sidebar." },
-  { key: "work", label: "Work", desc: "A shortcut tile to the session timer, showing this week's hours. On: shown on Home. Off: the tile disappears from Home; Work itself is unaffected if it's still in your sidebar." },
-  { key: "oracle", label: "Oracle", desc: "A shortcut tile to connection prompts. On: shown on Home. Off: the tile disappears from Home; Oracle itself is unaffected if it's still in your sidebar.", beta: true }
-];
+  { key: "timelines", label: "Timelines", desc: "A shortcut tile to your timelines, showing your era count. On: shown on Home. Off: the tile disappears from Home; Timelines itself is unaffected if it's still in your sidebar." }
+].concat(PAGES.filter(function (p) { return p.tab !== false && p.homeTile !== false; }).map(function (p) {
+  return { key: p.key, label: p.label, desc: p.tileDesc, beta: p.beta, recommended: p.recommended };
+}));
 var HOME_SECTION_ITEMS = [
-  { key: "calendar", label: "Calendar", desc: "A Mon\u2013Sun strip showing which days this week you've worked, rested, or neither. On: shown on Home, below the tiles. Off: hidden from Home; rest days and sessions are unaffected \u2014 track them from the Work page instead.", beta: true },
+  { key: "calendar", label: "Calendar", desc: "A Mon\u2013Sun strip showing which days this week you've worked, rested, or neither. On: shown on Home, below the tiles. Off: hidden from Home; nothing is lost \u2014 open the Calendar tab for the full month view and your plans.", beta: true },
   { key: "activity", label: "Activity", desc: "A heat-grid showing which days you've edited something in Notebook, like a habit tracker. On: shown on Home, below the tiles. Off: the grid is hidden; your activity history is still tracked in the background, just not displayed.", recommended: true },
   { key: "pinned", label: "Pinned", desc: "A list of anything you've pinned — across pages and entries — for quick access. On: shown on Home when you have at least one pinned item. Off: hidden from Home; pinned items stay pinned, you'd just open them from their own room instead." },
   { key: "recent", label: "Recent", desc: "Your most recently edited pages and entries, so you can jump back into whatever you touched last. On: shown on Home. Off: hidden from Home; everything is still reachable from its own room, just not surfaced here.", recommended: true }
@@ -8976,6 +9766,7 @@ function applyBgTone(key) {
 }
 function applyHeadingFont(key) { forEachStyleRoot(function (r) { r.style.setProperty("--serif", HEADING_FONTS[key] || HEADING_FONTS.classic); }); }
 function applyCalmMode(on) { forEachStyleRoot(function (r) { r.classList.toggle("calm", !!on); }); }
+function applyDblClickCursor(on) { forEachStyleRoot(function (r) { r.classList.toggle("no-dblclick-cursor", !on); }); }
 function applyAllStyle() {
   applyAccent(state.settings.accent);
   applyCornerStyle(state.settings.cornerStyle);
@@ -8983,6 +9774,7 @@ function applyAllStyle() {
   applyBgTone(state.settings.bgTone);
   applyHeadingFont(state.settings.headingFont);
   applyCalmMode(state.settings.calmMode);
+  applyDblClickCursor(state.settings.dblClickCursor);
 }
 function toggleLabelEl(it) {
   if (!it.desc) {
@@ -8998,10 +9790,11 @@ function toggleLabelEl(it) {
   wrap.append(top, el("span", "set-row-desc", it.desc));
   return wrap;
 }
-function buildToggleGroup(container, items, bucket, onAnyChange) {
+function buildToggleGroup(container, items, bucket, onAnyChange, onboardingMode) {
   container.innerHTML = "";
   var hidden = state.settings.hidden[bucket];
-  items.forEach(function (it) {
+  var visible = onboardingMode ? items.filter(function (it) { return it.onboarding !== false; }) : items;
+  visible.forEach(function (it) {
     var row = el("label", "set-row");
     var cb = el("input"); cb.type = "checkbox"; cb.checked = hidden.indexOf(it.key) === -1;
     cb.addEventListener("change", function () {
@@ -9019,9 +9812,10 @@ function buildToggleGroup(container, items, bucket, onAnyChange) {
     container.appendChild(row);
   });
 }
-function buildBoolToggleGroup(container, items) {
+function buildBoolToggleGroup(container, items, onboardingMode) {
   container.innerHTML = "";
-  items.forEach(function (it) {
+  var visible = onboardingMode ? items.filter(function (it) { return it.onboarding !== false; }) : items;
+  visible.forEach(function (it) {
     var row = el("label", "set-row");
     var cb = el("input"); cb.type = "checkbox"; cb.checked = !!state.settings[it.key];
     cb.addEventListener("change", function () {
@@ -9041,7 +9835,8 @@ var EDITOR_TYPING_ITEMS = [
   { key: "autoLinkUrls", label: "Turn typed web addresses into links", desc: "On (default): finish typing a web address and it becomes a clickable link automatically. Off: typed addresses stay as plain text — you'd need to select it and use the toolbar's link button to make it clickable.", recommended: true }
 ];
 var STYLE_BOOL_ITEMS = [
-  { key: "calmMode", label: "Calm mode", desc: "Turns off medal sparkle bursts, spin, and other flourish animations app-wide — independent of your OS's reduce-motion setting.", onChange: function (v) { applyCalmMode(v); } }
+  { key: "calmMode", label: "Calm mode", desc: "Turns off medal sparkle bursts, spin, and other flourish animations app-wide — independent of your OS's reduce-motion setting.", onChange: function (v) { applyCalmMode(v); } },
+  { key: "dblClickCursor", label: "Double-click cursor hint", desc: "On (default): hovering anything that opens on a double-click (calendar days, timeline graph nodes) swaps the cursor to a double-click icon, so it's discoverable without guessing. Off: cursor stays a normal pointer everywhere.", recommended: true, onChange: function (v) { applyDblClickCursor(v); } }
 ];
 function renderEditorSettings() {
   buildBoolToggleGroup($("set-editor-toggles"), EDITOR_PASTE_ITEMS);
@@ -9511,23 +10306,23 @@ var SETTINGS_CATEGORIES = [
   {
     key: "rail", title: "What's in your sidebar?",
     lede: "Pick the rooms you'll use. Nothing here is permanent — everything lives in <b>Preferences</b> too.",
-    render: function (c) { buildToggleGroup(c.appendChild(el("div")), RAIL_TOGGLE_ITEMS, "railTabs"); }
+    render: function (c) { buildToggleGroup(c.appendChild(el("div")), RAIL_TOGGLE_ITEMS, "railTabs", null, true); }
   },
   {
     key: "home", title: "What should Home show?",
     lede: "Home is your dashboard — the first thing you'll see. Turn off anything you don't need there.",
     render: function (c) {
       c.appendChild(el("div", "set-group-title", "Tiles"));
-      buildToggleGroup(c.appendChild(el("div")), HOME_TILE_ITEMS, "homeTiles");
+      buildToggleGroup(c.appendChild(el("div")), HOME_TILE_ITEMS, "homeTiles", null, true);
       var sect = el("div", "set-group-title", "Sections"); sect.style.marginTop = "18px";
       c.appendChild(sect);
-      buildToggleGroup(c.appendChild(el("div")), HOME_SECTION_ITEMS, "homeSections");
+      buildToggleGroup(c.appendChild(el("div")), HOME_SECTION_ITEMS, "homeSections", null, true);
     }
   },
   {
     key: "work", title: "What should Work show?",
     lede: "Work is a session timer with a weekly goal. These sections are optional extras on top of it.",
-    render: function (c) { buildToggleGroup(c.appendChild(el("div")), WORK_SECTION_ITEMS, "workSections"); }
+    render: function (c) { buildToggleGroup(c.appendChild(el("div")), WORK_SECTION_ITEMS, "workSections", null, true); }
   },
   {
     key: "style", title: "Make it feel like yours",
@@ -9621,17 +10416,17 @@ var SETTINGS_CATEGORIES = [
       }
       paintHeadingFont();
 
-      var motionTitle = el("div", "set-group-title", "Motion"); motionTitle.style.marginTop = "16px";
+      var motionTitle = el("div", "set-group-title", "Motion & interaction"); motionTitle.style.marginTop = "16px";
       c.appendChild(motionTitle);
-      buildBoolToggleGroup(c.appendChild(el("div")), STYLE_BOOL_ITEMS);
+      buildBoolToggleGroup(c.appendChild(el("div")), STYLE_BOOL_ITEMS, true);
     }
   },
   {
     key: "editor", title: "How should typing and pasting behave?",
     lede: "Small conveniences in the Pages editor — all reversible.",
     render: function (c) {
-      buildBoolToggleGroup(c.appendChild(el("div")), EDITOR_PASTE_ITEMS);
-      buildBoolToggleGroup(c.appendChild(el("div")), EDITOR_TYPING_ITEMS);
+      buildBoolToggleGroup(c.appendChild(el("div")), EDITOR_PASTE_ITEMS, true);
+      buildBoolToggleGroup(c.appendChild(el("div")), EDITOR_TYPING_ITEMS, true);
     }
   },
   {
@@ -9663,7 +10458,7 @@ var SETTINGS_CATEGORIES = [
       var togWrap = el("div"); c.appendChild(togWrap);
       buildBoolToggleGroup(togWrap, POPOUT_TIMER_ITEMS.map(function (it) {
         return Object.assign({}, it, { onChange: function () { renderTimerPreview(preview); } });
-      }));
+      }), true);
     }
   },
   {
@@ -9694,7 +10489,7 @@ var SETTINGS_CATEGORIES = [
       var togWrap = el("div"); c.appendChild(togWrap);
       buildBoolToggleGroup(togWrap, POPOUT_PAGES_ITEMS.map(function (it) {
         return Object.assign({}, it, { onChange: function () { renderPagesPreview(preview); } });
-      }));
+      }), true);
     }
   },
   {
@@ -10075,6 +10870,7 @@ function exportJSON() {
     tagPresets: state.tagPresets, settings: state.settings,
     medalProgress: state.medalProgress, bestStreak: state.bestStreak,
     overachieve: state.overachieve, restDays: state.restDays, restTokens: state.restTokens,
+    plans: state.plans,
     lastGoalWeekAwarded: state.lastGoalWeekAwarded, goalTokenCheckedThrough: state.goalTokenCheckedThrough,
     medalPrestige: state.medalPrestige, medalBest: state.medalBest, medalHistory: state.medalHistory,
     graphLaidOut: state.graphLaidOut
@@ -10532,6 +11328,7 @@ function importNotebookData(data) {
   if (data.overachieve && typeof data.overachieve === "object") s.overachieve = data.overachieve;
   if (data.restDays && typeof data.restDays === "object") s.restDays = data.restDays;
   if (typeof data.restTokens === "number") s.restTokens = data.restTokens;
+  if (Array.isArray(data.plans)) s.plans = data.plans;
   if (typeof data.lastGoalWeekAwarded === "string") s.lastGoalWeekAwarded = data.lastGoalWeekAwarded;
   if (typeof data.goalTokenCheckedThrough === "string") s.goalTokenCheckedThrough = data.goalTokenCheckedThrough;
   if (data.medalPrestige && typeof data.medalPrestige === "object") s.medalPrestige = data.medalPrestige;
@@ -10778,12 +11575,12 @@ document.addEventListener("keydown", function (e) {
 /* ════════════════ RENDER & BOOT ════════════════ */
 function renderAll() {
   var tab = state.sel.tab;
+  var page = PAGES.filter(function (p) { return p.tab !== false; }).find(function (p) { return p.key === tab; });
   if (tab === "pages") renderPagesTab();
   else if (tab === "entries") renderEntriesTab();
   else if (tab === "timelines") applyTlView();
-  else if (tab === "work") renderWorkTab();
   else if (tab === "hub") renderHub();
-  else if (tab === "oracle") renderOracle();
+  else if (page) page.render();
   renderTimingPill();
 }
 
@@ -10791,7 +11588,7 @@ function boot() {
   normalizeState(state);
   applyHiddenSettings();
   applyAllStyle();
-  var VALID_TABS = ["hub", "pages", "entries", "timelines", "work", "oracle"];
+  var VALID_TABS = ["hub", "pages", "entries", "timelines"].concat(PAGES.filter(function (p) { return p.tab !== false; }).map(function (p) { return p.key; }));
   if (VALID_TABS.indexOf(state.sel.tab) === -1) state.sel.tab = "hub";
   if ((state.settings.hidden.railTabs || []).indexOf(state.sel.tab) > -1) {
     state.sel.tab = "hub";
