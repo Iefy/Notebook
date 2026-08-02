@@ -3099,7 +3099,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
    to read from the `dev` branch's version.json instead of `main`'s, so a
    dev build never gets nagged about (or accidentally offered) a main-line
    release, and vice versa. */
-var APP_VERSION = "0.5.0-dev.test";
+var APP_VERSION = "2.4.0";
 var UPDATE_CHANNEL = APP_VERSION.toLowerCase().indexOf("dev") > -1 ? "dev" : "main";
 var UPDATE_CHECK_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/version.json";
 var UPDATE_HTML_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/Notebook.html";
@@ -11501,7 +11501,12 @@ function checkForUpdate(manual) {
     $("check-updates-btn").disabled = true;
     $("check-updates-desc").textContent = "Checking\u2026";
   }
-  fetch(UPDATE_CHECK_URL, { cache: "no-store" })
+  // Appending a cache-busting param, not just relying on `cache: "no-store"` —
+  // that option only bypasses this *browser's* cache. GitHub's raw-content
+  // CDN sits in front of the actual request and can keep serving a stale
+  // response for several minutes regardless, so the URL itself needs to be
+  // unique every time to force a real hit against origin.
+  fetch(UPDATE_CHECK_URL + "?t=" + Date.now(), { cache: "no-store" })
     .then(function (r) { if (!r.ok) throw new Error("status " + r.status); return r.json(); })
     .then(function (data) {
       if (!data || !data.version) throw new Error("malformed version.json");
@@ -11545,7 +11550,7 @@ $("update-open").addEventListener("click", function () {
   var originalLabel = btn.textContent;
   btn.disabled = true;
   btn.textContent = "Downloading\u2026";
-  fetch(UPDATE_HTML_URL, { cache: "no-store" })
+  fetch(UPDATE_HTML_URL + "?t=" + Date.now(), { cache: "no-store" })
     .then(function (r) { if (!r.ok) throw new Error("status " + r.status); return r.text(); })
     .then(function (html) {
       var blob = new Blob([html], { type: "text/html" });
