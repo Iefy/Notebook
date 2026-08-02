@@ -1,0 +1,15 @@
+{
+  "version": "1.0.1",
+  "changelog": [
+    {
+      "version": "1.0.1",
+      "date": "2026-08-02",
+      "changes": [
+        "Cleaned up UI",
+        "Fixed automatic updating",
+        "Added more modular support for developers",
+        "Some extra small stuff"
+      ]
+    }
+  ]
+}
