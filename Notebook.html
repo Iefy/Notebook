@@ -3099,7 +3099,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
    to read from the `dev` branch's version.json instead of `main`'s, so a
    dev build never gets nagged about (or accidentally offered) a main-line
    release, and vice versa. */
-var APP_VERSION = "0.0.8-dev.1";
+var APP_VERSION = "2.4.0";
 var UPDATE_CHANNEL = APP_VERSION.toLowerCase().indexOf("dev") > -1 ? "dev" : "main";
 var UPDATE_CHECK_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/version.json";
 var UPDATE_RELEASES_URL = UPDATE_CHANNEL === "dev"
@@ -11431,22 +11431,37 @@ function compareVersions(a, b) {
   return preBuild(a) - preBuild(b);
 }
 var pendingUpdateVersion = null;
-function renderUpdateModal(data) {
+function renderUpdateModal(data, isDowngrade) {
   var body = $("update-body");
   body.innerHTML = "";
-  body.appendChild(el("h2", null, "An update is available"));
-  var lede = el("p", "onboard-lede", "You're on v" + APP_VERSION + ". Here's what's changed since then:");
+  body.appendChild(el("h2", null, isDowngrade ? "A different version is available" : "An update is available"));
+  if (isDowngrade) {
+    var warn = el("div", "onboard-callout warn");
+    warn.appendChild(el("div", "onboard-callout-title", "This looks like a downgrade"));
+    warn.appendChild(el("p", null,
+      "v" + data.version + " is older than the v" + APP_VERSION + " you're currently running. " +
+      "Double-check this is what you meant before installing it."));
+    body.appendChild(warn);
+  }
+  var lede = el("p", "onboard-lede", isDowngrade
+    ? "Here's what v" + data.version + " changed:"
+    : "You're on v" + APP_VERSION + ". Here's what's changed since then:");
   body.appendChild(lede);
-  var entries = (Array.isArray(data.changelog) ? data.changelog : [])
-    .filter(function (e) { return e && e.version && compareVersions(e.version, APP_VERSION) > 0; })
-    .sort(function (a, b) { return compareVersions(b.version, a.version); });
+  // Upgrades show everything newer than what's installed, oldest-shown-last;
+  // a downgrade only has one meaningful entry to show — the target version's
+  // own notes — since "everything newer than APP_VERSION" would be empty.
+  var entries = isDowngrade
+    ? (Array.isArray(data.changelog) ? data.changelog : []).filter(function (e) { return e && e.version === data.version; })
+    : (Array.isArray(data.changelog) ? data.changelog : [])
+        .filter(function (e) { return e && e.version && compareVersions(e.version, APP_VERSION) > 0; })
+        .sort(function (a, b) { return compareVersions(b.version, a.version); });
   if (!entries.length) {
-    // remote "version" was newer but had no matching changelog entries — still
+    // remote "version" differs but had no matching changelog entry — still
     // worth flagging, just without specifics.
     body.appendChild(el("p", "onboard-lede", "Version " + data.version + " is out."));
   }
   entries.forEach(function (e) {
-    var box = el("div", "onboard-callout good");
+    var box = el("div", "onboard-callout " + (isDowngrade ? "warn" : "good"));
     box.appendChild(el("div", "onboard-callout-title", "v" + e.version + (e.date ? " \u2014 " + e.date : "")));
     var ul = el("ul", "onboard-list");
     (Array.isArray(e.changes) ? e.changes : []).forEach(function (line) {
@@ -11462,9 +11477,9 @@ function renderUpdateModal(data) {
     body.appendChild(box);
   });
 }
-function showUpdateModal(data) {
+function showUpdateModal(data, isDowngrade) {
   pendingUpdateVersion = data.version;
-  renderUpdateModal(data);
+  renderUpdateModal(data, isDowngrade);
   $("update-overlay").classList.add("show");
 }
 function checkForUpdate(manual) {
@@ -11476,17 +11491,20 @@ function checkForUpdate(manual) {
     .then(function (r) { if (!r.ok) throw new Error("status " + r.status); return r.json(); })
     .then(function (data) {
       if (!data || !data.version) throw new Error("malformed version.json");
-      // a manual check always shows the modal if a newer version exists,
-      // even one the person already dismissed with "Later" — that dismissal
-      // was about not being nagged automatically, not about hiding the
-      // update forever from a check they explicitly asked for.
-      if (compareVersions(data.version, APP_VERSION) <= 0) {
+      var cmp = compareVersions(data.version, APP_VERSION);
+      if (cmp === 0) {
         if (manual) resetCheckUpdatesTile("You're up to date \u2014 v" + APP_VERSION);
         return;
       }
-      if (!manual && data.version === state.settings.dismissedUpdateVersion) return; // already said "later" for this one
+      // Any difference prompts — including a lower remote version. That's
+      // deliberate: version.json is hand-edited and can be wrong (a bad
+      // bump, a rollback), and the person should see and confirm it rather
+      // than have it silently swallowed because it's "not an upgrade."
+      // A manual check always shows the modal, even for a version the
+      // person already dismissed with "Later" on the automatic check.
+      if (!manual && data.version === state.settings.dismissedUpdateVersion) return;
       if (manual) resetCheckUpdatesTile("You're on v" + APP_VERSION);
-      showUpdateModal(data);
+      showUpdateModal(data, cmp < 0);
     })
     .catch(function (e) {
       console.warn("Notebook: update check failed (offline, or version.json unreachable)", e);
