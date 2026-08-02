@@ -1696,6 +1696,11 @@ body[data-tab="oracle"] #panel { display: none; }
   padding: 14px var(--pad); border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
 .settings-head h2 { font-family: var(--serif); font-size: 18px; color: var(--ink-hi); flex: 1; min-width: 0; }
+.settings-version-badge {
+  flex-shrink: 0; font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em;
+  color: var(--ink-mute); background: var(--surf2); border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px 8px; margin-right: 2px;
+}
 #settings-back, #settings-close {
   width: 32px; height: 32px; flex-shrink: 0;
   display: grid; place-items: center;
@@ -2773,6 +2778,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <h2 id="settings-title">Preferences</h2>
+      <span id="settings-version-badge" class="settings-version-badge"></span>
       <button id="settings-close" aria-label="Close preferences">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
       </button>
@@ -3087,10 +3093,18 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
 
 /* Bump this on every release that gets a version.json entry — it's the
    only thing checkForUpdate() (near the onboarding code, below) compares
-   against the remote file to decide whether to show the update modal. */
+   against the remote file to decide whether to show the update modal.
+   Include "dev" anywhere in the string (e.g. "2.5.0-dev.3") to build a dev
+   channel release — that alone is what switches the update checker below
+   to read from the `dev` branch's version.json instead of `main`'s, so a
+   dev build never gets nagged about (or accidentally offered) a main-line
+   release, and vice versa. */
 var APP_VERSION = "0.1.0-dev.1";
-var UPDATE_CHECK_URL = "https://raw.githubusercontent.com/Iefy/Notebook/main/version.json";
-var UPDATE_RELEASES_URL = "https://github.com/Iefy/Notebook/releases";
+var UPDATE_CHANNEL = APP_VERSION.toLowerCase().indexOf("dev") > -1 ? "dev" : "main";
+var UPDATE_CHECK_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/version.json";
+var UPDATE_RELEASES_URL = UPDATE_CHANNEL === "dev"
+  ? "https://github.com/Iefy/Notebook/commits/dev"
+  : "https://github.com/Iefy/Notebook/releases";
 
 /* ── Markdown renderer (pure; escape-first, no raw HTML pass-through) ── */
 /* MD-START */
@@ -11396,15 +11410,25 @@ function importFromFileOnboarding(f) {
    styled like the onboarding overlay. "Later" remembers the version so the
    nag doesn't repeat until a *further* update ships; there's no periodic
    re-check beyond app launch, and any fetch failure (offline, blocked, bad
-   JSON) is swallowed silently — this is a nicety, never a blocker. */
+   JSON) is swallowed silently — this is a nicety, never a blocker.
+   UPDATE_CHANNEL (set above, from whether APP_VERSION contains "dev") decides
+   which branch's version.json gets fetched, so this whole flow is otherwise
+   channel-agnostic — same code path for both, just pointed at a different file. */
 function compareVersions(a, b) {
-  var pa = String(a || "0").split(".").map(function (n) { return parseInt(n, 10) || 0; });
-  var pb = String(b || "0").split(".").map(function (n) { return parseInt(n, 10) || 0; });
+  // Compare the numeric "2.5.0" core first; a "-dev.3"-style suffix only
+  // breaks the tie when the core versions match, using its trailing number.
+  var core = function (v) { return String(v || "0").split("-")[0]; };
+  var preBuild = function (v) {
+    var m = /-\D*(\d+)\s*$/.exec(String(v || ""));
+    return m ? parseInt(m[1], 10) : 0;
+  };
+  var pa = core(a).split(".").map(function (n) { return parseInt(n, 10) || 0; });
+  var pb = core(b).split(".").map(function (n) { return parseInt(n, 10) || 0; });
   for (var i = 0; i < Math.max(pa.length, pb.length); i++) {
     var diff = (pa[i] || 0) - (pb[i] || 0);
     if (diff !== 0) return diff;
   }
-  return 0;
+  return preBuild(a) - preBuild(b);
 }
 var pendingUpdateVersion = null;
 function renderUpdateModal(data) {
@@ -11482,6 +11506,7 @@ $("update-open").addEventListener("click", function () {
   window.open(UPDATE_RELEASES_URL, "_blank", "noopener");
 });
 $("check-updates-version").textContent = APP_VERSION;
+$("settings-version-badge").textContent = "v" + APP_VERSION;
 $("check-updates-btn").addEventListener("click", function () { checkForUpdate(true); });
 $("settings-open-btn").addEventListener("click", openSettingsPanel);
 $("settings-close").addEventListener("click", closeSettingsPanel);
