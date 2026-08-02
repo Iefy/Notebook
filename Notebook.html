@@ -3099,7 +3099,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
    to read from the `dev` branch's version.json instead of `main`'s, so a
    dev build never gets nagged about (or accidentally offered) a main-line
    release, and vice versa. */
-var APP_VERSION = "0.1.0-dev.1";
+var APP_VERSION = "0.0.8-dev.1";
 var UPDATE_CHANNEL = APP_VERSION.toLowerCase().indexOf("dev") > -1 ? "dev" : "main";
 var UPDATE_CHECK_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/version.json";
 var UPDATE_RELEASES_URL = UPDATE_CHANNEL === "dev"
