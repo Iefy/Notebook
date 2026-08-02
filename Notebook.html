@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1781,6 +1780,7 @@ body[data-tab="oracle"] #panel { display: none; }
   font-size: 14px; color: var(--ink);
 }
 .set-cat-btn:hover { background: var(--surf2); }
+.set-cat-btn:disabled { opacity: 0.5; cursor: default; pointer-events: none; }
 .set-cat-btn .set-cat-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .set-cat-btn .set-cat-desc { font-size: 11px; color: var(--ink-mute); font-weight: 400; }
 .set-cat-btn .set-cat-chev { color: var(--ink-mute); flex-shrink: 0; }
@@ -1854,7 +1854,7 @@ html.no-dblclick-cursor .dbl-clickable { cursor: pointer; }
   padding: 24px;
 }
 .onboard-overlay.show { display: flex; }
-#onboard-panel {
+#onboard-panel, #update-panel {
   width: 460px; max-width: 100%; max-height: 88vh;
   background: var(--surf); border: 1px solid var(--border); border-radius: calc(14px * var(--radius-scale, 1));
   box-shadow: 0 24px 60px rgba(0,0,0,0.55);
@@ -2786,10 +2786,15 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
       <div class="set-view" id="set-view-main" data-view="main">
         <div class="set-group-title">Set up</div>
         <div class="set-tile-grid">
-          <button class="set-cat-btn set-tile set-tile-full" id="redo-setup-btn">
+          <button class="set-cat-btn set-tile" id="redo-setup-btn">
             <span class="set-cat-icon set-icon-sage"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg></span>
             <span class="set-tile-label">Redo setup</span>
             <span class="set-tile-desc">Go through the first-run picks again</span>
+          </button>
+          <button class="set-cat-btn set-tile" id="check-updates-btn">
+            <span class="set-cat-icon set-icon-sage"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg></span>
+            <span class="set-tile-label">Check for updates</span>
+            <span class="set-tile-desc" id="check-updates-desc">You're on v<span id="check-updates-version"></span></span>
           </button>
         </div>
         <div class="set-group-title" style="margin-top:16px">Appearance</div>
@@ -3056,6 +3061,21 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
   </div>
 </div>
 
+<div id="update-overlay" class="onboard-overlay">
+  <div id="update-panel" role="dialog" aria-modal="true" aria-label="Update available">
+    <div class="onboard-scroll-wrap">
+      <div class="onboard-scroll" style="padding-top:22px">
+        <div id="update-body"></div>
+      </div>
+    </div>
+    <div class="onboard-actions">
+      <button id="update-later" class="foot-btn">Later</button>
+      <div style="flex:1"></div>
+      <button id="update-open" class="primary">View update</button>
+    </div>
+  </div>
+</div>
+
 
 <script>
 "use strict";
@@ -3064,6 +3084,13 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
    Local-first single file. Storage: 'notebook_v2' (+ snapshots).
    Imports: Notebook v1/v2 exports and best-effort Suitebook saves.
    ════════════════════════════════════════════════════════════════ */
+
+/* Bump this on every release that gets a version.json entry — it's the
+   only thing checkForUpdate() (near the onboarding code, below) compares
+   against the remote file to decide whether to show the update modal. */
+var APP_VERSION = "1.0.0";
+var UPDATE_CHECK_URL = "https://raw.githubusercontent.com/Iefy/Notebook/main/version.json";
+var UPDATE_RELEASES_URL = "https://github.com/Iefy/Notebook/releases";
 
 /* ── Markdown renderer (pure; escape-first, no raw HTML pass-through) ── */
 /* MD-START */
@@ -3667,6 +3694,7 @@ function normalizeState(s) {
       popoutPagesShowNotebooks: st.popoutPagesShowNotebooks !== false,
       popoutPagesSize: ["compact", "cozy", "large"].indexOf(st.popoutPagesSize) > -1 ? st.popoutPagesSize : "cozy",
       onboarded: st.onboarded === undefined ? true : !!st.onboarded,
+      dismissedUpdateVersion: typeof st.dismissedUpdateVersion === "string" ? st.dismissedUpdateVersion : "",
       sessionCleanupFilters: {
         after: (st.sessionCleanupFilters && st.sessionCleanupFilters.after) || "",
         before: (st.sessionCleanupFilters && st.sessionCleanupFilters.before) || "",
@@ -3677,7 +3705,7 @@ function normalizeState(s) {
     };
   });
   if (!s.settings || typeof s.settings !== "object") {
-    s.settings = { hidden: { railTabs: [], homeTiles: [], homeSections: [], workSections: [] }, pastePlainText: false, autoListShortcuts: true, autoLinkUrls: true, accent: DEFAULT_ACCENT, density: "cozy", cornerStyle: "soft", bgTone: "ink", headingFont: "classic", calmMode: false, dblClickCursor: true, autoAssignActiveProject: true, snapshots: { intervalMin: 10, keep: 5 }, popoutTimerShowTotal: true, popoutTimerShowLabel: true, popoutTimerShowGoal: true, popoutTimerSize: "cozy", popoutPagesShowSearch: true, popoutPagesShowNotebooks: true, popoutPagesSize: "cozy", onboarded: true, sessionCleanupFilters: { after: "", before: "", minMinutes: "", maxMinutes: "", labels: [] } };
+    s.settings = { hidden: { railTabs: [], homeTiles: [], homeSections: [], workSections: [] }, pastePlainText: false, autoListShortcuts: true, autoLinkUrls: true, accent: DEFAULT_ACCENT, density: "cozy", cornerStyle: "soft", bgTone: "ink", headingFont: "classic", calmMode: false, dblClickCursor: true, autoAssignActiveProject: true, snapshots: { intervalMin: 10, keep: 5 }, popoutTimerShowTotal: true, popoutTimerShowLabel: true, popoutTimerShowGoal: true, popoutTimerSize: "cozy", popoutPagesShowSearch: true, popoutPagesShowNotebooks: true, popoutPagesSize: "cozy", onboarded: true, dismissedUpdateVersion: "", sessionCleanupFilters: { after: "", before: "", minMinutes: "", maxMinutes: "", labels: [] } };
   }
   if (!Array.isArray(s.entryTypes) || !s.entryTypes.length) {
     s.entryTypes = TYPE_PRESETS.map(function (t) { return { key: t.key, label: t.label, color: t.color, tags: [] }; });
@@ -10815,6 +10843,7 @@ function buildSettingsIndex() {
   var idx = [];
   function add(label, desc, view) { idx.push({ label: label, desc: desc || "", view: view }); }
   add("Redo setup", "Go through the first-run picks again", "main");
+  add("Check for updates", "See if a newer version is available on GitHub", "main");
   add("Display", "Hide what you don't use", "display");
   add("Style", "Accent color", "style");
   add("Accent color", "Pick a color that applies everywhere, including pop-outs", "style");
@@ -11359,6 +11388,101 @@ function importFromFileOnboarding(f) {
   reader.onerror = function () { toast("Couldn't read that file."); };
   reader.readAsText(f);
 }
+
+/* ════════════════ UPDATE CHECK — reads version.json from GitHub ════════════════
+   Fires once per boot (see boot(), below) for anyone past onboarding. Compares
+   the remote "version" field against APP_VERSION (top of file); if the remote
+   is newer, shows every changelog entry newer than what's installed in a modal
+   styled like the onboarding overlay. "Later" remembers the version so the
+   nag doesn't repeat until a *further* update ships; there's no periodic
+   re-check beyond app launch, and any fetch failure (offline, blocked, bad
+   JSON) is swallowed silently — this is a nicety, never a blocker. */
+function compareVersions(a, b) {
+  var pa = String(a || "0").split(".").map(function (n) { return parseInt(n, 10) || 0; });
+  var pb = String(b || "0").split(".").map(function (n) { return parseInt(n, 10) || 0; });
+  for (var i = 0; i < Math.max(pa.length, pb.length); i++) {
+    var diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+var pendingUpdateVersion = null;
+function renderUpdateModal(data) {
+  var body = $("update-body");
+  body.innerHTML = "";
+  body.appendChild(el("h2", null, "An update is available"));
+  var lede = el("p", "onboard-lede", "You're on v" + APP_VERSION + ". Here's what's changed since then:");
+  body.appendChild(lede);
+  var entries = (Array.isArray(data.changelog) ? data.changelog : [])
+    .filter(function (e) { return e && e.version && compareVersions(e.version, APP_VERSION) > 0; })
+    .sort(function (a, b) { return compareVersions(b.version, a.version); });
+  if (!entries.length) {
+    // remote "version" was newer but had no matching changelog entries — still
+    // worth flagging, just without specifics.
+    body.appendChild(el("p", "onboard-lede", "Version " + data.version + " is out."));
+  }
+  entries.forEach(function (e) {
+    var box = el("div", "onboard-callout good");
+    box.appendChild(el("div", "onboard-callout-title", "v" + e.version + (e.date ? " \u2014 " + e.date : "")));
+    var ul = el("ul", "onboard-list");
+    (Array.isArray(e.changes) ? e.changes : []).forEach(function (line) {
+      // Same escape-then-inlineMd pipeline renderMd() uses for its own <li>s
+      // (see the markdown renderer up top) — so **bold**, *italic*, `code`,
+      // ~~strike~~, and [links](url) in a changelog line format exactly like
+      // they would anywhere else in the app, instead of showing as raw text.
+      var li = el("li");
+      li.innerHTML = inlineMd(escapeHtml(String(line)));
+      ul.appendChild(li);
+    });
+    box.appendChild(ul);
+    body.appendChild(box);
+  });
+}
+function showUpdateModal(data) {
+  pendingUpdateVersion = data.version;
+  renderUpdateModal(data);
+  $("update-overlay").classList.add("show");
+}
+function checkForUpdate(manual) {
+  if (manual) {
+    $("check-updates-btn").disabled = true;
+    $("check-updates-desc").textContent = "Checking\u2026";
+  }
+  fetch(UPDATE_CHECK_URL, { cache: "no-store" })
+    .then(function (r) { if (!r.ok) throw new Error("status " + r.status); return r.json(); })
+    .then(function (data) {
+      if (!data || !data.version) throw new Error("malformed version.json");
+      // a manual check always shows the modal if a newer version exists,
+      // even one the person already dismissed with "Later" — that dismissal
+      // was about not being nagged automatically, not about hiding the
+      // update forever from a check they explicitly asked for.
+      if (compareVersions(data.version, APP_VERSION) <= 0) {
+        if (manual) resetCheckUpdatesTile("You're up to date \u2014 v" + APP_VERSION);
+        return;
+      }
+      if (!manual && data.version === state.settings.dismissedUpdateVersion) return; // already said "later" for this one
+      if (manual) resetCheckUpdatesTile("You're on v" + APP_VERSION);
+      showUpdateModal(data);
+    })
+    .catch(function (e) {
+      console.warn("Notebook: update check failed (offline, or version.json unreachable)", e);
+      if (manual) resetCheckUpdatesTile("Couldn't check \u2014 try again later");
+    });
+}
+function resetCheckUpdatesTile(desc) {
+  $("check-updates-btn").disabled = false;
+  $("check-updates-desc").textContent = desc;
+}
+$("update-later").addEventListener("click", function () {
+  state.settings.dismissedUpdateVersion = pendingUpdateVersion || "";
+  persist();
+  $("update-overlay").classList.remove("show");
+});
+$("update-open").addEventListener("click", function () {
+  window.open(UPDATE_RELEASES_URL, "_blank", "noopener");
+});
+$("check-updates-version").textContent = APP_VERSION;
+$("check-updates-btn").addEventListener("click", function () { checkForUpdate(true); });
 $("settings-open-btn").addEventListener("click", openSettingsPanel);
 $("settings-close").addEventListener("click", closeSettingsPanel);
 $("settings-back").addEventListener("click", settingsBack);
@@ -12304,6 +12428,7 @@ function boot() {
   renderAll();
   initStaticTagTooltips();
   if (!state.settings.onboarded) openOnboarding();
+  else checkForUpdate();
   document.documentElement.classList.remove("nb-loading");
 }
 
