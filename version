@@ -8,7 +8,7 @@
         "Cleaned up UI",
         "Fixed automatic updating",
         "Added more modular support for developers",
-        "Some extra small stuff"
+        "compareVersions is now capable of reading pre-release versions via -dev",
       ]
     }
   ]
