@@ -3099,7 +3099,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
    to read from the `dev` branch's version.json instead of `main`'s, so a
    dev build never gets nagged about (or accidentally offered) a main-line
    release, and vice versa. */
-var APP_VERSION = "0.5.0-dev.1";
+var APP_VERSION = "2.4.0";
 var UPDATE_CHANNEL = APP_VERSION.toLowerCase().indexOf("dev") > -1 ? "dev" : "main";
 var UPDATE_CHECK_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/version.json";
 var UPDATE_HTML_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/Notebook.html";
@@ -11477,6 +11477,19 @@ function renderUpdateModal(data, isDowngrade) {
     box.appendChild(ul);
     body.appendChild(box);
   });
+  // Installing this is a manual file swap — there's no in-app auto-update,
+  // so spell out exactly what "Download update" actually does and does not
+  // do, every time the modal shows, on both upgrades and downgrades.
+  var howTo = el("div", "onboard-callout");
+  howTo.appendChild(el("div", "onboard-callout-title", "Before you update"));
+  var howToList = el("ul", "onboard-list");
+  [
+    "Export your save first, just in case \u2014 Preferences \u2192 Data \u2192 Export JSON.",
+    "Click \u201cDownload update\u201d below, then replace your old Notebook.html with the downloaded file.",
+    "Reload this page (or reopen the file) to start using it."
+  ].forEach(function (line) { howToList.appendChild(el("li", null, line)); });
+  howTo.appendChild(howToList);
+  body.appendChild(howTo);
 }
 function showUpdateModal(data, isDowngrade) {
   pendingUpdateVersion = data.version;
@@ -11544,7 +11557,7 @@ $("update-open").addEventListener("click", function () {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast("Downloaded \u2014 replace your old Notebook.html with this one.");
+      toast("Downloaded \u2014 replace your old Notebook.html with this one, then reload the page.");
     })
     .catch(function (e) {
       console.warn("Notebook: update download failed, falling back to the GitHub page", e);
