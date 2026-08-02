@@ -3077,7 +3077,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
     <div class="onboard-actions">
       <button id="update-later" class="foot-btn">Later</button>
       <div style="flex:1"></div>
-      <button id="update-open" class="primary">View update</button>
+      <button id="update-open" class="primary">Download update</button>
     </div>
   </div>
 </div>
@@ -3099,9 +3099,10 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
    to read from the `dev` branch's version.json instead of `main`'s, so a
    dev build never gets nagged about (or accidentally offered) a main-line
    release, and vice versa. */
-var APP_VERSION = "2.4.0-dev.1";
+var APP_VERSION = "2.4.0";
 var UPDATE_CHANNEL = APP_VERSION.toLowerCase().indexOf("dev") > -1 ? "dev" : "main";
 var UPDATE_CHECK_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/version.json";
+var UPDATE_HTML_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/Notebook.html";
 var UPDATE_RELEASES_URL = UPDATE_CHANNEL === "dev"
   ? "https://github.com/Iefy/Notebook/commits/dev"
   : "https://github.com/Iefy/Notebook/releases";
@@ -11521,7 +11522,39 @@ $("update-later").addEventListener("click", function () {
   $("update-overlay").classList.remove("show");
 });
 $("update-open").addEventListener("click", function () {
-  window.open(UPDATE_RELEASES_URL, "_blank", "noopener");
+  // A page can't silently overwrite an arbitrary file on disk — that's a
+  // hard browser security boundary, not something worth trying to route
+  // around. This is the closest practical equivalent: fetch the actual
+  // updated Notebook.html and hand it to the browser as a download, so the
+  // person just has to drag it over their old copy, instead of hunting the
+  // right raw file down on GitHub themselves.
+  var btn = this;
+  var originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Downloading\u2026";
+  fetch(UPDATE_HTML_URL, { cache: "no-store" })
+    .then(function (r) { if (!r.ok) throw new Error("status " + r.status); return r.text(); })
+    .then(function (html) {
+      var blob = new Blob([html], { type: "text/html" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "Notebook.html";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast("Downloaded \u2014 replace your old Notebook.html with this one.");
+    })
+    .catch(function (e) {
+      console.warn("Notebook: update download failed, falling back to the GitHub page", e);
+      toast("Couldn't download it directly \u2014 opening GitHub instead.");
+      window.open(UPDATE_RELEASES_URL, "_blank", "noopener");
+    })
+    .then(function () {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    });
 });
 $("check-updates-version").textContent = APP_VERSION;
 $("settings-version-badge").textContent = "v" + APP_VERSION;
