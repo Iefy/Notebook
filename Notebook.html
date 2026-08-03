@@ -1293,6 +1293,8 @@ body[data-tab="productivity"] #panel { display: none; }
 body[data-tab="productivity"] #view-work { display: flex; }
 #wk-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 18px var(--pad) 60px; max-width: 760px; }
 @media (min-width: 940px) { #wk-scroll { max-width: 920px; } }
+@media (min-width: 1300px) { #wk-scroll { max-width: 1200px; } }
+@media (min-width: 1600px) { #wk-scroll { max-width: 1400px; } }
 #wk-scroll h2 { font-family: var(--serif); font-size: 24px; color: var(--ink-hi); margin-bottom: 4px; }
 #wk-scroll > .or-lede { margin-bottom: 4px; }
 /* Groups cluster related Productivity cards (Plan / Track / Review) under a
@@ -1317,6 +1319,14 @@ body[data-tab="productivity"] #view-work { display: flex; }
   .wk-group-plan #cal-tasks-card { grid-column: 2; grid-row: 2; }
   .wk-group-track #wk-achieve-teaser { grid-column: 1 / -1; }
   .wk-group-review #wk-card-bylabel, .wk-group-review #wk-card-sessions { grid-column: 1 / -1; }
+}
+@media (min-width: 1300px) {
+  .wk-group-plan .wk-group-cards {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  .wk-group-plan #cal-grid-card { grid-column: 1; grid-row: 1; }
+  .wk-group-plan #cal-detail-card { grid-column: 2; grid-row: 1; }
+  .wk-group-plan #cal-tasks-card { grid-column: 3; grid-row: 1; }
 }
 .wk-group-plan #cal-detail-card { margin-top: 0; }
 .wk-card {
@@ -1856,6 +1866,23 @@ body[data-tab="oracle"] #panel { display: none; }
   border-radius: calc(5px * var(--radius-scale, 1)); padding: 1px 5px; margin-left: 6px; vertical-align: 1px;
   cursor: help;
 }
+/* Patch-note change tags — a changelog line starting with "[bug]", "[new]",
+   etc. (see parseChangeLine / changeTagStyle) gets rendered as one of these
+   pills instead of the literal bracket text. Known tag words map to a
+   palette color below; anything unrecognized still renders as a pill (using
+   the tag word itself, title-cased) in a neutral tone, so this never
+   silently drops a tag someone invents in the changelog JSON. */
+.change-tag {
+  display: inline-flex; align-items: center;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-dim); background: var(--surf3); border: 1px solid var(--border);
+  border-radius: calc(5px * var(--radius-scale, 1)); padding: 1px 6px; margin-right: 7px; vertical-align: 1px;
+}
+.change-tag-sage   { color: var(--sage);   background: var(--sage-bg); border-color: var(--sage-bd); }
+.change-tag-red    { color: var(--red);    background: color-mix(in srgb, var(--red) 16%, var(--bg));    border-color: color-mix(in srgb, var(--red) 40%, var(--bg)); }
+.change-tag-amber  { color: var(--amber);  background: color-mix(in srgb, var(--amber) 16%, var(--bg));  border-color: color-mix(in srgb, var(--amber) 40%, var(--bg)); }
+.change-tag-purple { color: var(--purple); background: color-mix(in srgb, var(--purple) 16%, var(--bg)); border-color: color-mix(in srgb, var(--purple) 40%, var(--bg)); }
+.change-tag-blue   { color: var(--blue);   background: color-mix(in srgb, var(--blue) 16%, var(--bg));   border-color: color-mix(in srgb, var(--blue) 40%, var(--bg)); }
 .tag-tip { white-space: normal; max-width: 230px; }
 .tag-tip-default { color: var(--ink-dim); font-style: italic; }
 .tag-tip-note { margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--border); color: var(--ink-hi); font-style: normal; }
@@ -11487,6 +11514,51 @@ function compareVersions(a, b) {
   }
   return preBuild(a) - preBuild(b);
 }
+// Known tag words → { label, cls }. cls picks one of the .change-tag-*
+// palette classes above; leave cls empty for a neutral pill. Aliases (e.g.
+// "fix"/"fixed" both reading as Bug) exist so the JSON author doesn't have
+// to remember one exact spelling per category.
+var CHANGE_TAG_STYLES = {
+  "new":         { label: "New",         cls: "sage" },
+  "feature":     { label: "New",         cls: "sage" },
+  "added":       { label: "New",         cls: "sage" },
+  "bug":         { label: "Bug",         cls: "red" },
+  "fix":         { label: "Bug",         cls: "red" },
+  "fixed":       { label: "Bug",         cls: "red" },
+  "bugfix":      { label: "Bug",         cls: "red" },
+  "security":    { label: "Security",    cls: "red" },
+  "redesign":    { label: "Redesign",    cls: "purple" },
+  "redesigned":  { label: "Redesign",    cls: "purple" },
+  "rework":      { label: "Rework",      cls: "amber" },
+  "reworked":    { label: "Rework",      cls: "amber" },
+  "improvement": { label: "Improved",    cls: "blue" },
+  "improved":    { label: "Improved",    cls: "blue" },
+  "perf":        { label: "Performance", cls: "blue" },
+  "performance": { label: "Performance", cls: "blue" },
+  "removed":     { label: "Removed",     cls: "" },
+  "deprecated":  { label: "Deprecated",  cls: "" }
+};
+// Pulls a leading "[tag]" off a changelog line, e.g. "[bug] Fixed the thing"
+// → { tag: "bug", text: "Fixed the thing" }. No brackets at all just means a
+// normal, untagged change ({ tag: null, text: line }).
+function parseChangeLine(line) {
+  var s = String(line == null ? "" : line);
+  var m = /^\s*\[\s*([a-zA-Z][a-zA-Z0-9 _-]{0,24})\s*\]\s*/.exec(s);
+  if (!m) return { tag: null, text: s };
+  return { tag: m[1].trim(), text: s.slice(m[0].length) };
+}
+function titleCase(s) {
+  return String(s).replace(/\w\S*/g, function (w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); });
+}
+// Known tag word → its pill style; anything else still gets a pill (using
+// the tag word itself, title-cased, in the neutral tone) rather than being
+// silently ignored — so inventing a new tag in the changelog JSON "just
+// works" without a code change here.
+function changeTagStyle(tag) {
+  if (!tag) return null;
+  var known = CHANGE_TAG_STYLES[tag.toLowerCase()];
+  return known || { label: titleCase(tag), cls: "" };
+}
 function changelogEntryBox(e, tone) {
   var box = el("div", "onboard-callout " + tone);
   box.appendChild(el("div", "onboard-callout-title", "v" + e.version + (e.date ? " \u2014 " + e.date : "")));
@@ -11496,8 +11568,19 @@ function changelogEntryBox(e, tone) {
     // (see the markdown renderer up top) — so **bold**, *italic*, `code`,
     // ~~strike~~, and [links](url) in a changelog line format exactly like
     // they would anywhere else in the app, instead of showing as raw text.
+    // A leading "[tag]" (parseChangeLine) is pulled out first and rendered
+    // as a .change-tag pill (changeTagStyle) instead of being passed through
+    // as literal bracket text.
+    var parsed = parseChangeLine(line);
     var li = el("li");
-    li.innerHTML = inlineMd(escapeHtml(String(line)));
+    var html = "";
+    if (parsed.tag) {
+      var style = changeTagStyle(parsed.tag);
+      html += '<span class="change-tag' + (style.cls ? " change-tag-" + style.cls : "") + '">' +
+        escapeHtml(style.label) + "</span>";
+    }
+    html += inlineMd(escapeHtml(parsed.text.trim()));
+    li.innerHTML = html;
     ul.appendChild(li);
   });
   box.appendChild(ul);
