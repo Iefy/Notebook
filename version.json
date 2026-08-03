@@ -1,12 +1,13 @@
 {
-  "version": "2.5.1-dev",
+  "version": "0.0.5-dev",
   "changelog": [
     {
-      "version": "2.5.1-dev",
+      "version": "0.0.5-dev",
       "date": "2026-08-03",
       "changes": [
         "[new] Patch notes now contain tags",
-        "[fix] Productivity now occupies more screenspace"
+        "[fix] Productivity now occupies more screenspace",
+        "[redesign] Multiple productivity tabs have been given touch-ups"
       ]
     }
   ],
