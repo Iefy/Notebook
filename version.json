@@ -1,18 +1,12 @@
 {
-  "version": "2.6.0",
+  "version": "2.5.1-dev",
   "changelog": [
     {
-      "version": "2.6.0",
+      "version": "2.5.1-dev",
       "date": "2026-08-03",
       "changes": [
-        "[new] Productivity tab now fills the available width on larger screens",
-        "[redesign] Plan section lays out as three columns on very wide displays",
-        "[rework] Patch notes now support tags like this one",
-        "[bug] Fixed the timer resetting when switching projects mid-session",
-        "[improvement] Faster load time for the weekly history view",
-        "[security] Tightened validation on imported JSON files",
-        "[removed] Dropped the old single-column Calendar-only view",
-        "Untagged lines still work exactly as before"
+        "[new] Patch notes now contain tags",
+        "[fix] Productivity now occupies more screenspace"
       ]
     }
   ],
