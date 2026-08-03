@@ -1714,7 +1714,9 @@ body[data-tab="oracle"] #panel { display: none; }
   flex-shrink: 0; font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em;
   color: var(--ink-mute); background: var(--surf2); border: 1px solid var(--border);
   border-radius: 999px; padding: 3px 8px; margin-right: 2px;
+  font-family: inherit; cursor: pointer; transition: color 0.15s, border-color 0.15s;
 }
+.settings-version-badge:hover { color: var(--ink-hi); border-color: var(--ink-mute); }
 #settings-back, #settings-close {
   width: 32px; height: 32px; flex-shrink: 0;
   display: grid; place-items: center;
@@ -2807,7 +2809,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <h2 id="settings-title">Preferences</h2>
-      <span id="settings-version-badge" class="settings-version-badge"></span>
+      <button id="settings-version-badge" class="settings-version-badge" type="button" aria-label="View patch notes"></button>
       <button id="settings-close" aria-label="Close preferences">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
       </button>
@@ -3107,6 +3109,20 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
       <button id="update-later" class="foot-btn">Later</button>
       <div style="flex:1"></div>
       <button id="update-open" class="primary">Download update</button>
+    </div>
+  </div>
+</div>
+
+<div id="patchnotes-overlay" class="onboard-overlay">
+  <div id="patchnotes-panel" role="dialog" aria-modal="true" aria-label="Patch notes">
+    <div class="onboard-scroll-wrap">
+      <div class="onboard-scroll" style="padding-top:22px">
+        <div id="patchnotes-body"></div>
+      </div>
+    </div>
+    <div class="onboard-actions">
+      <div style="flex:1"></div>
+      <button id="patchnotes-close" class="primary">Close</button>
     </div>
   </div>
 </div>
@@ -11471,6 +11487,22 @@ function compareVersions(a, b) {
   }
   return preBuild(a) - preBuild(b);
 }
+function changelogEntryBox(e, tone) {
+  var box = el("div", "onboard-callout " + tone);
+  box.appendChild(el("div", "onboard-callout-title", "v" + e.version + (e.date ? " \u2014 " + e.date : "")));
+  var ul = el("ul", "onboard-list");
+  (Array.isArray(e.changes) ? e.changes : []).forEach(function (line) {
+    // Same escape-then-inlineMd pipeline renderMd() uses for its own <li>s
+    // (see the markdown renderer up top) — so **bold**, *italic*, `code`,
+    // ~~strike~~, and [links](url) in a changelog line format exactly like
+    // they would anywhere else in the app, instead of showing as raw text.
+    var li = el("li");
+    li.innerHTML = inlineMd(escapeHtml(String(line)));
+    ul.appendChild(li);
+  });
+  box.appendChild(ul);
+  return box;
+}
 var pendingUpdateVersion = null;
 function renderUpdateModal(data, isDowngrade) {
   var body = $("update-body");
@@ -11501,22 +11533,7 @@ function renderUpdateModal(data, isDowngrade) {
     // worth flagging, just without specifics.
     body.appendChild(el("p", "onboard-lede", "Version " + data.version + " is out."));
   }
-  entries.forEach(function (e) {
-    var box = el("div", "onboard-callout " + (isDowngrade ? "warn" : "good"));
-    box.appendChild(el("div", "onboard-callout-title", "v" + e.version + (e.date ? " \u2014 " + e.date : "")));
-    var ul = el("ul", "onboard-list");
-    (Array.isArray(e.changes) ? e.changes : []).forEach(function (line) {
-      // Same escape-then-inlineMd pipeline renderMd() uses for its own <li>s
-      // (see the markdown renderer up top) — so **bold**, *italic*, `code`,
-      // ~~strike~~, and [links](url) in a changelog line format exactly like
-      // they would anywhere else in the app, instead of showing as raw text.
-      var li = el("li");
-      li.innerHTML = inlineMd(escapeHtml(String(line)));
-      ul.appendChild(li);
-    });
-    box.appendChild(ul);
-    body.appendChild(box);
-  });
+  entries.forEach(function (e) { body.appendChild(changelogEntryBox(e, isDowngrade ? "warn" : "good")); });
   // Installing this is a manual file swap — there's no in-app auto-update,
   // so spell out exactly what "Download update" actually does and does not
   // do, every time the modal shows, on both upgrades and downgrades.
@@ -11617,6 +11634,52 @@ $("update-open").addEventListener("click", function () {
 $("check-updates-version").textContent = APP_VERSION;
 $("settings-version-badge").textContent = "v" + APP_VERSION;
 $("check-updates-btn").addEventListener("click", function () { checkForUpdate(true); });
+/* ── Patch notes — clicking the version badge in Preferences shows the
+   changelog entry for the version currently installed (the most recent
+   entry that isn't newer than APP_VERSION), fetched fresh from the same
+   version.json the update check reads. Unlike the update modal, this is
+   read-only: no downgrade framing, no "Download update" button — just
+   what the version already running actually changed. */
+function latestInstalledChangelogEntry(changelog) {
+  var entries = (Array.isArray(changelog) ? changelog : []).filter(function (e) { return e && e.version; });
+  var notNewer = entries.filter(function (e) { return compareVersions(e.version, APP_VERSION) <= 0; });
+  if (!notNewer.length) return null;
+  notNewer.sort(function (a, b) { return compareVersions(b.version, a.version); });
+  return notNewer[0];
+}
+function showPatchNotesMessage(msg) {
+  var body = $("patchnotes-body");
+  body.innerHTML = "";
+  body.appendChild(el("h2", null, "Patch notes"));
+  body.appendChild(el("p", "onboard-lede", msg));
+}
+function renderPatchNotes(entry) {
+  var body = $("patchnotes-body");
+  body.innerHTML = "";
+  body.appendChild(el("h2", null, "Patch notes"));
+  if (!entry) {
+    body.appendChild(el("p", "onboard-lede", "No changelog entry for v" + APP_VERSION + " yet."));
+    return;
+  }
+  body.appendChild(el("p", "onboard-lede", "What v" + APP_VERSION + " changed:"));
+  body.appendChild(changelogEntryBox(entry, "good"));
+}
+$("settings-version-badge").addEventListener("click", function () {
+  $("patchnotes-overlay").classList.add("show");
+  showPatchNotesMessage("Loading\u2026");
+  fetch(UPDATE_CHECK_URL + "?t=" + Date.now(), { cache: "no-store" })
+    .then(function (r) { if (!r.ok) throw new Error("status " + r.status); return r.json(); })
+    .then(function (data) {
+      if (!data || !Array.isArray(data.changelog)) throw new Error("malformed version.json");
+      renderPatchNotes(latestInstalledChangelogEntry(data.changelog));
+    })
+    .catch(function (e) {
+      console.warn("Notebook: patch notes fetch failed (offline, or version.json unreachable)", e);
+      showPatchNotesMessage("Couldn't load patch notes \u2014 check your connection and try again.");
+    });
+});
+$("patchnotes-close").addEventListener("click", function () { $("patchnotes-overlay").classList.remove("show"); });
+$("patchnotes-overlay").addEventListener("click", function (e) { if (e.target === this) $("patchnotes-overlay").classList.remove("show"); });
 $("settings-open-btn").addEventListener("click", openSettingsPanel);
 $("settings-close").addEventListener("click", closeSettingsPanel);
 $("settings-back").addEventListener("click", settingsBack);
