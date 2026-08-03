@@ -1,0 +1,74 @@
+name: Sync APP_VERSION from version.json
+
+# version.json is the single source of truth for the app's version number.
+# Whenever it changes on main or dev, this pulls the "version" field out and
+# writes it into the `var APP_VERSION = "...";` line in Notebook.html, then
+# opens a PR with that one-line change. Nobody has to remember to update
+# Notebook.html by hand, and it can't silently drift out of sync.
+#
+# On main, that PR is left for you to review and merge (matches the
+# review-gated ruleset already on that branch). On dev, it merges itself
+# immediately, since dev has no such protection and is meant to move fast.
+#
+# Requires: Settings -> Actions -> General -> Workflow permissions ->
+# "Allow GitHub Actions to create and approve pull requests" (checked).
+
+on:
+  push:
+    paths:
+      - "version.json"
+    branches:
+      - main
+      - dev
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Validate version.json is well-formed
+        run: jq empty version.json
+
+      - name: Read version from version.json
+        id: read_version
+        run: |
+          VERSION=$(jq -r '.version' version.json)
+          if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+            echo "::error::version.json has no top-level \"version\" field"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Update APP_VERSION in Notebook.html
+        run: |
+          sed -i -E 's/var APP_VERSION = "[^"]*";/var APP_VERSION = "${{ steps.read_version.outputs.version }}";/' Notebook.html
+
+      - name: Open a PR if anything changed
+        id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore: sync APP_VERSION to ${{ steps.read_version.outputs.version }}"
+          title: "Sync APP_VERSION to ${{ steps.read_version.outputs.version }}"
+          body: >
+            `version.json` changed on `${{ github.ref_name }}` — this updates
+            `APP_VERSION` in `Notebook.html` to match (`${{ steps.read_version.outputs.version }}`)
+            so the in-app update checker and this file agree.
+          branch: "sync-app-version-${{ github.ref_name }}"
+          base: ${{ github.ref_name }}
+          delete-branch: true
+
+      # main is under a review-gated ruleset, so PRs there stay manual on
+      # purpose (see the workflow-level comment above). dev has no such
+      # protection and is meant to move fast, so a sync PR there just
+      # merges itself the moment it's opened — nothing to click.
+      - name: Auto-merge on dev
+        if: steps.cpr.outputs.pull-request-number != '' && github.ref_name == 'dev'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr merge --merge "${{ steps.cpr.outputs.pull-request-number }}"

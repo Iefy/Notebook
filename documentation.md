@@ -69,55 +69,39 @@ Either way: **you write the list once.** The checkbox, its label, its descriptio
 }
 ```
 
-That `render` function is usually calling the exact same `buildToggleGroup`/`buildBoolToggleGroup` used in regular Preferences, just with a final `true` argument (`onboardingMode`). That flag filters out any individual item marked `onboarding: false` — so an item can be fully visible in Preferences but skipped during first-run if it's too niche to bother a new user with.
+That `render` function is usually calling the exact same `buildToggleGroup`/`buildBoolToggleGroup` used in regular Preferences — every category's `render` in `SETTINGS_CATEGORIES` does exactly this (see `rail`, `home`, `work`, etc.). **Every item in the list you pass in shows up during onboarding, with no filtering** — `buildToggleGroup(container, items, bucket, onAnyChange)` and `buildBoolToggleGroup(container, items)` only take the arguments in that signature; there's no extra flag that skips individual items for first-run. If you want a specific item hidden from onboarding but still visible in regular Preferences, that per-item filter doesn't exist yet — you'd build it yourself (e.g. `items.filter(function (it) { return !it.onboarding; })` before handing the array to `buildToggleGroup`, and add the corresponding check inside the function if you want it centralized rather than repeated per category).
 
-Two levels of opt-out:
-- **Whole category doesn't apply to a blank workspace** (e.g. "Library", "Data management") → set `onboarding: false` on the *category* object, no `render` needed.
-- **One setting within a category is too obscure for first-run** → set `onboarding: false` on that *item* inside its `*_ITEMS` array. It still shows in Preferences; onboarding just skips it.
+One level of opt-out that *does* exist today:
+- **Whole category doesn't apply to a blank workspace** (e.g. "Library", "Data management") → set `onboarding: false` on the *category* object in `SETTINGS_CATEGORIES`, no `render` needed. This is real and in active use — see the `library`/`data`/`popouts` entries.
 
-If you add a brand-new `*_ITEMS` array for a new feature area, you get onboarding for free by adding one category entry that calls `buildToggleGroup`/`buildBoolToggleGroup` on it with `onboardingMode: true`. Nothing else in the wizard needs to change — it iterates `SETTINGS_CATEGORIES` and renders whatever isn't opted out.
+If you add a brand-new `*_ITEMS` array for a new feature area, you get onboarding for free by adding one category entry that calls `buildToggleGroup`/`buildBoolToggleGroup` on it. Nothing else in the wizard needs to change — it iterates `SETTINGS_CATEGORIES` and renders whatever isn't opted out at the category level.
 
 ---
 
 ## 4. Adding a new "room" (rail tab / page)
 
-This is the one most people will actually want. Notebook has two kinds of top-level views:
+This is the one most people will actually want, and it's the one worth being most careful about: **there is no registry for this.** Despite what you might expect from §§1–3, adding a room is not a one-object registration — it's five separate hardcoded spots you edit by hand. (If you came here after searching for a `PAGES` array or a "PAGE REGISTRY" comment and found nothing, that's not you missing something — it doesn't exist.)
 
-- **Master-detail rooms** — Pages, Entries, Timelines. These share the `#panel` split-view layout and have their own dedicated wiring (list on the left, detail on the right). If what you're building genuinely needs that shape, look at how one of these three is wired as a reference; it's not a one-object registration, it's a structural pattern.
-- **Simple full-view rooms** — Work, Calendar, Oracle. One view, no split panel. **This is almost certainly what you want**, and it's fully registry-driven.
+Notebook has two kinds of top-level views:
 
-To add a simple full-view room, find the `PAGES` array (search `PAGE REGISTRY`) and add one object:
+- **Master-detail rooms** — Pages, Entries, Timelines. These share the `#panel` split-view layout and have their own dedicated wiring (list on the left, detail on the right). If what you're building genuinely needs that shape, look at how one of these three is wired as a reference; it's a structural pattern, not something you register.
+- **Simple full-view rooms** — Productivity, Oracle, and Home itself. One view, no split panel. This is almost certainly what you want, but it's still five manual edits, not one.
 
-```js
-{
-  key: "journal", label: "Journal", beta: true, recommended: false,
-  railIcon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">...</svg>',
-  railTip: "Journal — a plain SVG string, not HTML-escaped, keep it simple",
-  railDesc: "What this does, shown next to the sidebar toggle in Preferences.",
-  tileGlyph: "☾",                 // single glyph shown on the Home tile
-  tileDesc: "What this tile does, shown next to the Home-tile toggle in Preferences.",
-  stat: function () {
-    // Called every time Home re-renders. Return the tile's live numbers.
-    return { desc: "Live description line", num: "3", unit: "entries today", nudge: false };
-  },
-  render: function () { renderJournalTab(); }   // your existing render function
-}
-```
+To add a simple full-view room, called `journal` here as an example:
 
-That's it. This one object automatically:
-- Adds a rail nav button (icon, label, tooltip) — generated at load, no HTML edit needed
-- Becomes a valid tab (`boot()`'s validity check reads `PAGES`)
-- Gets a "hide from sidebar" toggle in Preferences *and* onboarding's "What's in your sidebar?" step (both read `RAIL_TOGGLE_ITEMS`, which is `PAGES` mapped over)
-- Gets a Home tile with your live stat line, and a "hide from Home" toggle — unless you set `homeTile: false`
-- Gets its `#view-journal` / `#panel` show-hide CSS auto-injected — you still need to build the `<section id="view-journal">` markup itself and a `renderJournalTab()` function, but you never write `body[data-tab="journal"] #view-journal { display: flex }` by hand
-- Gets called by `renderAll()` when its tab is active
+1. **`RAIL_ITEMS`** — add one object: `{ key: "journal", label: "Journal", tip: "Journal", scope: "project", icon: '<svg ...>' }` (copy an existing entry's shape). This is what actually generates the sidebar button — `renderRailRooms()` builds `#rail-rooms` from this array at load. It's also what feeds `RAIL_TOGGLE_ITEMS` (a plain alias: `var RAIL_TOGGLE_ITEMS = RAIL_ITEMS;`), so adding it here automatically gets you the "hide from sidebar" toggle in Preferences → Display → Sidebar, and in onboarding's "What's in your sidebar?" step, for free — that part genuinely is shared, same as §§1–3.
 
-Opt-outs, all explicit:
-- `tab: false` — metadata only, no rail button / no route (rare; almost nothing needs this)
-- `homeTile: false` — has its own richer Home presence instead of a plain tile (this is what Calendar does — see §5)
-- Omit `beta`/`recommended` — no tag shown
+2. **`VALID_TABS`** — a plain array declared inline inside `boot()` (search `var VALID_TABS = [`). Add `"journal"` to it. If you skip this, `boot()`'s validity check silently kicks anyone who lands on that tab (e.g. from a stale URL or an old save) back to `"hub"`.
 
-You still have to build the actual view: a `<section id="view-KEY">` in the HTML body, and whatever `render()` calls. The registry only handles the *plumbing* around that view, not the view's contents.
+3. **`renderAll()`** — a hardcoded `if/else` chain, not a lookup. Add a branch: `else if (tab === "journal") renderJournalTab();`. This is the dispatcher that actually calls your render function when the tab is active; nothing calls it automatically.
+
+4. **CSS show/hide** — also hand-written, scattered near the top of the stylesheet as `body[data-tab="journal"] #view-journal { display: flex; }` (and `#panel { display: none; }` alongside it, following the pattern used for `oracle`/`productivity`/`hub`). Nothing generates this for you.
+
+5. **A Home presence** — add to `HOME_TILE_ITEMS` (a plain `{ key, label, desc }` toggle entry, same shape as any other settings item — see §2) if a simple shortcut card is enough, or build a full `HOME_SECTION_ITEMS` entry plus hand-written markup if it needs more (see §5). Either way this is optional, but skipping it means the room is only reachable from the sidebar.
+
+You still build, as always: a `<section id="view-journal">` in the HTML body, and a `renderJournalTab()` function that fills it in.
+
+**None of this is auto-generated.** If you're adding several rooms and this friction bothers you, that's a legitimate thing to fix — pulling steps 1–4 into one shared registration function (even without the full imagined shape from an earlier draft of this doc) is a reasonable follow-up, just not something that exists today.
 
 ---
 
@@ -125,10 +109,10 @@ You still have to build the actual view: a `<section id="view-KEY">` in the HTML
 
 Two different ways a room can show up on Home, and they're not interchangeable:
 
-- **A tile** (`HOME_TILE_ITEMS`, or `homeTile` on a `PAGES` entry) is a small shortcut card: glyph, label, one stat number, click to jump to the room. Good default for most things.
-- **A section** (`HOME_SECTION_ITEMS`) is a full custom block below the tiles — like the Calendar week strip, or the Activity heat-grid. Use this when a single number-and-glyph card can't represent what the feature actually offers. It needs its own `<div id="home-sect-KEY">` markup and its own render call inside `renderHub()` — a section is *not* auto-generated the way a tile is, it's a bespoke block that's just hideable the same generic way.
+- **A tile** (`HOME_TILE_ITEMS`) is a small shortcut card: glyph, label, one stat number, click to jump to the room. Good default for most things.
+- **A section** (`HOME_SECTION_ITEMS`) is a full custom block below the tiles — like the Calendar week strip, or the Activity heat-grid. Use this when a single number-and-glyph card can't represent what the feature actually offers. It needs its own `<div id="home-sect-KEY">` markup and its own render call inside `renderHub()` — a section is *not* auto-generated the way a tile toggle is, it's a bespoke block that's just hideable the same generic way (§2).
 
-If your feature has both — a rail room *and* a richer Home presence — do what Calendar does: register it in `PAGES` with `homeTile: false`, and separately add it to `HOME_SECTION_ITEMS` with its own hand-built section. Don't show the same feature as both a tile and a section; it reads as clutter.
+If your feature has both — a rail room *and* a richer Home presence — do what Calendar does: give it its own `HOME_SECTION_ITEMS` entry with hand-built markup instead of also adding a plain tile for the same thing. Don't show the same feature as both a tile and a section; it reads as clutter.
 
 ---
 
@@ -177,10 +161,10 @@ If you're building something date-based that might repeat or span multiple days,
 Find the nearest matching `*_ITEMS` array, add `{ key, label, desc, beta/recommended }` to it. If it's a single on/off flag, that array feeds `buildBoolToggleGroup` and you write an `applyX()`/`onChange` if it needs to do something live. Give it a default in all three state-shape spots (§7).
 
 **"I want a new room in the sidebar."**
-Add one object to `PAGES` (§4). Build the `<section id="view-KEY">` and its render function. Don't touch CSS, don't touch the rail HTML, don't touch `VALID_TABS`.
+No registry for this one — five manual edits (§4): add to `RAIL_ITEMS`, add to `VALID_TABS` inside `boot()`, add a branch to `renderAll()`'s if/else chain, hand-write the `body[data-tab="..."]` show/hide CSS, and build the `<section id="view-KEY">` plus its render function. Optionally add a `HOME_TILE_ITEMS`/`HOME_SECTION_ITEMS` entry too.
 
 **"I want it to skip onboarding but stay in Preferences."**
-Add `onboarding: false` to the item (not the whole category, unless the whole category should be skipped).
+Only works at the whole-category level today — add `onboarding: false` to the category object in `SETTINGS_CATEGORIES`. There's no built-in way to skip a single item within a category while keeping the rest of that category in onboarding (§3) — you'd need to add that filtering yourself.
 
 **"I want a double-click interaction to be discoverable."**
 Add the `dbl-clickable` class. Nothing else.
