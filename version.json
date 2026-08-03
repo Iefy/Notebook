@@ -1,19 +1,37 @@
 {
-  "version": "0.5.1-dev",
+  "version": "2.6.0",
   "changelog": [
     {
-      "version": "0.5.1-dev",
-      "date": "2026-08-02",
+      "version": "2.6.0",
+      "date": "2026-08-03",
       "changes": [
-        "Cleaned up and improved UI",
-        "Added support for multiple projects",
-        "Added more modular support for developers",
-        "Combined work & calendar -> productivity",
-        "Added compareVersions to support upadting from in the app",
-        "You can now view your current version and patch notes in preferences",
-        "Fixed a bug that caused daily tasks to dump up to ~175+ rows into your task list",
-        "compareVersions is now capable of reading pre-release versions via -dev"
+        "[new] Productivity tab now fills the available width on larger screens",
+        "[redesign] Plan section lays out as three columns on very wide displays",
+        "[rework] Patch notes now support tags like this one",
+        "[bug] Fixed the timer resetting when switching projects mid-session",
+        "[improvement] Faster load time for the weekly history view",
+        "[security] Tightened validation on imported JSON files",
+        "[removed] Dropped the old single-column Calendar-only view",
+        "Untagged lines still work exactly as before"
       ]
     }
+  ],
+
+  "_comment_tags": [
+    "Changelog lines can start with a bracketed tag, e.g. \"[bug] Fixed the thing\".",
+    "This key is documentation only — the app never reads it, just 'version' and 'changelog' above.",
+    "",
+    "[new] / [feature] / [added]                       -> New (sage)",
+    "[bug] / [fix] / [fixed] / [bugfix]                 -> Bug (red)",
+    "[security]                                         -> Security (red)",
+    "[redesign] / [redesigned]                          -> Redesign (purple)",
+    "[rework] / [reworked]                              -> Rework (amber)",
+    "[improvement] / [improved] / [perf] / [performance]-> Improved (blue)",
+    "[removed]                                          -> Removed (neutral)",
+    "[deprecated]                                       -> Deprecated (neutral)",
+    "",
+    "Any other bracketed word -> still renders as a neutral pill, title-cased.",
+    "No brackets at all -> plain untagged line.",
+    "Tags are case-insensitive and only match at the very start of the line."
   ]
 }
