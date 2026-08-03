@@ -11,7 +11,7 @@
         "Combined work & calendar -> productivity",
         "Added compareVersions to support upadting from in the app",
         "You can now view your current version and patch notes in preferences",
-        "Fixed a bug that caused daily tasks to dump up to ~175+ rows into your task list"
+        "Fixed a bug that caused daily tasks to dump up to ~175+ rows into your task list",
         "compareVersions is now capable of reading pre-release versions via -dev"
       ]
     }
