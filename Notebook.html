@@ -1292,19 +1292,33 @@ body[data-tab="timelines"].tl-chart #view-tlchart { display: flex; flex-directio
 body[data-tab="productivity"] #panel { display: none; }
 body[data-tab="productivity"] #view-work { display: flex; }
 #wk-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 18px var(--pad) 60px; max-width: 760px; }
-@media (min-width: 1180px) {
-  #wk-scroll {
-    max-width: 1180px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    align-content: start;
-  }
-  #wk-scroll h2, #wk-achieve-teaser, #wk-card-timer, #wk-card-sessions { grid-column: 1 / -1; }
-  #wk-scroll .wk-card { margin-top: 0; }
-  #wk-scroll h2 { margin-bottom: 0; }
+@media (min-width: 940px) { #wk-scroll { max-width: 920px; } }
+#wk-scroll h2 { font-family: var(--serif); font-size: 24px; color: var(--ink-hi); margin-bottom: 4px; }
+#wk-scroll > .or-lede { margin-bottom: 4px; }
+/* Groups cluster related Productivity cards (Plan / Track / Review) under a
+   shared label instead of one flat stack, so they read as connected
+   sections rather than unrelated blocks. */
+.wk-group { margin-top: 30px; }
+.wk-group:first-of-type { margin-top: 22px; }
+.wk-group-label {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--ink-mute); margin: 0 0 10px 1px;
 }
-#wk-scroll h2 { font-family: var(--serif); font-size: 24px; color: var(--ink-hi); }
+.wk-group-label::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.wk-group-cards { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.wk-group-cards .wk-card, .wk-group-cards .wk-achieve-teaser { margin-top: 0; }
+@media (min-width: 720px) {
+  .wk-group-plan .wk-group-cards, .wk-group-track .wk-group-cards, .wk-group-review .wk-group-cards {
+    grid-template-columns: 1fr 1fr;
+  }
+  .wk-group-plan #cal-grid-card { grid-column: 1; grid-row: 1 / 3; }
+  .wk-group-plan #cal-detail-card { grid-column: 2; grid-row: 1; }
+  .wk-group-plan #cal-tasks-card { grid-column: 2; grid-row: 2; }
+  .wk-group-track #wk-achieve-teaser { grid-column: 1 / -1; }
+  .wk-group-review #wk-card-bylabel, .wk-group-review #wk-card-sessions { grid-column: 1 / -1; }
+}
+.wk-group-plan #cal-detail-card { margin-top: 0; }
 .wk-card {
   background: var(--surf); border: 1px solid var(--border);
   border-radius: calc(10px * var(--radius-scale, 1)); padding: 14px; margin-top: 16px;
@@ -2550,32 +2564,40 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
       <div id="wk-scroll">
         <h2>Productivity<span class="beta-tag" data-note="Cross-project aggregation, goals, streaks, and medals are newer and still being tuned.">Beta</span></h2>
         <p class="or-lede">Rest days, worked days, and anything you've planned — across every project, one-off or recurring, with links to your entries.</p>
-        <div class="wk-card" id="cal-grid-card">
-          <div class="wk-weeknav">
-            <button id="cal-month-prev" aria-label="Previous month">‹</button>
-            <div class="wk-weeklabel">
-              <span class="t" id="cal-month-title"></span>
+        <div class="wk-group wk-group-plan">
+          <div class="wk-group-label">Plan</div>
+          <div class="wk-group-cards">
+            <div class="wk-card" id="cal-grid-card">
+              <div class="wk-weeknav">
+                <button id="cal-month-prev" aria-label="Previous month">‹</button>
+                <div class="wk-weeklabel">
+                  <span class="t" id="cal-month-title"></span>
+                </div>
+                <button class="foot-btn" id="cal-month-today" style="min-height:30px;padding:5px 10px;font-size:11px">Today</button>
+                <button id="cal-month-next" aria-label="Next month">›</button>
+              </div>
+              <div class="cal-weekday-row"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+              <div id="cal-grid" class="cal-grid"></div>
             </div>
-            <button class="foot-btn" id="cal-month-today" style="min-height:30px;padding:5px 10px;font-size:11px">Today</button>
-            <button id="cal-month-next" aria-label="Next month">›</button>
+            <div class="wk-card" id="cal-detail-card">
+              <div class="ov-sect-head"><span id="cal-detail-title">Day</span><button class="foot-btn" id="cal-add-plan-btn" style="min-height:30px;padding:5px 10px;font-size:11px">+ New plan</button></div>
+              <div class="note" id="cal-detail-daystatus"></div>
+              <div class="set-group-title" style="margin-top:14px">Logged time<span class="note" id="cal-detail-logged-total" style="text-transform:none;letter-spacing:normal;margin-left:6px"></span></div>
+              <div id="cal-detail-sessions"></div>
+              <button class="foot-btn" id="cal-detail-log-btn" style="min-height:30px;padding:5px 10px;font-size:11px;margin-top:6px">+ Log time for this day</button>
+              <div class="set-group-title" style="margin-top:16px">Plans</div>
+              <div id="cal-detail-plans"></div>
+            </div>
+            <div class="wk-card" id="cal-tasks-card">
+              <div class="ov-sect-head"><span>Tasks</span><button class="foot-btn" id="cal-add-task-btn" style="min-height:30px;padding:5px 10px;font-size:11px">+ New task</button></div>
+              <div class="note" id="cal-tasks-note"></div>
+              <div id="cal-tasks-list" style="margin-top:8px"></div>
+            </div>
           </div>
-          <div class="cal-weekday-row"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
-          <div id="cal-grid" class="cal-grid"></div>
         </div>
-        <div class="wk-card" id="cal-detail-card">
-          <div class="ov-sect-head"><span id="cal-detail-title">Day</span><button class="foot-btn" id="cal-add-plan-btn" style="min-height:30px;padding:5px 10px;font-size:11px">+ New plan</button></div>
-          <div class="note" id="cal-detail-daystatus"></div>
-          <div class="set-group-title" style="margin-top:14px">Logged time<span class="note" id="cal-detail-logged-total" style="text-transform:none;letter-spacing:normal;margin-left:6px"></span></div>
-          <div id="cal-detail-sessions"></div>
-          <button class="foot-btn" id="cal-detail-log-btn" style="min-height:30px;padding:5px 10px;font-size:11px;margin-top:6px">+ Log time for this day</button>
-          <div class="set-group-title" style="margin-top:16px">Plans</div>
-          <div id="cal-detail-plans"></div>
-        </div>
-        <div class="wk-card" id="cal-tasks-card">
-          <div class="ov-sect-head"><span>Tasks</span><button class="foot-btn" id="cal-add-task-btn" style="min-height:30px;padding:5px 10px;font-size:11px">+ New task</button></div>
-          <div class="note" id="cal-tasks-note"></div>
-          <div id="cal-tasks-list" style="margin-top:8px"></div>
-        </div>
+        <div class="wk-group wk-group-track">
+          <div class="wk-group-label">Track</div>
+          <div class="wk-group-cards">
         <div id="wk-achieve-teaser" class="wk-achieve-teaser">
           <div id="wk-achieve-teaser-medals" class="wk-achieve-teaser-medals"></div>
           <span id="wk-achieve-teaser-note" class="note"></span>
@@ -2633,6 +2655,11 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
           </div>
           <div id="wk-days" aria-label="Hours per day, last 14 days"></div>
         </div>
+          </div>
+        </div>
+        <div class="wk-group wk-group-review">
+          <div class="wk-group-label">Review</div>
+          <div class="wk-group-cards">
         <div class="wk-card" id="wk-card-achievements">
           <div class="ov-sect-head"><span>Medals<span class="beta-tag" data-note="Tier thresholds and prestige math are still being tuned and may shift.">Beta</span></span><span class="note" id="wk-achieve-summary"></span><button id="wk-achieve-history-btn" class="wk-achieve-history-btn" type="button">History</button></div>
           <div id="wk-achieve-lifetime" class="wk-achieve-lifetime"></div>
@@ -2659,6 +2686,8 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
             <button id="wk-bulk-clear">Clear</button>
           </div>
           <div class="wk-row"><button class="foot-btn" id="wk-csv">Export sessions CSV</button><button class="foot-btn" id="wk-ics">Export sessions ICS</button></div>
+        </div>
+          </div>
         </div>
       </div>
     </section>
@@ -9527,6 +9556,17 @@ function renderCalTasks() {
   });
   overdue.sort(function (a, b) { return a.occStart < b.occStart ? -1 : 1; });
   upcoming.sort(function (a, b) { return a.occStart < b.occStart ? -1 : 1; });
+  // Recurring tasks can have many future occurrences within the lookahead
+  // window; only the soonest one is useful in the Upcoming list, so keep the
+  // first occurrence per plan and drop the rest.
+  (function () {
+    var seen = {};
+    upcoming = upcoming.filter(function (inst) {
+      if (seen[inst.plan.id]) return false;
+      seen[inst.plan.id] = true;
+      return true;
+    });
+  })();
   done.sort(function (a, b) { return a.occStart > b.occStart ? -1 : 1; });
   var list = $("cal-tasks-list");
   list.innerHTML = "";
