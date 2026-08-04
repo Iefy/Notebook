@@ -1,11 +1,16 @@
 {
-  "version": "0.0.5-dev",
+  "version": "0.4.5-dev",
   "changelog": [
     {
-      "version": "0.0.5-dev",
-      "date": "2026-08-03",
+      "version": "0.4.5-dev",
+      "date": "2026-08-04",
       "changes": [
         "[new] Patch notes now contain tags",
+        "[new] Management: a new sidebar room for real-world budgeting and product tracking, shared across every project like Productivity.",
+        "[new] Added a Management tile showing your current budget balance",
+        "[new] Product entry type for fictional goods/items",
+        "[new] Added a Wealth field to Characters and a Treasury field to Factions",
+        "[fix] Home tiles now come from a single registry to avoid mismatches",
         "[fix] Productivity now occupies more screenspace",
         "[redesign] Multiple productivity tabs have been given touch-ups"
       ]
