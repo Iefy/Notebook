@@ -1313,6 +1313,8 @@ body[data-tab="timelines"].tl-chart #view-tlchart { display: flex; flex-directio
 /* ── Work / time tracking ── */
 body[data-tab="productivity"] #panel { display: none; }
 body[data-tab="productivity"] #view-work { display: flex; }
+body[data-tab="management"] #panel { display: none; }
+body[data-tab="management"] #view-management { display: flex; }
 /* No max-width cap: this is a grid of cards (calendar, lists, timer), not
    a column of prose, so unlike the reading-width caps on other tabs
    (ent-scroll, ov-scroll, etc.) there's no readability reason to stop it
@@ -1416,6 +1418,26 @@ body.timing #wk-toggle { border-color: #4a342e; color: var(--red); }
 .sess-row.selectable:hover { background: var(--surf2); }
 .sess-row.sel { background: var(--sage-bg); }
 .sess-row.sel .nm { color: var(--ink-hi); }
+.mgmt-amt { font-size: 11.5px; width: 74px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.mgmt-amt.income { color: var(--sage); }
+.mgmt-amt.expense { color: var(--red); }
+.mgmt-note-dot { color: var(--amber); margin-left: 6px; font-size: 14px; line-height: 1; vertical-align: middle; }
+.mgmt-cat { color: var(--ink-mute); font-size: 11px; flex-shrink: 0; }
+.mgmt-summary { display: flex; gap: 18px; flex-wrap: wrap; }
+.mgmt-summary-item { display: flex; flex-direction: column; gap: 2px; }
+.mgmt-summary-item .lbl { font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-mute); font-weight: 700; }
+.mgmt-summary-item .val { font-family: var(--serif); font-size: 19px; color: var(--ink-hi); font-variant-numeric: tabular-nums; }
+.mgmt-summary-item .val.income { color: var(--sage); }
+.mgmt-summary-item .val.expense { color: var(--red); }
+.mgmt-status {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 2px 8px; border-radius: calc(20px * var(--radius-scale, 1)); flex-shrink: 0;
+  border: 1px solid var(--border); color: var(--ink-dim);
+}
+.mgmt-status.idea { color: var(--purple); border-color: var(--purple); }
+.mgmt-status.planned { color: var(--blue); border-color: var(--blue); }
+.mgmt-status.active { color: var(--amber); border-color: var(--amber); }
+.mgmt-status.done { color: var(--sage); border-color: var(--sage); }
 .wk-chk {
   width: 20px; height: 20px; flex-shrink: 0;
   display: grid; place-items: center;
@@ -1667,7 +1689,8 @@ body[data-tab="hub"] #panel { display: none; }
 .hub-tile:hover { border-color: var(--ink-mute); transform: translateY(-2px); }
 .hub-tile:active { transform: translateY(0); }
 .hub-tile.accent { border-color: var(--sage-bd); background: var(--sage-bg); }
-.hub-tile .ht-glyph { font-family: var(--serif); font-size: 22px; color: var(--sage); line-height: 1; }
+.hub-tile .ht-glyph { color: var(--sage); line-height: 1; display: block; }
+.hub-tile .ht-glyph svg { width: 20px; height: 20px; display: block; }
 .hub-tile.accent .ht-glyph { color: var(--sage); }
 .hub-tile .ht-label { font-size: 14.5px; color: var(--ink-hi); font-weight: 600; margin-top: 6px; }
 .hub-tile .ht-desc { font-size: 11.5px; color: var(--ink-mute); line-height: 1.45; flex: 1; }
@@ -2202,7 +2225,7 @@ button.tagchip:hover { border-color: var(--ink-mute); color: var(--ink-hi); }
   .rail-btn .lbl { display: block; font-size: 8.5px; }
   #panel { width: 100%; border-right: none; flex: 1; }
   #main { display: none; }
-  body[data-tab="productivity"] #main, body[data-tab="hub"] #main, body[data-tab="oracle"] #main { display: flex; flex: 1; }
+  body[data-tab="productivity"] #main, body[data-tab="hub"] #main, body[data-tab="oracle"] #main, body[data-tab="management"] #main { display: flex; flex: 1; }
   body[data-tab="timelines"].tl-graph #main, body[data-tab="timelines"].tl-chart #main { display: flex; flex: 1; }
   #now-timing { bottom: calc(58px + env(safe-area-inset-bottom)); right: 12px; }
   body.mobile-editor #panel { display: none !important; }
@@ -2809,6 +2832,40 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
       </div>
     </section>
 
+    <section id="view-management">
+      <div id="mgmt-scroll">
+        <h2>Management<span class="beta-tag" data-note="Budget and product tracking are new and still being tuned.">Beta</span></h2>
+        <p class="or-lede">Real-world budget and the products or deliverables you're building — shared across every project.</p>
+
+        <div class="wk-group wk-group-budget">
+          <div class="wk-group-label">Budget</div>
+          <div class="wk-group-cards">
+            <div class="wk-card" id="mgmt-budget-summary-card">
+              <div class="mgmt-summary">
+                <div class="mgmt-summary-item"><span class="lbl">Income</span><span class="val income" id="mgmt-sum-income">$0</span></div>
+                <div class="mgmt-summary-item"><span class="lbl">Expenses</span><span class="val expense" id="mgmt-sum-expense">$0</span></div>
+                <div class="mgmt-summary-item"><span class="lbl">Balance</span><span class="val" id="mgmt-sum-balance">$0</span></div>
+              </div>
+            </div>
+            <div class="wk-card" id="mgmt-budget-list-card">
+              <div class="ov-sect-head"><span>Transactions</span><button class="foot-btn" id="mgmt-add-budget-btn" style="min-height:30px;padding:5px 10px;font-size:11px">+ Add transaction</button></div>
+              <div id="mgmt-budget-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="wk-group wk-group-products">
+          <div class="wk-group-label">Products</div>
+          <div class="wk-group-cards">
+            <div class="wk-card" id="mgmt-products-list-card">
+              <div class="ov-sect-head"><span>Products</span><button class="foot-btn" id="mgmt-add-product-btn" style="min-height:30px;padding:5px 10px;font-size:11px">+ Add product</button></div>
+              <div id="mgmt-products-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
   <div id="drop-overlay" aria-hidden="true">
     <div class="drop-card">
@@ -3369,11 +3426,11 @@ var ERA_STATUSES = [null, "todo", "needs", "question", "settled"];
 var STATUS_LABEL = { todo: "Todo", needs: "Needs work", question: "Question", settled: "Settled" };
 var TYPE_PRESETS = [
   { key: "character", label: "Character", color: "#c98ba4",
-    sections: ["Overview", "Arc", "Voice", "Relationships"], attrs: ["Age", "Allegiance", "Status"] },
+    sections: ["Overview", "Arc", "Voice", "Relationships"], attrs: ["Age", "Allegiance", "Status", "Wealth"] },
   { key: "place", label: "Place", color: "#7fa89a",
     sections: ["Nature", "Origin", "Influence"], attrs: ["Climate", "Population", "Status"] },
   { key: "faction", label: "Faction", color: "#8b9cb3",
-    sections: ["Purpose", "Structure", "Beliefs"], attrs: ["Size", "Territory", "Alignment"] },
+    sections: ["Purpose", "Structure", "Beliefs"], attrs: ["Size", "Territory", "Alignment", "Treasury"] },
   { key: "object", label: "Object", color: "#c2876a",
     sections: ["Description", "Origin", "History"], attrs: ["Holder", "Status"] },
   { key: "concept", label: "Concept", color: "#a3879c",
@@ -3381,7 +3438,9 @@ var TYPE_PRESETS = [
   { key: "race", label: "Race", color: "#c29e6a",
     sections: ["Origin", "Culture", "Notable traits"], attrs: [] },
   { key: "event", label: "Event", color: "#b3705f",
-    sections: ["What happened", "Causes", "Consequences"], attrs: ["When", "Where"] }
+    sections: ["What happened", "Causes", "Consequences"], attrs: ["When", "Where"] },
+  { key: "product", label: "Product", color: "#c2a86a",
+    sections: ["Description", "Origin", "Trade"], attrs: ["Price", "Rarity", "Owner", "Availability"] }
 ];
 function isPresetType(key) { return TYPE_PRESETS.some(function (t) { return t.key === key; }); }
 /* Defined here (not down with the rest of the medals code) because normalizeState
@@ -3548,6 +3607,8 @@ function blankState() {
     medalPrestige: {},
     medalBest: {},
     medalHistory: [],
+    budget: [],
+    products: [],
     settings: {
       hidden: { railTabs: [], homeTiles: [], homeSections: [], workSections: [] },
       sessionCleanupFilters: { after: "", before: "", minMinutes: "", maxMinutes: "", labels: [] },
@@ -3770,9 +3831,36 @@ function normalizeState(s) {
       });
     }
   });
+  safe("budget", function () {
+    s.budget = (Array.isArray(s.budget) ? s.budget : []).filter(function (b) { return b && typeof b === "object"; }).map(function (b) {
+      return {
+        id: b.id || uid(),
+        date: typeof b.date === "string" && b.date ? b.date : dayKey(),
+        kind: b.kind === "income" ? "income" : "expense",
+        category: typeof b.category === "string" ? b.category : "",
+        amount: Math.max(0, +b.amount || 0),
+        note: typeof b.note === "string" ? b.note : "",
+        createdAt: +b.createdAt || Date.now()
+      };
+    });
+  });
+  safe("products", function () {
+    var PRODUCT_STATUSES = ["idea", "planned", "active", "done"];
+    s.products = (Array.isArray(s.products) ? s.products : []).filter(function (p) { return p && typeof p === "object"; }).map(function (p) {
+      return {
+        id: p.id || uid(),
+        name: typeof p.name === "string" ? p.name : "",
+        status: PRODUCT_STATUSES.indexOf(p.status) > -1 ? p.status : "idea",
+        cost: Math.max(0, +p.cost || 0),
+        note: typeof p.note === "string" ? p.note : "",
+        createdAt: +p.createdAt || Date.now(),
+        updatedAt: +p.updatedAt || +p.createdAt || Date.now()
+      };
+    }).filter(function (p) { return p.name; });
+  });
   safe("settings", function () {
     var RAIL_KEYS = RAIL_ITEMS.map(function (it) { return it.key; });
-    var HOME_TILE_KEYS = ["continue", "pages", "entries", "timelines", "work", "oracle"];
+    var HOME_TILE_KEYS = HOME_TILE_DEFS.map(function (d) { return d.key; });
     var HOME_SECTION_KEYS = ["calendar", "activity", "pinned", "recent"];
     var WORK_SECTION_KEYS = ["goal", "history", "bylabel", "sessions", "achievements"];
     function cleanList(arr, allowed) {
@@ -3848,7 +3936,7 @@ function normalizeState(s) {
     if (sel.tab === "overview") sel.tab = "hub";
     if (sel.tab === "graph") { sel.tab = "timelines"; sel.tlView = "map"; }
     if (sel.tab === "work" || sel.tab === "calendar") sel.tab = "productivity";
-    if (["hub", "pages", "entries", "timelines", "productivity", "oracle"].indexOf(sel.tab) < 0) sel.tab = "hub";
+    if (["hub", "pages", "entries", "timelines", "productivity", "oracle", "management"].indexOf(sel.tab) < 0) sel.tab = "hub";
     if (sel.tlGraph && !sel.tlView) sel.tlView = "map";
     delete sel.tlGraph;
     delete sel.prodView;
@@ -3946,7 +4034,7 @@ var workspace = null;
 // editing in place (it does, for a few of these — see normalizeState).
 var GLOBAL_FIELDS = ["settings", "sessions", "plans", "restDays", "restTokens", "runningSession",
   "weeklyTarget", "weeklyGoals", "medalProgress", "bestStreak", "overachieve", "medalPrestige", "medalBest", "medalHistory",
-  "lastGoalWeekAwarded", "goalTokenCheckedThrough"];
+  "lastGoalWeekAwarded", "goalTokenCheckedThrough", "budget", "products"];
 function attachGlobalFields() { GLOBAL_FIELDS.forEach(function (k) { state[k] = workspace[k]; }); }
 function syncGlobalFieldsBack() { GLOBAL_FIELDS.forEach(function (k) { workspace[k] = state[k]; }); }
 function blankProjectMeta(id, name) {
@@ -4202,8 +4290,13 @@ var RAIL_ITEMS = [
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="16" rx="2"/><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/></svg>' },
   { key: "oracle", label: "Oracle", tip: "Oracle — connection prompts", scope: "project", beta: true,
     desc: "Draws two entries together and asks what connects them — a prompt generator for building relationships in your world. On: appears in the sidebar. Off: hidden from the sidebar; nothing is lost, it's just out of the way until you want it.",
-    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>' }
+    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>' },
+  { key: "management", label: "Management", tip: "Management — budget & products", scope: "workspace", beta: true,
+    betaNote: "Budget and product tracking are new and still being tuned.",
+    desc: "Track real-world income/expenses and the products or deliverables you're building — shared across every project. On: appears in the sidebar. Off: hidden from the sidebar; your budget and product data are untouched.",
+    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2.5" y="7" width="19" height="13" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M2.5 12.5h19"/><circle cx="12" cy="12.5" r="1.4" fill="currentColor" stroke="none"/></svg>' }
 ];
+function railItem(key) { return RAIL_ITEMS.find(function (r) { return r.key === key; }) || null; }
 // Builds the rail's room buttons from RAIL_ITEMS into the static #rail-rooms
 // placeholder. Runs synchronously, at script-parse time, before the
 // tooltip-wiring and click-wiring code further down the script queries
@@ -9035,24 +9128,23 @@ function renderHubContent() {
   var curGoal = curGoalSet ? state.weeklyGoals[curWkKey] : null;
   var wkHours = weekSeconds() / 3600;
   var wkNudge = !curGoalSet && (state.sessions.length > 0 || Object.keys(state.weeklyGoals).length > 0);
-  var tiles = [
-    { key: "continue", tab: null, accent: true, glyph: "↺", label: "Continue", desc: le ? "Back to your last edit" : "Nothing edited yet — jump in",
-      num: le ? (le.name.length > 16 ? le.name.slice(0, 15) + "…" : le.name) : "—", unit: le ? le.kind : "", go: goContinue },
-    { key: "pages", tab: "pages", glyph: "✎", label: "Pages", desc: "Notes, lore, and long-form writing", num: state.pages.length, unit: state.pages.length === 1 ? "page" : "pages" },
-    { key: "entries", tab: "entries", glyph: "❧", label: "Entries", desc: "Your world bible — people, places, powers", num: state.entries.length, unit: state.entries.length === 1 ? "entry" : "entries" },
-    { key: "timelines", tab: "timelines", glyph: "│", label: "Timelines", desc: "Epochs, eras, and the relationship map", num: countEras(), unit: countEras() === 1 ? "era" : "eras" },
-    { key: "work", tab: null, glyph: "◷", label: "Timer",
-      desc: curGoalSet ? "Track sessions against your weekly goal" : "New week — set a goal in Work",
-      num: wkHours.toFixed(1) + "h", unit: curGoalSet ? "of " + curGoal + "h goal" : "this week", nudge: wkNudge, go: function () { goProductivity(); } },
-    { key: "oracle", tab: "oracle", glyph: "✶", label: "Oracle", desc: "Draw a prompt for what connects two things", num: oracleReady() ? "Ready" : state.entries.length, unit: oracleReady() ? "" : "need 2+", beta: true }
-  ];
+  var mgmtBalance = 0;
+  state.budget.forEach(function (b) { mgmtBalance += b.kind === "income" ? b.amount : -b.amount; });
+  var tileCtx = { le: le, curGoalSet: curGoalSet, curGoal: curGoal, wkHours: wkHours, wkNudge: wkNudge, mgmtBalance: mgmtBalance };
+  var tiles = HOME_TILE_DEFS.map(function (d) {
+    var t = d.build(tileCtx);
+    t.key = d.key; t.label = d.label; t.icon = d.icon; if (d.beta) t.beta = true;
+    return t;
+  });
   var hiddenTiles = state.settings.hidden.homeTiles || [];
   var wrap = $("hub-tiles");
   wrap.innerHTML = "";
   tiles.filter(function (t) { return hiddenTiles.indexOf(t.key) === -1; }).forEach(function (t) {
     var tile = el("button", "hub-tile" + (t.accent ? " accent" : ""));
     if (t.nudge) { var badge = el("span", "ht-nudge"); badge.title = "Set this week's work goal"; tile.appendChild(badge); }
-    tile.appendChild(el("span", "ht-glyph", t.glyph));
+    var glyphEl = el("span", "ht-glyph");
+    glyphEl.innerHTML = t.icon;
+    tile.appendChild(glyphEl);
     var labelEl = el("span", "ht-label", t.label);
     if (t.beta) labelEl.appendChild(tagBadge("beta", "Beta"));
     tile.appendChild(labelEl);
@@ -10153,6 +10245,249 @@ $("ent-oracle").addEventListener("click", function () {
   if (cur && entById(cur)) { $("or-anchor").value = cur; oracleDraw(); }
 });
 
+/* ════════════════ MANAGEMENT MODULE — budget & products ════════════════ */
+function fmtMoney(n) {
+  n = +n || 0;
+  return "$" + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+var PRODUCT_STATUS_LABELS = { idea: "Idea", planned: "Planned", active: "Active", done: "Done" };
+
+function renderManagementBudget() {
+  var rows = state.budget.slice().sort(function (a, b) { return (b.date || "").localeCompare(a.date || "") || b.createdAt - a.createdAt; });
+  var income = 0, expense = 0;
+  state.budget.forEach(function (b) { if (b.kind === "income") income += b.amount; else expense += b.amount; });
+  $("mgmt-sum-income").textContent = fmtMoney(income);
+  $("mgmt-sum-expense").textContent = fmtMoney(expense);
+  var balEl = $("mgmt-sum-balance");
+  balEl.textContent = fmtMoney(income - expense);
+  balEl.className = "val" + (income - expense < 0 ? " expense" : income - expense > 0 ? " income" : "");
+
+  var list = $("mgmt-budget-list");
+  list.innerHTML = "";
+  if (!rows.length) { list.appendChild(el("div", "empty", "No transactions yet. Add income or an expense above.")); return; }
+  rows.forEach(function (b) {
+    var row = el("div", "sess-row selectable");
+    row.title = "View details";
+    var nm = el("span", "nm", b.category || (b.kind === "income" ? "Income" : "Expense"));
+    if (b.note) nm.appendChild(el("span", "mgmt-note-dot", "•"));
+    var cat = el("span", "mgmt-cat", b.date);
+    var amt = el("span", "mgmt-amt " + b.kind, (b.kind === "income" ? "+" : "−") + fmtMoney(b.amount));
+    var edit = el("button", "tiny-x", "✎");
+    edit.setAttribute("aria-label", "Edit transaction");
+    edit.title = "Edit";
+    edit.addEventListener("click", function (e) { e.stopPropagation(); openBudgetModal(b); });
+    var x = el("button", "tiny-x", "✕");
+    x.setAttribute("aria-label", "Delete transaction");
+    x.addEventListener("click", function (e) {
+      e.stopPropagation();
+      confirmModal("Delete this transaction?", (b.category || (b.kind === "income" ? "Income" : "Expense")) + " of " + fmtMoney(b.amount) + " will be removed.", "Delete", function () {
+        state.budget = state.budget.filter(function (o) { return o.id !== b.id; });
+        persist(); renderManagementBudget();
+      });
+    });
+    row.append(nm, cat, amt, edit, x);
+    row.addEventListener("click", function () { openBudgetDetail(b); });
+    list.appendChild(row);
+  });
+}
+
+function mgmtDetailRow(labelText, valueText) {
+  var wrap = el("div", "cal-field");
+  wrap.appendChild(el("label", "cal-field-lbl", labelText));
+  wrap.appendChild(el("div", "note", valueText || "—"));
+  return wrap;
+}
+
+function openBudgetDetail(b) {
+  openModal((b.kind === "income" ? "Income" : "Expense") + (b.category ? ": " + b.category : ""), "");
+  var extra = $modal("modal-extra");
+  var box = el("div", "cal-plan-form");
+  box.append(
+    mgmtDetailRow("Type", b.kind === "income" ? "Income" : "Expense"),
+    mgmtDetailRow("Date", b.date),
+    mgmtDetailRow("Amount", fmtMoney(b.amount)),
+    mgmtDetailRow("Category", b.category),
+    mgmtDetailRow("Note", b.note)
+  );
+  extra.appendChild(box);
+  var modalRow = $modal("modal-row");
+  var close = el("button", null, "Close");
+  close.addEventListener("click", closeModal);
+  var editBtn = el("button", "primary", "Edit");
+  editBtn.addEventListener("click", function () { closeModal(); openBudgetModal(b); });
+  modalRow.append(close, editBtn);
+}
+
+function openBudgetModal(existing) {
+  var isEdit = !!existing;
+  openModal(isEdit ? "Edit transaction" : "New transaction", "");
+  var extra = $modal("modal-extra");
+  var form = el("div", "cal-plan-form");
+  function field(labelText, inputEl) {
+    var wrap = el("div", "cal-field");
+    wrap.appendChild(el("label", "cal-field-lbl", labelText));
+    wrap.appendChild(inputEl);
+    return wrap;
+  }
+  var kindSel = el("select");
+  [["expense", "Expense"], ["income", "Income"]].forEach(function (o) {
+    var opt = el("option", null, o[1]); opt.value = o[0]; kindSel.appendChild(opt);
+  });
+  kindSel.value = existing ? existing.kind : "expense";
+
+  var dateInp = el("input"); dateInp.type = "date";
+  dateInp.value = existing ? existing.date : dayKey();
+
+  var amountInp = el("input"); amountInp.type = "number"; amountInp.step = "0.01"; amountInp.min = "0";
+  amountInp.value = existing ? existing.amount : "";
+  amountInp.placeholder = "0.00";
+
+  var categoryInp = el("input"); categoryInp.type = "text"; categoryInp.placeholder = "e.g. Hosting, Client payment";
+  categoryInp.value = existing ? existing.category : "";
+
+  var noteInp = el("textarea"); noteInp.rows = 2; noteInp.placeholder = "Notes (optional)";
+  noteInp.value = existing ? existing.note : "";
+
+  var row1 = el("div", "cal-field-row");
+  row1.append(field("Type", kindSel), field("Date", dateInp));
+  var row2 = el("div", "cal-field-row");
+  row2.append(field("Amount", amountInp), field("Category", categoryInp));
+  form.append(row1, row2, field("Note", noteInp));
+  extra.appendChild(form);
+
+  var modalRow = $modal("modal-row");
+  var cancel = el("button", null, "Cancel");
+  cancel.addEventListener("click", closeModal);
+  var save = el("button", "primary", isEdit ? "Save" : "Add");
+  save.addEventListener("click", function () {
+    var amt = Math.max(0, +amountInp.value || 0);
+    if (existing) {
+      existing.kind = kindSel.value; existing.date = dateInp.value || dayKey();
+      existing.amount = amt; existing.category = categoryInp.value.trim(); existing.note = noteInp.value.trim();
+    } else {
+      state.budget.push({
+        id: uid(), kind: kindSel.value, date: dateInp.value || dayKey(),
+        amount: amt, category: categoryInp.value.trim(), note: noteInp.value.trim(), createdAt: Date.now()
+      });
+    }
+    closeModal(); persist(); renderManagementBudget(); toast(isEdit ? "Transaction updated" : "Transaction added");
+  });
+  modalRow.append(cancel, save);
+  amountInp.focus();
+}
+
+function renderManagementProducts() {
+  var rows = state.products.slice().sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+  var list = $("mgmt-products-list");
+  list.innerHTML = "";
+  if (!rows.length) { list.appendChild(el("div", "empty", "No products yet. Add one above to start tracking it.")); return; }
+  rows.forEach(function (p) {
+    var row = el("div", "sess-row selectable");
+    row.title = "View details";
+    var nm = el("span", "nm", p.name);
+    if (p.note) nm.appendChild(el("span", "mgmt-note-dot", "•"));
+    var status = el("span", "mgmt-status " + p.status, PRODUCT_STATUS_LABELS[p.status] || p.status);
+    var cost = el("span", "mgmt-amt expense", p.cost ? fmtMoney(p.cost) : "");
+    var edit = el("button", "tiny-x", "✎");
+    edit.setAttribute("aria-label", "Edit product");
+    edit.title = "Edit";
+    edit.addEventListener("click", function (e) { e.stopPropagation(); openProductModal(p); });
+    var x = el("button", "tiny-x", "✕");
+    x.setAttribute("aria-label", "Delete product");
+    x.addEventListener("click", function (e) {
+      e.stopPropagation();
+      confirmModal("Delete “" + p.name + "”?", "This can't be undone.", "Delete", function () {
+        state.products = state.products.filter(function (o) { return o.id !== p.id; });
+        persist(); renderManagementProducts();
+      });
+    });
+    row.append(nm, status, cost, edit, x);
+    row.addEventListener("click", function () { openProductDetail(p); });
+    list.appendChild(row);
+  });
+}
+
+function openProductDetail(p) {
+  openModal(p.name, "");
+  var extra = $modal("modal-extra");
+  var box = el("div", "cal-plan-form");
+  box.append(
+    mgmtDetailRow("Status", PRODUCT_STATUS_LABELS[p.status] || p.status),
+    mgmtDetailRow("Cost", p.cost ? fmtMoney(p.cost) : ""),
+    mgmtDetailRow("Note", p.note)
+  );
+  extra.appendChild(box);
+  var modalRow = $modal("modal-row");
+  var close = el("button", null, "Close");
+  close.addEventListener("click", closeModal);
+  var editBtn = el("button", "primary", "Edit");
+  editBtn.addEventListener("click", function () { closeModal(); openProductModal(p); });
+  modalRow.append(close, editBtn);
+}
+
+function openProductModal(existing) {
+  var isEdit = !!existing;
+  openModal(isEdit ? "Edit product" : "New product", "");
+  var extra = $modal("modal-extra");
+  var form = el("div", "cal-plan-form");
+  function field(labelText, inputEl) {
+    var wrap = el("div", "cal-field");
+    wrap.appendChild(el("label", "cal-field-lbl", labelText));
+    wrap.appendChild(inputEl);
+    return wrap;
+  }
+  var nameInp = el("input"); nameInp.type = "text"; nameInp.placeholder = "e.g. Pro plan, Onboarding kit";
+  nameInp.value = existing ? existing.name : "";
+
+  var statusSel = el("select");
+  ["idea", "planned", "active", "done"].forEach(function (k) {
+    var opt = el("option", null, PRODUCT_STATUS_LABELS[k]); opt.value = k; statusSel.appendChild(opt);
+  });
+  statusSel.value = existing ? existing.status : "idea";
+
+  var costInp = el("input"); costInp.type = "number"; costInp.step = "0.01"; costInp.min = "0";
+  costInp.value = existing && existing.cost ? existing.cost : "";
+  costInp.placeholder = "0.00";
+
+  var noteInp = el("textarea"); noteInp.rows = 2; noteInp.placeholder = "Notes (optional)";
+  noteInp.value = existing ? existing.note : "";
+
+  var row1 = el("div", "cal-field-row");
+  row1.append(field("Name", nameInp), field("Status", statusSel));
+  form.append(row1, field("Cost (optional)", costInp), field("Note", noteInp));
+  extra.appendChild(form);
+
+  var modalRow = $modal("modal-row");
+  var cancel = el("button", null, "Cancel");
+  cancel.addEventListener("click", closeModal);
+  var save = el("button", "primary", isEdit ? "Save" : "Add");
+  save.addEventListener("click", function () {
+    var name = nameInp.value.trim();
+    if (!name) { nameInp.focus(); return; }
+    if (existing) {
+      existing.name = name; existing.status = statusSel.value;
+      existing.cost = Math.max(0, +costInp.value || 0); existing.note = noteInp.value.trim();
+      existing.updatedAt = Date.now();
+    } else {
+      state.products.push({
+        id: uid(), name: name, status: statusSel.value,
+        cost: Math.max(0, +costInp.value || 0), note: noteInp.value.trim(),
+        createdAt: Date.now(), updatedAt: Date.now()
+      });
+    }
+    closeModal(); persist(); renderManagementProducts(); toast(isEdit ? "Product updated" : "Product added");
+  });
+  modalRow.append(cancel, save);
+  nameInp.focus();
+}
+
+function renderManagementTab() {
+  renderManagementBudget();
+  renderManagementProducts();
+}
+$("mgmt-add-budget-btn").addEventListener("click", function () { openBudgetModal(null); });
+$("mgmt-add-product-btn").addEventListener("click", function () { openProductModal(null); });
+
 
 /* ════════════════ OVERVIEW MODULE ════════════════ */
 function totalWords() {
@@ -10462,14 +10797,60 @@ function openSnapshotViewer(snap) {
 // see RAIL_ITEMS, defined up near the $/el helpers (it has to run before
 // the rail buttons are needed, well before this point in the file).
 var RAIL_TOGGLE_ITEMS = RAIL_ITEMS;
-var HOME_TILE_ITEMS = [
-  { key: "continue", label: "Continue", desc: "A tile that jumps straight back to whatever page, entry, or timeline you last had open — skips having to hunt for it. On: shown on Home. Off: the tile disappears; you can still reach anything from its own room.", recommended: true },
-  { key: "pages", label: "Pages", desc: "A shortcut tile to your notes, showing how many you have. On: shown on Home. Off: the tile disappears from Home; Pages itself is unaffected if it's still in your sidebar." },
-  { key: "entries", label: "Entries", desc: "A shortcut tile to your world bible, showing how many entries you have. On: shown on Home. Off: the tile disappears from Home; Entries itself is unaffected if it's still in your sidebar." },
-  { key: "timelines", label: "Timelines", desc: "A shortcut tile to your timelines, showing your era count. On: shown on Home. Off: the tile disappears from Home; Timelines itself is unaffected if it's still in your sidebar." },
-  { key: "work", label: "Timer", desc: "A shortcut tile to the session timer, showing this week's hours. On: shown on Home. Off: the tile disappears from Home; Productivity itself is unaffected if it's still in your sidebar." },
-  { key: "oracle", label: "Oracle", desc: "A shortcut tile to connection prompts. On: shown on Home. Off: the tile disappears from Home; Oracle itself is unaffected if it's still in your sidebar.", beta: true }
+// Single source of truth for Home tiles: add one entry here to register a
+// new tile — it's automatically picked up by the settings toggle list
+// (HOME_TILE_ITEMS, derived below), the sanitizer (HOME_TILE_KEYS, in
+// normalizeState), and the actual Home render (renderHubContent), no other
+// registration needed. `build(ctx)` returns this render's dynamic bits
+// (tab/accent/glyph/desc/num/unit/go/nudge); ctx carries the shared
+// per-render values (le, curGoalSet, curGoal, wkHours, wkNudge, mgmtBalance)
+// so tiles don't each recompute them.
+var HOME_TILE_DEFS = [
+  { key: "continue", label: "Continue", recommended: true,
+    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/></svg>',
+    settingsDesc: "A tile that jumps straight back to whatever page, entry, or timeline you last had open — skips having to hunt for it. On: shown on Home. Off: the tile disappears; you can still reach anything from its own room.",
+    build: function (ctx) {
+      var le = ctx.le;
+      return { tab: null, accent: true, desc: le ? "Back to your last edit" : "Nothing edited yet — jump in",
+        num: le ? (le.name.length > 16 ? le.name.slice(0, 15) + "…" : le.name) : "—", unit: le ? le.kind : "", go: goContinue };
+    } },
+  { key: "pages", railKey: "pages", label: railItem("pages").label, icon: railItem("pages").icon,
+    settingsDesc: "A shortcut tile to your notes, showing how many you have. On: shown on Home. Off: the tile disappears from Home; Pages itself is unaffected if it's still in your sidebar.",
+    build: function () {
+      return { tab: "pages", desc: "Notes, lore, and long-form writing", num: state.pages.length, unit: state.pages.length === 1 ? "page" : "pages" };
+    } },
+  { key: "entries", railKey: "entries", label: railItem("entries").label, icon: railItem("entries").icon,
+    settingsDesc: "A shortcut tile to your world bible, showing how many entries you have. On: shown on Home. Off: the tile disappears from Home; Entries itself is unaffected if it's still in your sidebar.",
+    build: function () {
+      return { tab: "entries", desc: "Your world bible — people, places, powers", num: state.entries.length, unit: state.entries.length === 1 ? "entry" : "entries" };
+    } },
+  { key: "timelines", railKey: "timelines", label: railItem("timelines").label, icon: railItem("timelines").icon,
+    settingsDesc: "A shortcut tile to your timelines, showing your era count. On: shown on Home. Off: the tile disappears from Home; Timelines itself is unaffected if it's still in your sidebar.",
+    build: function () {
+      return { tab: "timelines", desc: "Epochs, eras, and the relationship map", num: countEras(), unit: countEras() === 1 ? "era" : "eras" };
+    } },
+  { key: "work", railKey: "productivity", label: railItem("productivity").label, icon: railItem("productivity").icon,
+    settingsDesc: "A shortcut tile to the session timer, showing this week's hours. On: shown on Home. Off: the tile disappears from Home; Productivity itself is unaffected if it's still in your sidebar.",
+    build: function (ctx) {
+      return { tab: null,
+        desc: ctx.curGoalSet ? "Track sessions against your weekly goal" : "New week — set a goal in Work",
+        num: ctx.wkHours.toFixed(1) + "h", unit: ctx.curGoalSet ? "of " + ctx.curGoal + "h goal" : "this week",
+        nudge: ctx.wkNudge, go: function () { goProductivity(); } };
+    } },
+  { key: "oracle", railKey: "oracle", label: railItem("oracle").label, icon: railItem("oracle").icon, beta: true,
+    settingsDesc: "A shortcut tile to connection prompts. On: shown on Home. Off: the tile disappears from Home; Oracle itself is unaffected if it's still in your sidebar.",
+    build: function () {
+      return { tab: "oracle", desc: "Draw a prompt for what connects two things", num: oracleReady() ? "Ready" : state.entries.length, unit: oracleReady() ? "" : "need 2+" };
+    } },
+  { key: "management", railKey: "management", label: railItem("management").label, icon: railItem("management").icon, beta: true,
+    settingsDesc: "A shortcut tile showing your budget balance. On: shown on Home. Off: the tile disappears from Home; Management itself is unaffected if it's still in your sidebar.",
+    build: function (ctx) {
+      return { tab: "management", desc: "Budget and products, tracked here", num: fmtMoney(ctx.mgmtBalance), unit: "balance" };
+    } }
 ];
+var HOME_TILE_ITEMS = HOME_TILE_DEFS.map(function (d) {
+  return { key: d.key, label: d.label, desc: d.settingsDesc, beta: d.beta, recommended: d.recommended };
+});
 var HOME_SECTION_ITEMS = [
   { key: "calendar", label: "Calendar", desc: "A Mon\u2013Sun strip showing which days this week you've worked, rested, or neither. On: shown on Home, below the tiles. Off: hidden from Home; nothing is lost \u2014 open the Calendar tab for the full month view and your plans.", beta: true },
   { key: "activity", label: "Activity", desc: "A heat-grid showing which days you've edited something in Notebook, like a habit tracker. On: shown on Home, below the tiles. Off: the grid is hidden; your activity history is still tracked in the background, just not displayed.", recommended: true },
@@ -12717,6 +13098,7 @@ function renderAll() {
   else if (tab === "productivity") renderProductivityTab();
   else if (tab === "hub") renderHomeView();
   else if (tab === "oracle") renderOracle();
+  else if (tab === "management") renderManagementTab();
   renderTimingPill();
 }
 
@@ -12730,7 +13112,7 @@ function boot() {
   syncGlobalFieldsBack();
   applyHiddenSettings();
   applyAllStyle();
-  var VALID_TABS = ["hub", "pages", "entries", "timelines", "productivity", "oracle"];
+  var VALID_TABS = ["hub", "pages", "entries", "timelines", "productivity", "oracle", "management"];
   if (VALID_TABS.indexOf(state.sel.tab) === -1) state.sel.tab = "hub";
   if ((state.settings.hidden.railTabs || []).indexOf(state.sel.tab) > -1) {
     state.sel.tab = "hub";
