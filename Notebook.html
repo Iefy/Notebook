@@ -3259,7 +3259,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
    to read from the `dev` branch's version.json instead of `main`'s, so a
    dev build never gets nagged about (or accidentally offered) a main-line
    release, and vice versa. */
-var APP_VERSION = "v0.4.7-dev";
+var APP_VERSION = "0.4.7-dev";
 var UPDATE_CHANNEL = APP_VERSION.toLowerCase().indexOf("dev") > -1 ? "dev" : "main";
 var UPDATE_CHECK_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/version.json";
 var UPDATE_HTML_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/Notebook.html";
@@ -12232,12 +12232,20 @@ function showPatchNotesMessage(msg) {
   body.appendChild(el("h2", null, "Patch notes"));
   body.appendChild(el("p", "onboard-lede", msg));
 }
-function renderPatchNotes(entry) {
+function renderPatchNotes(entry, changelog) {
   var body = $("patchnotes-body");
   body.innerHTML = "";
   body.appendChild(el("h2", null, "Patch notes"));
   if (!entry) {
     body.appendChild(el("p", "onboard-lede", "No changelog entry for v" + APP_VERSION + " yet."));
+    // Every remote entry compared newer than the installed APP_VERSION, so
+    // there was nothing "not newer" to show — almost always means APP_VERSION
+    // (top of file) wasn't bumped to match the version.json entry that was
+    // actually published. Logged rather than shown in the UI since this is a
+    // maintainer-facing mistake, not something the person reading patch notes
+    // can act on.
+    var versions = (Array.isArray(changelog) ? changelog : []).map(function (e) { return e && e.version; }).filter(Boolean);
+    if (versions.length) console.warn("Notebook: no changelog entry <= APP_VERSION (" + APP_VERSION + "). Remote versions: " + versions.join(", ") + " \u2014 check whether APP_VERSION needs bumping to match.");
     return;
   }
   body.appendChild(el("p", "onboard-lede", "What v" + APP_VERSION + " changed:"));
@@ -12250,7 +12258,7 @@ $("settings-version-badge").addEventListener("click", function () {
     .then(function (r) { if (!r.ok) throw new Error("status " + r.status); return r.json(); })
     .then(function (data) {
       if (!data || !Array.isArray(data.changelog)) throw new Error("malformed version.json");
-      renderPatchNotes(latestInstalledChangelogEntry(data.changelog));
+      renderPatchNotes(latestInstalledChangelogEntry(data.changelog), data.changelog);
     })
     .catch(function (e) {
       console.warn("Notebook: patch notes fetch failed (offline, or version.json unreachable)", e);
