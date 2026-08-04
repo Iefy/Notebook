@@ -1,22 +1,40 @@
 {
-  "version": "0.4.5-dev",
+  "version": "0.4.7-dev",
   "changelog": [
     {
-      "version": "0.4.5-dev",
+      "version": "0.4.7-dev",
       "date": "2026-08-04",
       "changes": [
-        "[new] Patch notes now contain tags",
-        "[new] Management: a new sidebar room for real-world budgeting and product tracking, shared across every project like Productivity.",
-        "[new] Added a Management tile showing your current budget balance",
-        "[new] Product entry type for fictional goods/items",
-        "[new] Added a Wealth field to Characters and a Treasury field to Factions",
-        "[fix] Home tiles now come from a single registry to avoid mismatches",
+        "[new] Patch notes now support tags, and lines can be broken down into a sub-bullet list — see this entry's format for an example",
+        {
+          "text": "[new] Management: a new sidebar room for real-world budgeting and product tracking, shared across every project like Productivity",
+          "sub": [
+            "Budget: log income and expenses with category, amount, date, and notes — running income/expense/balance summary",
+            "Products: track what you're building through a status pipeline (Idea, Planned, Active, Done)",
+            "A Management tile on Home shows your current budget balance"
+          ]
+        },
+        {
+          "text": "[new] In-world economy tracking, integrated into Entries",
+          "sub": [
+            "New Product entry type for fictional goods/items",
+            "Added a Wealth field to Characters and a Treasury field to Factions"
+          ]
+        },
+        {
+          "text": "[fix] Rest tokens were accumulating far too fast",
+          "sub": [
+            "New rate: 1 token for hitting your weekly goal, +1 for clearing the overachieve challenge — roughly 1-2 a week if you're working",
+            "Medals no longer hand out tokens on their own; they're celebration-only now",
+            "Existing save stockpiles are recalculated once, automatically, on next load"
+          ]
+        },
+        "[fix] Home tiles now come from a single registry, so they can't drift out of sync with the sidebar",
         "[fix] Productivity now occupies more screenspace",
-        "[redesign] Multiple productivity tabs have been given touch-ups"
+        "[redesign] Multiple Productivity tabs have been given touch-ups"
       ]
     }
   ],
-
   "_comment_tags": [
     "Changelog lines can start with a bracketed tag, e.g. \"[bug] Fixed the thing\".",
     "This key is documentation only — the app never reads it, just 'version' and 'changelog' above.",
@@ -32,6 +50,14 @@
     "",
     "Any other bracketed word -> still renders as a neutral pill, title-cased.",
     "No brackets at all -> plain untagged line.",
-    "Tags are case-insensitive and only match at the very start of the line."
+    "Tags are case-insensitive and only match at the very start of the line.",
+    "",
+    "Each entry in 'changes' can also be an object instead of a plain string,",
+    "to break one tagged line down into specifics:",
+    "  { \"text\": \"[fix] Tokens accumulating rapidly\", \"sub\": [\"detail one\", \"detail two\"] }",
+    "'text' follows the same [tag] + markdown rules as a plain-string line.",
+    "'sub' is a list of plain strings, rendered as a smaller nested bullet list",
+    "underneath — each one also supports its own [tag] and markdown if needed,",
+    "though that's rarely necessary for a sub-bullet."
   ]
 }
