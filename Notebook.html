@@ -3257,7 +3257,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
    to read from the `dev` branch's version.json instead of `main`'s, so a
    dev build never gets nagged about (or accidentally offered) a main-line
    release, and vice versa. */
-var APP_VERSION = "0.4.5-dev";
+var APP_VERSION = "0.0.5-dev";
 var UPDATE_CHANNEL = APP_VERSION.toLowerCase().indexOf("dev") > -1 ? "dev" : "main";
 var UPDATE_CHECK_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/version.json";
 var UPDATE_HTML_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/Notebook.html";
@@ -3601,6 +3601,7 @@ function blankState() {
     overachieve: { challenge: null, record: 0, lastClearedWeek: null, checkedThrough: null },
     restDays: {},
     restTokens: 0,
+    restTokensV2: true,
     plans: [],
     lastGoalWeekAwarded: null,
     goalTokenCheckedThrough: null,
@@ -3691,6 +3692,48 @@ function normalizeState(s) {
   s.restDays = s.restDays && typeof s.restDays === "object" ? s.restDays : {};
   Object.keys(s.restDays).forEach(function (k) { if (!s.restDays[k]) delete s.restDays[k]; });
   s.restTokens = Math.max(0, +s.restTokens || 0);
+  // one-time migration: earlier versions handed out a rest token for every
+  // single medal tier crossed, with no ceiling — a save with a long history
+  // could cross a dozen-plus tiers the first time medals were computed, and
+  // weekly goal tokens then kept piling on top with nothing to spend them on.
+  // Tokens are now earned only from hitting a week's goal and clearing that
+  // week's overachieve challenge (both capped once per week), which averages
+  // out to roughly 1-2 a week for someone actively working. This replays
+  // that formula across the account's full session history (so an existing
+  // stockpile isn't lost, just recalculated) and nets out whatever's already
+  // been spent on rest days.
+  safe("restTokensMigration", function () {
+    if (s.restTokensV2) return;
+    s.restTokensV2 = true;
+    if (!s.sessions.length) { s.restTokens = 0; return; }
+    function localDayKey(ts) {
+      var d = new Date(ts);
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+    function localWeekStart(ts) {
+      var d = new Date(ts);
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+      return d.getTime();
+    }
+    var minTs = s.sessions.reduce(function (m, x) { return Math.min(m, +x.ts || Infinity); }, Infinity);
+    if (!isFinite(minTs)) { s.restTokens = 0; return; }
+    var wTs = localWeekStart(minTs);
+    var curTs = localWeekStart(Date.now());
+    var earned = 0;
+    while (wTs <= curTs) {
+      var we = wTs + 7 * 86400000;
+      var secs = 0;
+      s.sessions.forEach(function (x) { if (x.ts >= wTs && x.ts < we) secs += x.seconds || 0; });
+      var wk = localDayKey(wTs);
+      var goal = s.weeklyGoals.hasOwnProperty(wk) ? s.weeklyGoals[wk] : s.weeklyTarget;
+      if (goal > 0 && secs / 3600 >= goal) earned++;
+      wTs += 7 * 86400000;
+    }
+    earned += (s.overachieve && s.overachieve.record) || 0;
+    var spent = Object.keys(s.restDays || {}).filter(function (k) { return s.restDays[k]; }).length;
+    s.restTokens = Math.max(0, earned - spent);
+  });
   safe("plans", function () {
     s.plans = (Array.isArray(s.plans) ? s.plans : []).map(function (p) {
       var rec = null;
@@ -4032,7 +4075,7 @@ var workspace = null;
 // normalizes, and syncGlobalFieldsBack() resyncs workspace afterward in
 // case normalizeState() rebuilt one as a new object/array rather than
 // editing in place (it does, for a few of these — see normalizeState).
-var GLOBAL_FIELDS = ["settings", "sessions", "plans", "restDays", "restTokens", "runningSession",
+var GLOBAL_FIELDS = ["settings", "sessions", "plans", "restDays", "restTokens", "restTokensV2", "runningSession",
   "weeklyTarget", "weeklyGoals", "medalProgress", "bestStreak", "overachieve", "medalPrestige", "medalBest", "medalHistory",
   "lastGoalWeekAwarded", "goalTokenCheckedThrough", "budget", "products"];
 function attachGlobalFields() { GLOBAL_FIELDS.forEach(function (k) { state[k] = workspace[k]; }); }
@@ -7574,6 +7617,11 @@ function checkOverachieveProgress() {
       state.overachieve.record++;
       state.overachieve.lastClearedWeek = pastKey;
       state.overachieve.challenge = Math.round((state.overachieve.challenge + overachieveStep()) * 2) / 2;
+      // clearing the standing challenge is the "bonus" half of a working
+      // week's rest tokens — hitting the plain weekly goal earns one
+      // (see checkGoalWeekTokenAward), clearing this earns a second, so a
+      // strong week tops out around 2 tokens instead of an unbounded pile.
+      state.restTokens = (state.restTokens || 0) + 1;
       changed = true;
     }
     state.overachieve.checkedThrough = pastKey;
@@ -7585,6 +7633,7 @@ function checkOverachieveProgress() {
     state.overachieve.record++;
     state.overachieve.lastClearedWeek = wk;
     state.overachieve.challenge = Math.round((state.overachieve.challenge + overachieveStep()) * 2) / 2;
+    state.restTokens = (state.restTokens || 0) + 1;
     changed = true;
   }
   return changed;
@@ -7837,13 +7886,16 @@ function checkMedalLevelUps() {
     var prev = state.medalProgress[key];
     if (!prev || typeof prev !== "object") prev = { prestige: p, tier: 0 };
     if (prev.prestige === p && tier > prev.tier) {
-      // award and celebrate every tier passed through, not just the one
-      // landed on — a big jump (a long session logged at once, an import, a
-      // backfilled overachieve clear covering several missed weeks) can
-      // cross more than one tier in a single check, and previously only the
-      // final tier got a toast, silently skipping the ones in between.
+      // celebrate every tier passed through, not just the one landed on — a
+      // big jump (a long session logged at once, an import, a backfilled
+      // overachieve clear covering several missed weeks) can cross more than
+      // one tier in a single check, and previously only the final tier got a
+      // toast, silently skipping the ones in between. Medals no longer pay
+      // out rest tokens themselves (see checkGoalWeekTokenAward and
+      // checkOverachieveProgress for where tokens actually come from) —
+      // that's what let a long-history save cross a dozen-plus tiers the
+      // first time this ran and end up sitting on an absurd stockpile.
       for (var t = prev.tier + 1; t <= tier; t++) {
-        state.restTokens = (state.restTokens || 0) + 1;
         if (!achievementsHidden()) queueMedalCelebration(key, t);
         recordMedalHistory(key, t, p, "tier");
       }
@@ -8506,7 +8558,7 @@ function renderRestRow() {
     ? "Today is a rest day — your streak is frozen, not broken."
     : tokens > 0
       ? tokens + " rest token" + (tokens === 1 ? "" : "s") + " earned — spend one anytime, no pressure to."
-      : "Clear a goal week or level up a medal to earn a rest token.";
+      : "Hit your weekly goal to earn a rest token — clear the overachieve challenge too and earn a second.";
   var btn = $("wk-rest-btn");
   btn.textContent = rested ? "Undo rest day" : "Take a rest day";
   btn.dataset.mode = rested ? "undo" : "take";
@@ -10565,7 +10617,7 @@ var SNAPSHOT_PARTS = [
   { key: "pages", label: "Pages & notebooks", fields: ["notebooks", "pages", "topics"] },
   { key: "entries", label: "Entries", fields: ["entries", "entryTypes", "tagPresets"] },
   { key: "timelines", label: "Timelines", fields: ["timelines"] },
-  { key: "work", label: "Work sessions & goals", fields: ["sessions", "weeklyTarget", "weeklyGoals", "restDays", "restTokens", "medalProgress", "bestStreak", "overachieve", "medalPrestige", "lastGoalWeekAwarded", "goalTokenCheckedThrough", "medalBest", "medalHistory"] },
+  { key: "work", label: "Work sessions & goals", fields: ["sessions", "weeklyTarget", "weeklyGoals", "restDays", "restTokens", "restTokensV2", "medalProgress", "bestStreak", "overachieve", "medalPrestige", "lastGoalWeekAwarded", "goalTokenCheckedThrough", "medalBest", "medalHistory"] },
   { key: "calendar", label: "Calendar plans", fields: ["plans"] },
   { key: "settings", label: "Preferences", fields: ["settings"] }
 ];
@@ -12386,7 +12438,7 @@ function exportJSON() {
     sessions: ownSessions, weeklyTarget: state.weeklyTarget, weeklyGoals: state.weeklyGoals, graphPos: state.graphPos,
     tagPresets: state.tagPresets, settings: state.settings,
     medalProgress: state.medalProgress, bestStreak: state.bestStreak,
-    overachieve: state.overachieve, restDays: state.restDays, restTokens: state.restTokens,
+    overachieve: state.overachieve, restDays: state.restDays, restTokens: state.restTokens, restTokensV2: state.restTokensV2,
     plans: ownPlans,
     lastGoalWeekAwarded: state.lastGoalWeekAwarded, goalTokenCheckedThrough: state.goalTokenCheckedThrough,
     medalPrestige: state.medalPrestige, medalBest: state.medalBest, medalHistory: state.medalHistory,
@@ -12845,6 +12897,7 @@ function importNotebookData(data) {
   if (data.overachieve && typeof data.overachieve === "object") s.overachieve = data.overachieve;
   if (data.restDays && typeof data.restDays === "object") s.restDays = data.restDays;
   if (typeof data.restTokens === "number") s.restTokens = data.restTokens;
+  if (typeof data.restTokensV2 === "boolean") s.restTokensV2 = data.restTokensV2;
   if (Array.isArray(data.plans)) s.plans = data.plans;
   if (typeof data.lastGoalWeekAwarded === "string") s.lastGoalWeekAwarded = data.lastGoalWeekAwarded;
   if (typeof data.goalTokenCheckedThrough === "string") s.goalTokenCheckedThrough = data.goalTokenCheckedThrough;
