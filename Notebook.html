@@ -1429,6 +1429,10 @@ body.timing #wk-toggle { border-color: #4a342e; color: var(--red); }
   padding: 1px 6px; border-radius: calc(20px * var(--radius-scale, 1)); vertical-align: middle;
 }
 .mgmt-returns { font-size: 11.5px; color: var(--sage); flex-shrink: 0; }
+.mgmt-budget-row { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.mgmt-budget-row:last-child { border-bottom: none; }
+.mgmt-budget-row-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.mgmt-budget-row-head .nm { flex: 1; font-weight: 600; }
 .mgmt-cat { color: var(--ink-mute); font-size: 11px; flex-shrink: 0; }
 .mgmt-summary { display: flex; gap: 18px; flex-wrap: wrap; }
 .mgmt-summary-item { display: flex; flex-direction: column; gap: 2px; }
@@ -2853,12 +2857,17 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
           <div class="wk-group-label">Budget</div>
           <div class="wk-group-cards">
             <div class="wk-card" id="mgmt-budget-summary-card">
+              <div class="ov-sect-head"><span>Overview</span><button class="foot-btn" id="mgmt-breakdown-btn" style="min-height:30px;padding:5px 10px;font-size:11px">Breakdown</button></div>
               <div class="mgmt-summary">
                 <div class="mgmt-summary-item"><span class="lbl">Income</span><span class="val income" id="mgmt-sum-income">$0</span></div>
                 <div class="mgmt-summary-item"><span class="lbl">Expenses</span><span class="val expense" id="mgmt-sum-expense">$0</span></div>
                 <div class="mgmt-summary-item"><span class="lbl">Invested</span><span class="val investment" id="mgmt-sum-invested">$0</span></div>
-                <div class="mgmt-summary-item"><span class="lbl">Balance</span><span class="val" id="mgmt-sum-balance">$0</span></div>
+                <div class="mgmt-summary-item"><span class="lbl">Wallet</span><span class="val" id="mgmt-sum-balance">$0</span></div>
               </div>
+            </div>
+            <div class="wk-card" id="mgmt-budgets-card">
+              <div class="ov-sect-head"><span>Budgets</span><button class="foot-btn" id="mgmt-add-budget-limit-btn" style="min-height:30px;padding:5px 10px;font-size:11px">+ Add budget</button></div>
+              <div id="mgmt-budgets-list"></div>
             </div>
             <div class="wk-card" id="mgmt-budget-list-card">
               <div class="ov-sect-head"><span>Transactions</span><button class="foot-btn" id="mgmt-add-budget-btn" style="min-height:30px;padding:5px 10px;font-size:11px">+ Add transaction</button></div>
@@ -3279,7 +3288,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
    to read from the `dev` branch's version.json instead of `main`'s, so a
    dev build never gets nagged about (or accidentally offered) a main-line
    release, and vice versa. */
-var APP_VERSION = "0.5.0-dev";
+var APP_VERSION = "0.7.0-dev";
 var UPDATE_CHANNEL = APP_VERSION.toLowerCase().indexOf("dev") > -1 ? "dev" : "main";
 var UPDATE_CHECK_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/version.json";
 var UPDATE_HTML_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/Notebook.html";
@@ -3680,6 +3689,8 @@ function blankState() {
     medalBest: {},
     medalHistory: [],
     budget: [],
+    budgetLimit: null,
+    budgets: [],
     products: [],
     customProjectTypes: [],
     hidden: { railTabs: [], homeTiles: [], homeSections: [], workSections: [] },
@@ -3959,17 +3970,48 @@ function normalizeState(s) {
         note: typeof b.note === "string" ? b.note : "",
         createdAt: +b.createdAt || Date.now(),
         // Investment cash-outs and product returns are recorded as their own
-        // income transaction (see openCashOutModal / openProductReturnModal)
-        // rather than mutating the balance formula — cashedOut/cashOutTxId
-        // live on the investment being closed out, cashOutOf/returnOf live on
-        // the income transaction that resulted, so each side can find the
-        // other without a transaction ever needing both.
+        // transaction (see openCashOutModal / openProductReturnModal) for
+        // only the *profit* (or loss), not the full amount received — the
+        // principal already left cash once, as this investment transaction,
+        // so counting the whole cash-out as new income would double it.
+        // cashedOut/cashOutAmount/cashOutTxId live on the investment being
+        // closed out (cashOutAmount is what was actually received, for
+        // display — the resulting tx only holds the delta); cashOutOf/
+        // returnOf live on the resulting transaction, so each side can find
+        // the other without either needing both.
         cashedOut: !!b.cashedOut,
+        cashOutAmount: Math.max(0, +b.cashOutAmount || 0),
         cashOutTxId: typeof b.cashOutTxId === "string" ? b.cashOutTxId : null,
         cashOutOf: typeof b.cashOutOf === "string" ? b.cashOutOf : null,
         returnOf: typeof b.returnOf === "string" ? b.returnOf : null
       };
     });
+  });
+  // One-time migration: the first version of this feature only allowed a
+  // single monthly limit (budgetLimit, a bare number). It's now a list of
+  // budgets, each with its own label/period/optional category, so an
+  // existing monthly limit becomes the first entry in that list rather
+  // than being lost.
+  safe("budgets", function () {
+    var PERIODS = ["weekly", "monthly", "quarterly", "yearly", "custom"];
+    var legacyLimit = (typeof s.budgetLimit === "number" && s.budgetLimit > 0) ? s.budgetLimit : null;
+    var list = Array.isArray(s.budgets) ? s.budgets : [];
+    if (!list.length && legacyLimit) {
+      list = [{ id: uid(), label: "Monthly budget", period: "monthly", limit: legacyLimit, category: "", startDate: null, endDate: null, createdAt: Date.now() }];
+    }
+    s.budgets = list.filter(function (b) { return b && typeof b === "object"; }).map(function (b) {
+      return {
+        id: b.id || uid(),
+        label: (typeof b.label === "string" && b.label.trim()) ? b.label.trim().slice(0, 60) : "Budget",
+        period: PERIODS.indexOf(b.period) > -1 ? b.period : "monthly",
+        limit: Math.max(0, +b.limit || 0),
+        category: typeof b.category === "string" ? b.category : "",
+        startDate: typeof b.startDate === "string" ? b.startDate : null,
+        endDate: typeof b.endDate === "string" ? b.endDate : null,
+        createdAt: +b.createdAt || Date.now()
+      };
+    }).filter(function (b) { return b.limit > 0; });
+    s.budgetLimit = null; // fully migrated onto s.budgets; kept only so old exports/snapshots still parse
   });
   safe("products", function () {
     var PRODUCT_STATUSES = ["idea", "planned", "active", "done"];
@@ -4220,7 +4262,7 @@ var workspace = null;
 // editing in place (it does, for a few of these — see normalizeState).
 var GLOBAL_FIELDS = ["settings", "sessions", "plans", "restDays", "restTokens", "restTokensV2", "runningSession",
   "weeklyTarget", "weeklyGoals", "medalProgress", "bestStreak", "overachieve", "medalPrestige", "medalBest", "medalHistory",
-  "lastGoalWeekAwarded", "goalTokenCheckedThrough", "budget", "products", "customProjectTypes"];
+  "lastGoalWeekAwarded", "goalTokenCheckedThrough", "budget", "budgetLimit", "budgets", "products", "customProjectTypes"];
 function attachGlobalFields() { GLOBAL_FIELDS.forEach(function (k) { state[k] = workspace[k]; }); }
 function syncGlobalFieldsBack() { GLOBAL_FIELDS.forEach(function (k) { workspace[k] = state[k]; }); }
 function blankProjectMeta(id, name) {
@@ -10493,13 +10535,211 @@ function fmtMoney(n) {
 var PRODUCT_STATUS_LABELS = { idea: "Idea", planned: "Planned", active: "Active", done: "Done" };
 var BUDGET_KIND_LABELS = { income: "Income", expense: "Expense", investment: "Investment" };
 
+var BUDGET_PERIOD_LABELS = { weekly: "Weekly", monthly: "Monthly", quarterly: "Quarterly", yearly: "Yearly", custom: "Custom range" };
+function pad2(n) { return String(n).padStart(2, "0"); }
+// Resolves a budget's period into the concrete date range (as dayKey
+// strings, so it can be compared against transaction dates directly) it
+// currently covers, plus a short label for display. weekly/monthly/
+// quarterly/yearly always mean "the one containing today" — a monthly
+// budget automatically rolls into the new month rather than needing to be
+// recreated. custom is a fixed range the person picked themselves.
+function budgetPeriodWindow(b) {
+  var now = new Date();
+  if (b.period === "weekly") {
+    var wStart = weekStartTs(Date.now());
+    return { startKey: dayKey(wStart), endKey: dayKey(wStart + 6 * 86400000), label: "this week" };
+  }
+  if (b.period === "quarterly") {
+    var qStartMonth = Math.floor(now.getMonth() / 3) * 3;
+    var qEnd = new Date(now.getFullYear(), qStartMonth + 3, 0);
+    return { startKey: now.getFullYear() + "-" + pad2(qStartMonth + 1) + "-01", endKey: dayKey(qEnd.getTime()), label: "this quarter" };
+  }
+  if (b.period === "yearly") {
+    return { startKey: now.getFullYear() + "-01-01", endKey: now.getFullYear() + "-12-31", label: "this year" };
+  }
+  if (b.period === "custom") {
+    return { startKey: b.startDate || "0000-01-01", endKey: b.endDate || "9999-12-31", label: (b.startDate || "?") + " \u2013 " + (b.endDate || "?") };
+  }
+  var mEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return { startKey: now.getFullYear() + "-" + pad2(now.getMonth() + 1) + "-01", endKey: dayKey(mEnd.getTime()), label: "this month" };
+}
+// Spending only (never investments/cash-outs — a budget means reining in
+// spending, not investing), within the budget's current window, optionally
+// narrowed to one category.
+function budgetSpent(b) {
+  var win = budgetPeriodWindow(b);
+  return state.budget.reduce(function (sum, tx) {
+    if (tx.kind !== "expense") return sum;
+    if (tx.date < win.startKey || tx.date > win.endKey) return sum;
+    if (b.category && tx.category !== b.category) return sum;
+    return sum + tx.amount;
+  }, 0);
+}
+function renderBudgetsList() {
+  var wrap = $("mgmt-budgets-list");
+  wrap.innerHTML = "";
+  if (!state.budgets.length) {
+    wrap.appendChild(el("div", "empty", "No budgets set yet. Add one for any span you like \u2014 weekly, monthly, a quarter, a year, or a custom range \u2014 and optionally just one category."));
+    return;
+  }
+  state.budgets.slice().sort(function (a, b) { return a.createdAt - b.createdAt; }).forEach(function (b) {
+    var win = budgetPeriodWindow(b);
+    var spent = budgetSpent(b);
+    var pct = b.limit ? Math.min(100, Math.round((spent / b.limit) * 100)) : 0;
+    var over = spent > b.limit;
+    var row = el("div", "mgmt-budget-row");
+    var head = el("div", "mgmt-budget-row-head");
+    head.appendChild(el("span", "nm", b.label));
+    head.appendChild(el("span", "mgmt-cat", BUDGET_PERIOD_LABELS[b.period] + (b.category ? " \u00b7 " + b.category : "")));
+    var edit = el("button", "tiny-x", "✎");
+    edit.setAttribute("aria-label", "Edit budget"); edit.title = "Edit";
+    edit.addEventListener("click", function () { openBudgetLimitModal(b); });
+    var del = el("button", "tiny-x", "✕");
+    del.setAttribute("aria-label", "Delete budget");
+    del.addEventListener("click", function () {
+      confirmModal("Delete this budget?", "\u201c" + b.label + "\u201d will be removed. Your transactions are untouched.", "Delete", function () {
+        state.budgets = state.budgets.filter(function (o) { return o.id !== b.id; });
+        persist(); renderBudgetsList();
+      });
+    });
+    head.append(edit, del);
+    var line = el("div", "note", fmtMoney(spent) + " of " + fmtMoney(b.limit) + " spent " + win.label + (over ? " \u2014 " + fmtMoney(spent - b.limit) + " over" : ""));
+    var bar = el("div", "wk-progress" + (over ? " tier-missed" : pct >= 90 ? " tier-exceeded" : ""));
+    var fill = el("div"); fill.style.width = pct + "%";
+    bar.appendChild(fill);
+    row.append(head, line, bar);
+    wrap.appendChild(row);
+  });
+}
+function openBudgetLimitModal(existing) {
+  var isEdit = !!existing;
+  openModal(isEdit ? "Edit budget" : "New budget", "");
+  var extra = $modal("modal-extra");
+  var form = el("div", "cal-plan-form");
+  function field(labelText, inputEl) {
+    var wrap = el("div", "cal-field");
+    wrap.appendChild(el("label", "cal-field-lbl", labelText));
+    wrap.appendChild(inputEl);
+    return wrap;
+  }
+  var labelInp = el("input"); labelInp.type = "text"; labelInp.placeholder = "e.g. Monthly, Groceries, Q1 hosting";
+  labelInp.value = existing ? existing.label : "";
+
+  var periodSel = el("select");
+  [["weekly", "Weekly"], ["monthly", "Monthly"], ["quarterly", "Quarterly"], ["yearly", "Yearly"], ["custom", "Custom range"]].forEach(function (o) {
+    var opt = el("option", null, o[1]); opt.value = o[0]; periodSel.appendChild(opt);
+  });
+  periodSel.value = existing ? existing.period : "monthly";
+
+  var limitInp = el("input"); limitInp.type = "number"; limitInp.step = "0.01"; limitInp.min = "0";
+  limitInp.value = existing ? existing.limit : ""; limitInp.placeholder = "0.00";
+
+  var categoryInp = el("input"); categoryInp.type = "text"; categoryInp.placeholder = "Leave blank to track all spending";
+  categoryInp.value = existing ? existing.category : "";
+
+  var startInp = el("input"); startInp.type = "date"; startInp.value = existing && existing.startDate ? existing.startDate : "";
+  var endInp = el("input"); endInp.type = "date"; endInp.value = existing && existing.endDate ? existing.endDate : "";
+  var customRow = el("div", "cal-field-row");
+  customRow.append(field("Start date", startInp), field("End date", endInp));
+  customRow.style.display = periodSel.value === "custom" ? "" : "none";
+  periodSel.addEventListener("change", function () { customRow.style.display = periodSel.value === "custom" ? "" : "none"; });
+
+  var row1 = el("div", "cal-field-row");
+  row1.append(field("Label", labelInp), field("Period", periodSel));
+  var row2 = el("div", "cal-field-row");
+  row2.append(field("Limit", limitInp), field("Category (optional)", categoryInp));
+  form.append(row1, row2, customRow);
+  extra.appendChild(form);
+
+  var modalRow = $modal("modal-row");
+  var cancel = el("button", null, "Cancel");
+  cancel.addEventListener("click", closeModal);
+  if (isEdit) {
+    var del = el("button", null, "Delete");
+    del.addEventListener("click", function () {
+      closeModal();
+      confirmModal("Delete this budget?", "\u201c" + existing.label + "\u201d will be removed. Your transactions are untouched.", "Delete", function () {
+        state.budgets = state.budgets.filter(function (o) { return o.id !== existing.id; });
+        persist(); renderBudgetsList();
+      });
+    });
+    modalRow.appendChild(del);
+  }
+  var save = el("button", "primary", isEdit ? "Save" : "Add");
+  save.addEventListener("click", function () {
+    var limit = Math.max(0, +limitInp.value || 0);
+    if (!limit) { limitInp.focus(); return; }
+    var label = labelInp.value.trim() || "Budget";
+    var period = periodSel.value;
+    var category = categoryInp.value.trim();
+    var startDate = period === "custom" ? (startInp.value || null) : null;
+    var endDate = period === "custom" ? (endInp.value || null) : null;
+    if (existing) {
+      existing.label = label; existing.period = period; existing.limit = limit;
+      existing.category = category; existing.startDate = startDate; existing.endDate = endDate;
+    } else {
+      state.budgets.push({ id: uid(), label: label, period: period, limit: limit, category: category, startDate: startDate, endDate: endDate, createdAt: Date.now() });
+    }
+    closeModal(); persist(); renderBudgetsList();
+    toast(isEdit ? "Budget updated" : "Budget added");
+  });
+  modalRow.append(cancel, save);
+  labelInp.focus();
+}
+$("mgmt-add-budget-limit-btn").addEventListener("click", function () { openBudgetLimitModal(null); });
+
+// A per-category view of where money's actually going, within each
+// transaction kind — the four summary numbers say what happened overall,
+// this says specifically what made them up.
+function openBudgetBreakdownModal() {
+  openModal("Budget breakdown", "");
+  var extra = $modal("modal-extra");
+  var wrap = el("div", "cal-plan-form");
+  function section(label, kind) {
+    var txs = state.budget.filter(function (b) { return b.kind === kind; });
+    if (!txs.length) return null;
+    var byCat = {};
+    txs.forEach(function (b) {
+      var cat = b.category || label;
+      byCat[cat] = (byCat[cat] || 0) + b.amount;
+    });
+    var total = txs.reduce(function (s, b) { return s + b.amount; }, 0);
+    var box = el("div");
+    box.appendChild(el("div", "set-group-title", label + " \u00b7 " + fmtMoney(total) + " across " + txs.length + (txs.length === 1 ? " entry" : " entries")));
+    Object.keys(byCat).sort(function (a, b) { return byCat[b] - byCat[a]; }).forEach(function (cat) {
+      var pct = total ? Math.round((byCat[cat] / total) * 100) : 0;
+      var row = el("div", "sess-row");
+      row.appendChild(el("span", "nm", cat));
+      row.appendChild(el("span", "mgmt-cat", pct + "%"));
+      row.appendChild(el("span", "mgmt-amt " + kind, fmtMoney(byCat[cat])));
+      box.appendChild(row);
+    });
+    return box;
+  }
+  var boxes = [section("Income", "income"), section("Expenses", "expense"), section("Investments", "investment")].filter(Boolean);
+  if (!boxes.length) wrap.appendChild(el("div", "empty", "No transactions yet."));
+  else boxes.forEach(function (box, i) { if (i > 0) box.style.marginTop = "16px"; wrap.appendChild(box); });
+  extra.appendChild(wrap);
+  var modalRow = $modal("modal-row");
+  var close = el("button", "primary", "Close");
+  close.addEventListener("click", closeModal);
+  modalRow.appendChild(close);
+}
+$("mgmt-breakdown-btn").addEventListener("click", openBudgetBreakdownModal);
+
 function renderManagementBudget() {
+  renderBudgetsList();
   var rows = state.budget.slice().sort(function (a, b) { return (b.date || "").localeCompare(a.date || "") || b.createdAt - a.createdAt; });
   var income = 0, expense = 0, invested = 0;
   state.budget.forEach(function (b) {
     if (b.kind === "income") income += b.amount;
-    else if (b.kind === "investment") invested += b.amount;
-    else expense += b.amount;
+    // A cashed-out investment isn't tied up anymore — its principal is back
+    // in hand (that's exactly what the cash-out's income/expense delta
+    // transaction accounts for), so it stops counting toward "Invested"
+    // once closed. Still shown in the ledger as history, just excluded from
+    // this sum.
+    else if (b.kind === "investment" && !b.cashedOut) invested += b.amount;
+    else if (b.kind !== "investment") expense += b.amount;
   });
   $("mgmt-sum-income").textContent = fmtMoney(income);
   $("mgmt-sum-expense").textContent = fmtMoney(expense);
@@ -10517,20 +10757,36 @@ function renderManagementBudget() {
     row.title = "View details";
     var nm = el("span", "nm", b.category || BUDGET_KIND_LABELS[b.kind]);
     if (b.note) nm.appendChild(el("span", "mgmt-note-dot", "•"));
-    if (b.kind === "investment" && b.cashedOut) nm.appendChild(el("span", "mgmt-cashed-badge", "cashed out"));
+    if (b.kind === "investment" && b.cashedOut) {
+      var cashOutDelta = b.cashOutAmount - b.amount;
+      var badgeText = "cashed out" + (cashOutDelta !== 0 ? " \u00b7 " + (cashOutDelta > 0 ? "+" : "\u2212") + fmtMoney(Math.abs(cashOutDelta)) : "");
+      nm.appendChild(el("span", "mgmt-cashed-badge", badgeText));
+    }
     var cat = el("span", "mgmt-cat", b.date);
     var sign = b.kind === "income" ? "+" : b.kind === "investment" ? "\u2192" : "\u2212";
     var amt = el("span", "mgmt-amt " + b.kind, sign + fmtMoney(b.amount));
     var edit = el("button", "tiny-x", "✎");
     edit.setAttribute("aria-label", "Edit transaction");
     edit.title = "Edit";
-    edit.addEventListener("click", function (e) { e.stopPropagation(); openBudgetModal(b); });
+    edit.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (b.cashOutOf) {
+        var srcInv = state.budget.find(function (t) { return t.id === b.cashOutOf; });
+        if (srcInv) { openCashOutModal(srcInv, b); return; }
+      }
+      if (b.kind === "investment" && b.cashedOut) {
+        var deltaTx = b.cashOutTxId ? state.budget.find(function (t) { return t.id === b.cashOutTxId; }) : null;
+        openCashOutModal(b, deltaTx);
+        return;
+      }
+      openBudgetModal(b);
+    });
     var x = el("button", "tiny-x", "✕");
     x.setAttribute("aria-label", "Delete transaction");
     x.addEventListener("click", function (e) {
       e.stopPropagation();
-      confirmModal("Delete this transaction?", (b.category || BUDGET_KIND_LABELS[b.kind]) + " of " + fmtMoney(b.amount) + " will be removed.", "Delete", function () {
-        state.budget = state.budget.filter(function (o) { return o.id !== b.id; });
+      confirmModal("Delete this transaction?", (b.category || BUDGET_KIND_LABELS[b.kind]) + " of " + fmtMoney(b.amount) + " will be removed." + (b.cashOutOf ? " The investment it came from will go back to \u201cnot yet cashed out.\u201d" : ""), "Delete", function () {
+        deleteBudgetTx(b);
         persist(); renderManagementBudget();
       });
     });
@@ -10547,6 +10803,19 @@ function mgmtDetailRow(labelText, valueText) {
   return wrap;
 }
 
+// Deleting a transaction that resulted from cashing out an investment undoes
+// that event rather than leaving the investment stuck saying "cashed out"
+// with nothing to back it up — it goes back to open (cashedOut: false),
+// exactly as if the cash-out never happened, matching how deleting a plan
+// or session un-does its side effects elsewhere in the app.
+function deleteBudgetTx(b) {
+  if (b.cashOutOf) {
+    var inv = state.budget.find(function (t) { return t.id === b.cashOutOf; });
+    if (inv) { inv.cashedOut = false; inv.cashOutAmount = 0; inv.cashOutTxId = null; }
+  }
+  state.budget = state.budget.filter(function (o) { return o.id !== b.id; });
+}
+
 function openBudgetDetail(b) {
   openModal(BUDGET_KIND_LABELS[b.kind] + (b.category ? ": " + b.category : ""), "");
   var extra = $modal("modal-extra");
@@ -10558,17 +10827,20 @@ function openBudgetDetail(b) {
     mgmtDetailRow("Category", b.category),
     mgmtDetailRow("Note", b.note)
   );
+  var sourceInv = b.cashOutOf ? state.budget.find(function (t) { return t.id === b.cashOutOf; }) : null;
   if (b.kind === "investment") {
     if (b.cashedOut) {
-      var tx = state.budget.find(function (t) { return t.id === b.cashOutTxId; });
-      box.appendChild(mgmtDetailRow("Cashed out", tx ? fmtMoney(tx.amount) + " on " + tx.date + (tx.note ? " — " + tx.note : "") : "Yes (the income entry was since removed)"));
+      var tx = b.cashOutTxId ? state.budget.find(function (t) { return t.id === b.cashOutTxId; }) : null;
+      var delta = b.cashOutAmount - b.amount;
+      var deltaLabel = delta > 0 ? fmtMoney(delta) + " earnings" : delta < 0 ? fmtMoney(-delta) + " loss" : "break-even, no earnings or loss";
+      box.appendChild(mgmtDetailRow("Cashed out for", fmtMoney(b.cashOutAmount) + (tx ? " on " + tx.date : "")));
+      box.appendChild(mgmtDetailRow("Result", fmtMoney(b.amount) + " principal returned + " + deltaLabel));
     } else {
       box.appendChild(mgmtDetailRow("Cashed out", "Not yet"));
     }
   }
   if (b.cashOutOf) {
-    var src = state.budget.find(function (t) { return t.id === b.cashOutOf; });
-    box.appendChild(mgmtDetailRow("Source", src ? "Cash-out of " + (src.category || "an investment") + " (originally " + fmtMoney(src.amount) + ")" : "Cash-out of a since-deleted investment"));
+    box.appendChild(mgmtDetailRow("Source", sourceInv ? (b.kind === "income" ? "Earnings" : "Loss") + " from cashing out " + (sourceInv.category || "an investment") + " (principal " + fmtMoney(sourceInv.amount) + ")" : "From a since-deleted investment's cash-out"));
   }
   if (b.returnOf) {
     var prodSrc = state.products.find(function (p) { return p.id === b.returnOf; });
@@ -10576,11 +10848,36 @@ function openBudgetDetail(b) {
   }
   extra.appendChild(box);
   var modalRow = $modal("modal-row");
+  var del = el("button", null, "Delete");
+  del.addEventListener("click", function () {
+    closeModal();
+    confirmModal("Delete this transaction?", (b.category || BUDGET_KIND_LABELS[b.kind]) + " of " + fmtMoney(b.amount) + " will be removed." + (b.cashOutOf ? " The investment it came from will go back to \u201cnot yet cashed out.\u201d" : ""), "Delete", function () {
+      deleteBudgetTx(b);
+      persist(); renderManagementBudget();
+    });
+  });
   var close = el("button", null, "Close");
   close.addEventListener("click", closeModal);
-  var editBtn = el("button", null, "Edit");
-  editBtn.addEventListener("click", function () { closeModal(); openBudgetModal(b); });
-  modalRow.append(close, editBtn);
+  modalRow.append(del, close);
+  // A cash-out delta (b.cashOutOf) or an already-cashed-out investment both
+  // route editing through openCashOutModal instead of the plain field
+  // editor — changing the amount there directly would desync it from
+  // cashOutAmount/the principal split, so this keeps the breakdown correct
+  // no matter which side of the pair you opened.
+  if (b.cashOutOf && sourceInv) {
+    var editCashOutBtn1 = el("button", "primary", "Edit cash-out");
+    editCashOutBtn1.addEventListener("click", function () { closeModal(); openCashOutModal(sourceInv, b); });
+    modalRow.append(editCashOutBtn1);
+  } else if (b.kind === "investment" && b.cashedOut) {
+    var deltaTx = b.cashOutTxId ? state.budget.find(function (t) { return t.id === b.cashOutTxId; }) : null;
+    var editCashOutBtn2 = el("button", "primary", "Edit cash-out");
+    editCashOutBtn2.addEventListener("click", function () { closeModal(); openCashOutModal(b, deltaTx); });
+    modalRow.append(editCashOutBtn2);
+  } else {
+    var editBtn = el("button", null, "Edit");
+    editBtn.addEventListener("click", function () { closeModal(); openBudgetModal(b); });
+    modalRow.append(editBtn);
+  }
   if (b.kind === "investment" && !b.cashedOut) {
     var cashOutBtn = el("button", "primary", "Cash out");
     cashOutBtn.addEventListener("click", function () { closeModal(); openCashOutModal(b); });
@@ -10588,14 +10885,21 @@ function openBudgetDetail(b) {
   }
 }
 
-// Closes out an investment: records a new income transaction for the return
-// (so it counts toward Income/Balance the same as any other income) and
-// flags the original investment as cashed out, linking each to the other
-// (cashOutTxId / cashOutOf) so either side's detail view can show the full
-// story. The investment row itself is untouched otherwise — it stays as the
-// historical record of what was originally put in.
-function openCashOutModal(inv) {
-  openModal("Cash out \u2014 " + (inv.category || "Investment"), "");
+// Closes out an investment, or edits an existing cash-out if existingDeltaTx
+// is passed (prefills with what was actually received last time, and
+// replaces that delta transaction rather than adding a second one). Asks
+// for the total received, then only ever records the *difference* against
+// what was originally put in — the principal already left cash once, as the
+// investment transaction itself, so logging the full amount received again
+// would double-count it as new income. A cash-out for more than was
+// invested logs the excess as income (real profit); for less, logs the
+// shortfall as an expense (a realized loss); for exactly the same, logs
+// nothing — either way the investment itself stops counting toward
+// "Invested" once cashedOut (see renderManagementBudget), since that
+// capital isn't tied up anymore.
+function openCashOutModal(inv, existingDeltaTx) {
+  var isEdit = !!existingDeltaTx || inv.cashedOut;
+  openModal((isEdit ? "Edit cash-out \u2014 " : "Cash out \u2014 ") + (inv.category || "Investment"), "");
   var extra = $modal("modal-extra");
   var form = el("div", "cal-plan-form");
   function field(labelText, inputEl) {
@@ -10604,33 +10908,54 @@ function openCashOutModal(inv) {
     wrap.appendChild(inputEl);
     return wrap;
   }
+  var principalNote = el("div", "note", "Originally invested: " + fmtMoney(inv.amount));
   var amountInp = el("input"); amountInp.type = "number"; amountInp.step = "0.01"; amountInp.min = "0";
-  amountInp.value = inv.amount; amountInp.placeholder = "0.00";
-  var dateInp = el("input"); dateInp.type = "date"; dateInp.value = dayKey();
+  amountInp.value = isEdit ? inv.cashOutAmount : inv.amount; amountInp.placeholder = "0.00";
+  var dateInp = el("input"); dateInp.type = "date"; dateInp.value = (existingDeltaTx && existingDeltaTx.date) || dayKey();
   var noteInp = el("textarea"); noteInp.rows = 2; noteInp.placeholder = "Notes (optional)";
+  noteInp.value = existingDeltaTx ? existingDeltaTx.note : "";
+  var breakdown = el("div", "note mgmt-cashout-breakdown");
+  function refreshBreakdown() {
+    var received = Math.max(0, +amountInp.value || 0);
+    var delta = received - inv.amount;
+    if (delta > 0) breakdown.innerHTML = "Earnings: <b style=\"color:var(--sage)\">" + fmtMoney(delta) + "</b> \u2014 that's the only part logged as income; the other " + fmtMoney(inv.amount) + " is just your principal coming back.";
+    else if (delta < 0) breakdown.innerHTML = "Loss: <b style=\"color:var(--red)\">" + fmtMoney(-delta) + "</b> \u2014 logged as an expense.";
+    else breakdown.textContent = "Break-even \u2014 you got exactly your principal back, so nothing new is logged.";
+  }
+  amountInp.addEventListener("input", refreshBreakdown);
+  refreshBreakdown();
 
   var row1 = el("div", "cal-field-row");
-  row1.append(field("Return amount", amountInp), field("Date", dateInp));
-  form.append(row1, field("Note", noteInp));
+  row1.append(field("Total received", amountInp), field("Date", dateInp));
+  form.append(principalNote, row1, breakdown, field("Note", noteInp));
   extra.appendChild(form);
 
   var modalRow = $modal("modal-row");
   var cancel = el("button", null, "Cancel");
   cancel.addEventListener("click", closeModal);
-  var confirm = el("button", "primary", "Cash out");
+  var confirm = el("button", "primary", isEdit ? "Save" : "Cash out");
   confirm.addEventListener("click", function () {
-    var amt = Math.max(0, +amountInp.value || 0);
-    var incomeTx = {
-      id: uid(), kind: "income", date: dateInp.value || dayKey(),
-      category: "Cash out: " + (inv.category || "Investment"),
-      amount: amt, note: noteInp.value.trim(), createdAt: Date.now(),
-      cashedOut: false, cashOutTxId: null, cashOutOf: inv.id, returnOf: null
-    };
-    state.budget.push(incomeTx);
+    var received = Math.max(0, +amountInp.value || 0);
+    var delta = received - inv.amount;
+    var date = dateInp.value || dayKey();
+    var note = noteInp.value.trim();
+    if (existingDeltaTx) state.budget = state.budget.filter(function (t) { return t.id !== existingDeltaTx.id; });
+    var deltaTxId = null;
+    if (delta !== 0) {
+      var deltaTx = {
+        id: uid(), kind: delta > 0 ? "income" : "expense", date: date,
+        category: (delta > 0 ? "Cash out (earnings): " : "Cash out (loss): ") + (inv.category || "Investment"),
+        amount: Math.abs(delta), note: note, createdAt: Date.now(),
+        cashedOut: false, cashOutAmount: 0, cashOutTxId: null, cashOutOf: inv.id, returnOf: null
+      };
+      state.budget.push(deltaTx);
+      deltaTxId = deltaTx.id;
+    }
     inv.cashedOut = true;
-    inv.cashOutTxId = incomeTx.id;
+    inv.cashOutAmount = received;
+    inv.cashOutTxId = deltaTxId;
     closeModal(); persist(); renderManagementBudget();
-    toast("Cashed out \u2014 logged as income");
+    toast(delta === 0 ? "Cashed out \u2014 break-even, nothing new logged" : delta > 0 ? "Cashed out \u2014 " + fmtMoney(delta) + " earnings logged as income" : "Cashed out \u2014 " + fmtMoney(-delta) + " loss logged as an expense");
   });
   modalRow.append(cancel, confirm);
   amountInp.focus();
@@ -10724,6 +11049,27 @@ function removeProductPlan(productId) {
 function productReturnsTotal(p) {
   return (p.returns || []).reduce(function (sum, r) { return sum + r.amount; }, 0);
 }
+// Same principle as investment cash-out, extended to a repeatable series:
+// the first dollars back just recoup what the product cost to make — only
+// once total returns pass that cost does anything count as real profit.
+// priorTotal is the sum of returns logged *before* the one being added, so
+// this can tell how much of a *new* return is recoupment vs profit without
+// re-deriving it from the full history every time.
+function productReturnSplit(p, amount, priorTotal) {
+  var cost = p.cost || 0;
+  var remaining = Math.max(0, cost - priorTotal);
+  var recoup = Math.min(amount, remaining);
+  return { recoup: recoup, profit: amount - recoup };
+}
+function productProfitTotal(p) {
+  var cost = p.cost || 0, running = 0, profit = 0;
+  (p.returns || []).forEach(function (r) {
+    var split = productReturnSplit(p, r.amount, running);
+    profit += split.profit;
+    running += r.amount;
+  });
+  return profit;
+}
 
 function renderManagementProducts() {
   var rows = state.products.slice().sort(function (a, b) { return b.updatedAt - a.updatedAt; });
@@ -10768,11 +11114,14 @@ function openProductDetail(p) {
   var box = el("div", "cal-plan-form");
   var returnsTotal = productReturnsTotal(p);
   var returnsCount = (p.returns || []).length;
+  var profitTotal = productProfitTotal(p);
+  var costRemaining = Math.max(0, (p.cost || 0) - returnsTotal);
   box.append(
     mgmtDetailRow("Status", PRODUCT_STATUS_LABELS[p.status] || p.status),
     mgmtDetailRow("Cost", p.cost ? fmtMoney(p.cost) : ""),
     mgmtDetailRow("Date", p.date ? p.date + " (on your calendar)" : ""),
     mgmtDetailRow("Total returned", returnsTotal > 0 ? fmtMoney(returnsTotal) + " across " + returnsCount + (returnsCount === 1 ? " entry" : " entries") : ""),
+    mgmtDetailRow("Profit", returnsTotal > 0 ? (profitTotal > 0 ? fmtMoney(profitTotal) + " \u2014 the rest recoups its " + fmtMoney(p.cost) + " cost" : "None yet \u2014 still recouping its " + fmtMoney(p.cost) + " cost (" + fmtMoney(costRemaining) + " to go)") : ""),
     mgmtDetailRow("Note", p.note)
   );
   extra.appendChild(box);
@@ -10787,10 +11136,13 @@ function openProductDetail(p) {
 }
 
 // Repeatable, unlike investment cash-out — a product (a book, a plugin, a
-// course) can keep earning over time, so each call adds another entry to
-// its own p.returns (for the running total shown here) *and* pushes a
-// matching income transaction into state.budget (returnOf: p.id) so it
-// actually counts toward Income/Balance like any other money coming in.
+// course) can keep earning over time. Each call adds an entry to p.returns
+// (the raw record — total returned, shown in the row/detail) and, per
+// productReturnSplit, pushes an income transaction into state.budget for
+// only the *profit* portion of that entry (returnOf: p.id) once the
+// product's cost has been fully recouped by returns so far. Recoupment
+// itself logs no transaction — it's the product's own cost (already an
+// expense the moment it was set) coming back, not new money.
 function openProductReturnModal(p) {
   openModal("Log a return \u2014 " + p.name, "");
   var extra = $modal("modal-extra");
@@ -10801,14 +11153,26 @@ function openProductReturnModal(p) {
     wrap.appendChild(inputEl);
     return wrap;
   }
+  var priorTotal = productReturnsTotal(p);
   var amountInp = el("input"); amountInp.type = "number"; amountInp.step = "0.01"; amountInp.min = "0";
   amountInp.placeholder = "0.00";
   var dateInp = el("input"); dateInp.type = "date"; dateInp.value = dayKey();
   var noteInp = el("textarea"); noteInp.rows = 2; noteInp.placeholder = "Notes (optional)";
+  var breakdown = el("div", "note mgmt-cashout-breakdown");
+  function refreshBreakdown() {
+    var amt = Math.max(0, +amountInp.value || 0);
+    if (!p.cost) { breakdown.textContent = "No cost set on this product, so it all counts as profit."; return; }
+    var split = productReturnSplit(p, amt, priorTotal);
+    if (split.profit > 0 && split.recoup > 0) breakdown.innerHTML = fmtMoney(split.recoup) + " recoups the rest of its cost, and <b style=\"color:var(--sage)\">" + fmtMoney(split.profit) + "</b> counts as profit.";
+    else if (split.profit > 0) breakdown.innerHTML = "Cost is already recouped \u2014 all of this, <b style=\"color:var(--sage)\">" + fmtMoney(split.profit) + "</b>, counts as profit.";
+    else breakdown.textContent = "All of this recoups its cost \u2014 " + fmtMoney(Math.max(0, p.cost - priorTotal - split.recoup)) + " still to go after this.";
+  }
+  amountInp.addEventListener("input", refreshBreakdown);
+  refreshBreakdown();
 
   var row1 = el("div", "cal-field-row");
   row1.append(field("Amount", amountInp), field("Date", dateInp));
-  form.append(row1, field("Note", noteInp));
+  form.append(row1, breakdown, field("Note", noteInp));
   extra.appendChild(form);
 
   var modalRow = $modal("modal-row");
@@ -10820,12 +11184,15 @@ function openProductReturnModal(p) {
     if (!amt) { amountInp.focus(); return; }
     var date = dateInp.value || dayKey();
     var note = noteInp.value.trim();
+    var split = productReturnSplit(p, amt, priorTotal);
     p.returns.push({ id: uid(), amount: amt, date: date, note: note, createdAt: Date.now() });
     p.updatedAt = Date.now();
-    state.budget.push({
-      id: uid(), kind: "income", date: date, category: "Return: " + p.name, amount: amt, note: note,
-      createdAt: Date.now(), cashedOut: false, cashOutTxId: null, cashOutOf: null, returnOf: p.id
-    });
+    if (split.profit > 0) {
+      state.budget.push({
+        id: uid(), kind: "income", date: date, category: "Return (profit): " + p.name, amount: split.profit, note: note,
+        createdAt: Date.now(), cashedOut: false, cashOutAmount: 0, cashOutTxId: null, cashOutOf: null, returnOf: p.id
+      });
+    }
     closeModal(); persist(); renderManagementProducts(); renderManagementBudget();
     toast("Return logged");
   });
@@ -10986,6 +11353,7 @@ var SNAPSHOT_PARTS = [
   { key: "timelines", label: "Timelines", fields: ["timelines"] },
   { key: "work", label: "Work sessions & goals", fields: ["sessions", "weeklyTarget", "weeklyGoals", "restDays", "restTokens", "restTokensV2", "medalProgress", "bestStreak", "overachieve", "medalPrestige", "lastGoalWeekAwarded", "goalTokenCheckedThrough", "medalBest", "medalHistory"] },
   { key: "calendar", label: "Calendar plans", fields: ["plans"] },
+  { key: "management", label: "Management (budget & products)", fields: ["budget", "budgetLimit", "budgets", "products"] },
   { key: "settings", label: "Preferences", fields: ["settings", "hidden", "projectType"] }
 ];
 function snapshotCounts(s) {
@@ -11264,7 +11632,7 @@ var HOME_TILE_DEFS = [
   { key: "management", railKey: "management", label: railItem("management").label, icon: railItem("management").icon, beta: true,
     settingsDesc: "A shortcut tile showing your budget balance. On: shown on Home. Off: the tile disappears from Home; Management itself is unaffected if it's still in your sidebar.",
     build: function (ctx) {
-      return { tab: "management", desc: "Budget and products, tracked here", num: fmtMoney(ctx.mgmtBalance), unit: "balance" };
+      return { tab: "management", desc: "Budget and products, tracked here", num: fmtMoney(ctx.mgmtBalance), unit: "wallet" };
     } }
 ];
 var HOME_TILE_ITEMS = HOME_TILE_DEFS.map(function (d) {
@@ -12907,6 +13275,7 @@ function exportJSON() {
     plans: ownPlans,
     lastGoalWeekAwarded: state.lastGoalWeekAwarded, goalTokenCheckedThrough: state.goalTokenCheckedThrough,
     medalPrestige: state.medalPrestige, medalBest: state.medalBest, medalHistory: state.medalHistory,
+    budget: state.budget, budgetLimit: state.budgetLimit, budgets: state.budgets, products: state.products,
     graphLaidOut: state.graphLaidOut
   };
   downloadText("notebook-export-" + new Date().toISOString().slice(0, 10) + ".json", JSON.stringify(payload, null, 2), "application/json");
@@ -13365,6 +13734,10 @@ function importNotebookData(data) {
   if (data.restDays && typeof data.restDays === "object") s.restDays = data.restDays;
   if (typeof data.restTokens === "number") s.restTokens = data.restTokens;
   if (typeof data.restTokensV2 === "boolean") s.restTokensV2 = data.restTokensV2;
+  if (Array.isArray(data.budget)) s.budget = data.budget;
+  if (typeof data.budgetLimit === "number") s.budgetLimit = data.budgetLimit;
+  if (Array.isArray(data.budgets)) s.budgets = data.budgets;
+  if (Array.isArray(data.products)) s.products = data.products;
   if (Array.isArray(data.plans)) s.plans = data.plans;
   if (typeof data.lastGoalWeekAwarded === "string") s.lastGoalWeekAwarded = data.lastGoalWeekAwarded;
   if (typeof data.goalTokenCheckedThrough === "string") s.goalTokenCheckedThrough = data.goalTokenCheckedThrough;
@@ -13596,7 +13969,7 @@ document.addEventListener("keydown", function (e) {
     openGlobalSearch();
   }
   else if (mod && e.key.toLowerCase() === "n") { e.preventDefault(); if (state.sel.tab === "entries") newEntry(); else newPage(); }
-  else if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); clearTimeout(saveTimer); persist(); toast("Saved"); }
+  else if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); exportJSON(); }
   else if (e.key === "Escape") {
     if ($("gsearch-overlay").classList.contains("show")) closeGlobalSearch();
     else if ($modal("overlay").classList.contains("show")) closeModal();
