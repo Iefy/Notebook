@@ -3753,13 +3753,22 @@ function normalizeState(s) {
   safe("sessions projectId", function () {
     s.sessions.forEach(function (sess) { if (sess && typeof sess === "object") sess.projectId = typeof sess.projectId === "string" ? sess.projectId : null; });
   });
-  s.weeklyTarget = typeof s.weeklyTarget === "number" && s.weeklyTarget >= 0 ? s.weeklyTarget : 5;
+  s.weeklyTarget = typeof s.weeklyTarget === "number" && s.weeklyTarget > 0 ? s.weeklyTarget : 5;
   s.weeklyGoals = s.weeklyGoals && typeof s.weeklyGoals === "object" ? s.weeklyGoals : {};
+  // A 0-hour goal isn't a real goal (see wk-goal-save, which clears rather
+  // than stores one) — strip any that slipped in some other way (an old
+  // import, a brief window where this wasn't enforced) so a stray 0 can't
+  // masquerade as a real, met-by-default goal.
+  safe("weeklyGoals zeros", function () {
+    Object.keys(s.weeklyGoals).forEach(function (k) { if (!(s.weeklyGoals[k] > 0)) delete s.weeklyGoals[k]; });
+  });
   // migrate: users upgrading from the single global target get this week pre-seeded
   // so they aren't nagged for a goal they'd effectively already set; brand-new
   // states (no sessions, untouched default target) start clean and get the nudge.
+  // Guards against weeklyTarget itself having been 0 from before 0 was
+  // treated as "clear the goal" — a 0 target isn't worth seeding either.
   safe("weeklyGoals seed", function () {
-    if (!Object.keys(s.weeklyGoals).length && (s.sessions.length || s.weeklyTarget !== 5)) {
+    if (!Object.keys(s.weeklyGoals).length && s.weeklyTarget > 0 && (s.sessions.length || s.weeklyTarget !== 5)) {
       s.weeklyGoals[weekKey()] = s.weeklyTarget;
     }
   });
@@ -8590,11 +8599,10 @@ function renderWorkTab() {
 
   var hours = ws / 3600;
   var tier = goalSet ? weekGoalTier(hours, goal, !isCurrent, priorWeekWasIntense(viewTs)) : null;
-  // A 0-hour goal is trivially met the instant the week starts (any hours
-  // logged, including none, is >= 0) — goal > 0 as the gate meant a 0-hour
-  // goal always showed a completely empty bar, indistinguishable at a
-  // glance from no goal being set at all.
-  var pct = goalSet ? (goal > 0 ? Math.min(100, hours / goal * 100) : 100) : 0;
+  // goal is never 0 here — a 0-hour goal isn't a real goal, so setting one
+  // to 0 clears it back to "no goal set" (see wk-goal-save) rather than
+  // ever being stored. goalSet alone is enough to guard this.
+  var pct = goal > 0 ? Math.min(100, hours / goal * 100) : 0;
   var prog = $("wk-progress");
   prog.style.display = goalSet ? "" : "none";
   prog.className = "wk-progress" + (tier ? " tier-" + tier.cls : "");
@@ -8962,11 +8970,20 @@ $("wk-goal-save").addEventListener("click", function () {
   var v = parseFloat($("wk-goal-input").value);
   if (!isFinite(v) || v < 0) { toast("Enter a valid number of hours."); return; }
   var k = weekKey(Date.now() + wkWeekOffset * 7 * 86400000);
-  state.weeklyGoals[k] = v;
-  state.weeklyTarget = v;
+  if (v === 0) {
+    // A 0-hour goal isn't a real goal — clear it back to "no goal set"
+    // instead of storing 0, so the banner correctly offers to set one
+    // again rather than showing a trivially-always-met 0h target.
+    // weeklyTarget (the default new weeks pre-fill from) is left alone,
+    // so it still reflects whatever the last real goal actually was.
+    delete state.weeklyGoals[k];
+  } else {
+    state.weeklyGoals[k] = v;
+    state.weeklyTarget = v;
+  }
   wkEditingGoal = false;
   persist(); renderWorkTab(); refreshHomeContent();
-  toast("Goal set: " + v + "h" + (k === weekKey() ? " this week" : ""));
+  toast(v === 0 ? "Goal cleared" : "Goal set: " + v + "h" + (k === weekKey() ? " this week" : ""));
 });
 $("wk-goal-input").addEventListener("keydown", function (e) { if (e.key === "Enter") $("wk-goal-save").click(); });
 $("wk-bulk-clear").addEventListener("click", function () { wkSel = {}; renderWorkTab(); });
