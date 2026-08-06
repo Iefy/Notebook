@@ -1,6 +1,38 @@
 {
-  "version": "0.7.0-dev",
+  "version": "0.7.5-dev",
   "changelog": [
+    {
+      "version": "0.7.5-dev",
+      "date": "2026-08-06",
+      "changes": [
+        {
+          "text": "[rework] Productivity and Management are now per-project instead of shared across all of them",
+          "sub": [
+            "Sessions, plans, weekly goals, streaks, medals, rest days, budget, and products all belong to whichever project you're in now — a Poetry project and a client-work project no longer pool the same hours and the same wallet",
+            "Existing saves are migrated automatically, once: session and plan history splits back apart correctly since each one was already tagged with its project; medals/streaks/rest tokens/budget/products (which were never tagged per-project) go to whichever project logged the most sessions, and every other project starts fresh on those fronts specifically",
+            "The now-pointless \"which project does this belong to\" pickers are gone from the timer, plan editor, and session editor — a session can only ever belong to the project you're currently in"
+          ]
+        },
+        {
+          "text": "[new] Projects breakdown: see your work across every project, not just the current one",
+          "sub": [
+            "Reachable from the Projects menu (\"View breakdown\") or from quick-swap",
+            "Hours, sessions, wallet, products, and page/entry/timeline counts per project, plus a total row across all of them",
+            "Read-only — it loads each project's own data to add it up without switching into any of them"
+          ]
+        },
+        {
+          "text": "[new] Quick-swap: switch projects from anywhere, not just Home",
+          "sub": [
+            "New \"Switch\" button in the sidebar, or Ctrl/Cmd+P",
+            "Unlike opening a project from the Projects menu, this doesn't send you to Home — closing it drops you back on whatever page you were already on",
+            "Falls back to Home only if that page happens to be hidden in the project you're switching to"
+          ]
+        },
+        "[new] Creating a new Blank project now walks you through onboarding for it, the same setup new installs get — since what's visible is per-project now, this is worth doing for each blank one rather than just the first",
+        "[removed] The \"Attribute sessions to the active project\" setting — no longer meaningful now that sessions can only ever belong to the project you're in"
+      ]
+    },
     {
       "version": "0.7.0-dev",
       "date": "2026-08-06",
