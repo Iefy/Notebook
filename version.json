@@ -70,7 +70,8 @@
             "Caused by the app's own version number not being bumped to match the published changelog — fixed, and a console warning now flags it early if it happens again"
           ]
         },
-        "[fix] Budgets and products weren't included in full JSON exports or selective snapshot restores — they are now"
+        "[fix] Budgets and products weren't included in full JSON exports or selective snapshot restores — they are now",
+        "[fix] Investments didn't count toward budget spending limits — putting money into an investment is still money leaving your wallet, so it counts against a budget's limit the same as an expense now"
       ]
     },
     {
