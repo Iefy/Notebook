@@ -50,10 +50,9 @@
         },
         "[new] Ctrl/Cmd+S now exports a full backup instead of just forcing an immediate autosave",
         {
-          "text": "[redesign] The update-available screen now matches the patch notes screen",
+          "text": "[redesign] The update-available screen's \"export first\" step is more compact",
           "sub": [
-            "The \"export first\" reminder is a single compact line now instead of a whole titled section with its own bulleted steps",
-            "Fixed the patch notes panel itself never actually having the same width/shadow/border styling as the update and onboarding panels — it had been missing from that shared CSS rule the whole time"
+            "It's a single line now instead of a whole titled section with its own bulleted steps — the patch notes screen's layout is unchanged"
           ]
         },
         {
