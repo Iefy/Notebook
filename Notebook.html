@@ -13527,6 +13527,9 @@ function downloadText(filename, text, mime) {
     setTimeout(function () { URL.revokeObjectURL(url); }, 120000);
   }
 }
+function slugifyFilename(name) {
+  return String(name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "project";
+}
 function exportJSON() {
   flushSave();
   var pid = workspace.activeProjectId;
@@ -13550,7 +13553,9 @@ function exportJSON() {
     budget: state.budget, budgetLimit: state.budgetLimit, budgets: state.budgets, products: state.products,
     graphLaidOut: state.graphLaidOut
   };
-  downloadText("notebook-export-" + new Date().toISOString().slice(0, 10) + ".json", JSON.stringify(payload, null, 2), "application/json");
+  var meta = projectMeta(pid);
+  var filename = "notebook-" + slugifyFilename(meta ? meta.name : "project") + "-" + new Date().toISOString().slice(0, 10) + ".json";
+  downloadText(filename, JSON.stringify(payload, null, 2), "application/json");
   toast("Exported " + state.pages.length + " pages, " + state.entries.length + " entries, " + state.timelines.length + " timelines");
 }
 // Full export: every project's own data, plus everything shared at the
@@ -14078,6 +14083,85 @@ function importNotebookData(data) {
 }
 
 $("import-btn").addEventListener("click", function () { $("import-file").click(); });
+// A full export (exportFullBackup) bundles every project's own data plus
+// the shared workspace-level data (Productivity, settings, project-type
+// presets) into one file — this is what restores it. Genuinely replaces
+// the *entire* workspace, every project, not just the current one, so it
+// gets its own stronger confirmation than a single-project import, and
+// its own apply path (applyImportedState only ever touched one project).
+function importFullBackup(data) {
+  var projectsData = data.projects.filter(function (p) { return p && typeof p === "object" && p.id; });
+  if (!projectsData.length) { toast("That full export has no projects in it."); return; }
+  var totals = { pages: 0, entries: 0, timelines: 0 };
+  projectsData.forEach(function (p) {
+    totals.pages += (p.pages || []).length;
+    totals.entries += (p.entries || []).length;
+    totals.timelines += (p.timelines || []).length;
+  });
+  confirmModal("Replace your entire workspace?",
+    "This full export has " + projectsData.length + (projectsData.length === 1 ? " project" : " projects") +
+    " (" + totals.pages + " pages, " + totals.entries + " entries, " + totals.timelines + " timelines total) and replaces every project currently here, plus your shared settings and Productivity data. " +
+    "A snapshot is kept first, but only for the project you're currently in — this import covers your whole workspace, so make sure that's really what you want.",
+    "Replace everything",
+    function () { applyFullBackup(data, projectsData); });
+}
+function applyFullBackup(data, projectsData) {
+  takeSnapshot("Before full import");
+  flushSave();
+
+  // Every project's own sessions/plans (tagged with that project's id in
+  // the export) merge back into one shared pool — see GLOBAL_FIELDS.
+  var allSessions = [], allPlans = [], newMetas = [], builtStates = {};
+  var PROJECT_OWN_FIELDS = ["notebooks", "pages", "topics", "entries", "entryTypes", "tagPresets", "timelines",
+    "activity", "graphPos", "graphLaidOut", "hidden", "projectType", "budget", "budgetLimit", "budgets", "products"];
+  projectsData.forEach(function (p) {
+    (Array.isArray(p.sessions) ? p.sessions : []).forEach(function (x) { x.projectId = p.id; allSessions.push(x); });
+    (Array.isArray(p.plans) ? p.plans : []).forEach(function (x) { x.projectId = p.id; allPlans.push(x); });
+    var s = blankState();
+    PROJECT_OWN_FIELDS.forEach(function (k) { if (p[k] !== undefined) s[k] = p[k]; });
+    var norm = normalizeState(s);
+    builtStates[p.id] = norm;
+    var meta = blankProjectMeta(p.id, p.name || "Untitled project");
+    meta.icon = p.icon || null;
+    meta.type = typeof p.type === "string" ? p.type : "blank";
+    meta.stats = { pages: norm.pages.length, entries: norm.entries.length, timelines: norm.timelines.length };
+    newMetas.push(meta);
+  });
+
+  var shared = (data.shared && typeof data.shared === "object") ? data.shared : {};
+  var activeId = projectsData.some(function (p) { return p.id === data.activeProjectId; }) ? data.activeProjectId : projectsData[0].id;
+
+  var newWorkspace = { version: 6, activeProjectId: activeId, projects: newMetas, sessions: allSessions, plans: allPlans };
+  ["settings", "customProjectTypes"].concat(PRODUCTIVITY_GLOBAL_FIELDS).forEach(function (k) {
+    if (k === "runningSession") return; // never resurrect a live timer from a backup
+    if (shared[k] !== undefined) newWorkspace[k] = shared[k];
+  });
+
+  var saves = [];
+  projectsData.forEach(function (p) {
+    if (p.id === activeId) return; // the active project gets written via the normal persist() path below
+    var st = builtStates[p.id];
+    var blob = {};
+    Object.keys(st).forEach(function (k) { if (GLOBAL_FIELDS.indexOf(k) === -1) blob[k] = st[k]; });
+    saves.push(saveBlob(projectKey(p.id), JSON.stringify(blob)));
+  });
+
+  Promise.all(saves).then(function () {
+    workspace = newWorkspace;
+    state = builtStates[activeId];
+    attachGlobalFields();
+    normalizeState(state);
+    syncGlobalFieldsBack();
+    snapshotsCache = [];
+    saveWorkspace();
+    persist();
+    applyHiddenSettings();
+    setTab("hub");
+    document.querySelectorAll(".rail-btn").forEach(function (b) { b.classList.toggle("active", b.dataset.tab === "hub"); });
+    initStaticTagTooltips();
+    toast("Full import complete \u2014 " + newMetas.length + (newMetas.length === 1 ? " project" : " projects"));
+  });
+}
 function importFromFile(f) {
   if (!f) return;
   var reader = new FileReader();
@@ -14087,6 +14171,7 @@ function importFromFile(f) {
     catch (e) { toast("That file isn't valid JSON."); return; }
     if (!data || typeof data !== "object") { toast("That file isn't a recognised export."); return; }
 
+    if (data.full === true && Array.isArray(data.projects)) { importFullBackup(data); return; }
     if (isSuitebookData(data)) {
       var conv = convertSuitebook(data);
       confirmModal("Import from Suitebook?",
