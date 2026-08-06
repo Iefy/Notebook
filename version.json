@@ -73,7 +73,7 @@
         },
         "[fix] Budgets and products weren't included in full JSON exports or selective snapshot restores — they are now",
         "[fix] Investments didn't count toward budget spending limits — putting money into an investment is still money leaving your wallet, so it counts against a budget's limit the same as an expense now",
-        "[fix] A weekly goal set to 0 hours showed a completely empty progress bar, indistinguishable from no goal being set — it now correctly shows as met (a 0-hour goal always is)",
+        "[fix] Setting a weekly goal to 0 hours now properly clears it back to \"no goal set,\" instead of silently storing a 0-hour goal that doesn't mean anything",
         {
           "text": "[new] Export is now two separate choices: this project, or everything",
           "sub": [
