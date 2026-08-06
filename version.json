@@ -1,6 +1,63 @@
 {
-  "version": "0.4.7-dev",
+  "version": "0.7.0-dev",
   "changelog": [
+    {
+      "version": "0.7.0-dev",
+      "date": "2026-08-06",
+      "changes": [
+        {
+          "text": "[new] Management overhaul: investments and products got a lot deeper",
+          "sub": [
+            "Investments can now be cashed out — enter what you actually received and only the profit (or loss) beyond your original principal is logged, so a $300 investment cashed out for $350 shows $50 earned, not $350",
+            "Cash-outs can be edited afterward, and deleting one reverts the investment to \"not yet cashed out\" — exactly as if it never happened",
+            "Products can log repeatable returns — early returns recoup the product's cost first, and only the excess counts as profit",
+            "Products can carry an optional date, which keeps a matching entry on your calendar in sync automatically",
+            "Product and transaction notes are no longer shown inline in the list — click a row to view its full details instead"
+          ]
+        },
+        {
+          "text": "[new] Budgets: set spending limits for any timeframe, not just monthly",
+          "sub": [
+            "Add as many budgets as you want — Weekly, Monthly, Quarterly, Yearly, or a custom date range",
+            "Each one can optionally be scoped to a single category, e.g. a \"Marketing\" budget that only tracks Marketing expenses",
+            "Weekly/Monthly/Quarterly/Yearly budgets automatically roll into the current period — no recreating them",
+            "A new Breakdown view groups income, expenses, and investments by category with totals and percentages",
+            "\"Balance\" is now labeled \"Wallet\" to make clear it's your net take-home, not a running transaction total"
+          ]
+        },
+        {
+          "text": "[new] Project types: tell Notebook what a project is for",
+          "sub": [
+            "Six presets to start from — Blank, Novel/Story, Worldbuilding/Campaign, Screenplay, Poetry/Collection, and Product/Professional work — each with sensible defaults for what's visible",
+            "Save your own custom presets from any project's current setup, reusable when creating new ones",
+            "Picking a type is part of creating a new project now, and can be changed later from Settings"
+          ]
+        },
+        {
+          "text": "[new] Sidebar rooms and Home tiles/sections are now per-project",
+          "sub": [
+            "Previously these were shared across every project — a Poetry project and a Worldbuilding project always looked identical. Each project now remembers its own visibility",
+            "Appearance settings (theme, accent color, density, etc.) are unaffected and still apply everywhere, since those aren't about content"
+          ]
+        },
+        {
+          "text": "[redesign] Preferences reorganized for clarity",
+          "sub": [
+            "A new \"This project\" group at the top holds everything scoped to the current project — Project type and Library",
+            "Every category is now a full-width row with a real description of what it does, instead of a cramped icon grid with little to no explanation",
+            "Home tiles now pull their icon and label directly from the sidebar, so they can't drift out of sync (e.g. a tile silently still saying \"Timer\" after the room was renamed \"Productivity\")"
+          ]
+        },
+        "[new] Ctrl/Cmd+S now exports a full backup instead of just forcing an immediate autosave",
+        {
+          "text": "[fix] Patch notes could fail to show what a version actually changed",
+          "sub": [
+            "Caused by the app's own version number not being bumped to match the published changelog — fixed, and a console warning now flags it early if it happens again"
+          ]
+        },
+        "[fix] Budgets and products weren't included in full JSON exports or selective snapshot restores — they are now"
+      ]
+    },
     {
       "version": "0.4.7-dev",
       "date": "2026-08-04",
