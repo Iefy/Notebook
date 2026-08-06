@@ -78,9 +78,11 @@
           "text": "[new] Export is now two separate choices: this project, or everything",
           "sub": [
             "Ctrl/Cmd+S now always does a full export — every project, plus shared settings and Productivity — instead of just the current project",
-            "Preferences → Data offers both: \"Export this project\" (the old single-project export) and \"Export everything\" (new, same as Ctrl/Cmd+S)"
+            "Preferences → Data offers both: \"Export this project\" (the old single-project export) and \"Export everything\" (new, same as Ctrl/Cmd+S)",
+            "Import now reads a full export back in too — replaces every project and shared data at once, with its own stronger confirmation since it's the whole workspace, not just one project"
           ]
-        }
+        },
+        "[fix] A single-project export's filename is now based on the project's own name, instead of a generic \"notebook-export-DATE.json\" for every project"
       ]
     },
     {
