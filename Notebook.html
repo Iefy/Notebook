@@ -10718,13 +10718,17 @@ function budgetPeriodWindow(b) {
   var mEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   return { startKey: now.getFullYear() + "-" + pad2(now.getMonth() + 1) + "-01", endKey: dayKey(mEnd.getTime()), label: "this month" };
 }
-// Spending only (never investments/cash-outs — a budget means reining in
-// spending, not investing), within the budget's current window, optionally
+// Counts as spending anything that actually left the wallet within the
+// budget's current window — expenses, and investments too (putting money
+// into an investment is still money leaving your pocket, even though it's
+// tracked separately from "Expenses" in the summary above). Cash-out gains
+// and losses are their own income/expense transactions already, so they're
+// covered by the "expense" branch without special-casing. Optionally
 // narrowed to one category.
 function budgetSpent(b) {
   var win = budgetPeriodWindow(b);
   return state.budget.reduce(function (sum, tx) {
-    if (tx.kind !== "expense") return sum;
+    if (tx.kind !== "expense" && tx.kind !== "investment") return sum;
     if (tx.date < win.startKey || tx.date > win.endKey) return sum;
     if (b.category && tx.category !== b.category) return sum;
     return sum + tx.amount;
