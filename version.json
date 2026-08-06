@@ -50,6 +50,13 @@
         },
         "[new] Ctrl/Cmd+S now exports a full backup instead of just forcing an immediate autosave",
         {
+          "text": "[redesign] The update-available screen now matches the patch notes screen",
+          "sub": [
+            "The \"export first\" reminder is a single compact line now instead of a whole titled section with its own bulleted steps",
+            "Fixed the patch notes panel itself never actually having the same width/shadow/border styling as the update and onboarding panels — it had been missing from that shared CSS rule the whole time"
+          ]
+        },
+        {
           "text": "[fix] Patch notes could fail to show what a version actually changed",
           "sub": [
             "Caused by the app's own version number not being bumped to match the published changelog — fixed, and a console warning now flags it early if it happens again"
