@@ -30,13 +30,7 @@
           ]
         },
         "[new] Creating a new Blank project now walks you through onboarding for it, the same setup new installs get — since what's visible is per-project now, this is worth doing for each blank one rather than just the first",
-        "[removed] The \"Attribute sessions to the active project\" setting — no longer meaningful now that sessions can only ever belong to the project you're in"
-      ]
-    },
-    {
-      "version": "0.7.0-dev",
-      "date": "2026-08-06",
-      "changes": [
+        "[removed] The \"Attribute sessions to the active project\" setting — no longer meaningful now that sessions can only ever belong to the project you're in",
         {
           "text": "[new] Management overhaul: investments and products got a lot deeper",
           "sub": [
@@ -63,13 +57,6 @@
             "Six presets to start from — Blank, Novel/Story, Worldbuilding/Campaign, Screenplay, Poetry/Collection, and Product/Professional work — each with sensible defaults for what's visible",
             "Save your own custom presets from any project's current setup, reusable when creating new ones",
             "Picking a type is part of creating a new project now, and can be changed later from Settings"
-          ]
-        },
-        {
-          "text": "[new] Sidebar rooms and Home tiles/sections are now per-project",
-          "sub": [
-            "Previously these were shared across every project — a Poetry project and a Worldbuilding project always looked identical. Each project now remembers its own visibility",
-            "Appearance settings (theme, accent color, density, etc.) are unaffected and still apply everywhere, since those aren't about content"
           ]
         },
         {
