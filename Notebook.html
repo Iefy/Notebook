@@ -1360,6 +1360,7 @@ body[data-tab="management"] #view-management { display: flex; }
   background: var(--surf); border: 1px solid var(--border);
   border-radius: calc(10px * var(--radius-scale, 1)); padding: 14px; margin-top: 16px;
 }
+.wk-card.good { border-color: var(--sage-bd); background: var(--sage-bg); }
 #wk-elapsed {
   font-family: var(--serif); font-size: 38px; color: var(--ink-hi);
   font-variant-numeric: tabular-nums; line-height: 1.1;
@@ -2395,6 +2396,10 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
       <span class="lbl">Home</span>
     </button>
     <div id="rail-rooms"></div>
+    <button class="rail-btn" id="quickswap-open-btn" aria-label="Switch project" data-tip="Switch project (Ctrl+P)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 3 3 7l4 4"/><path d="M3 7h13a4 4 0 0 1 4 4v1"/><path d="M17 21l4-4-4-4"/><path d="M21 17H8a4 4 0 0 1-4-4v-1"/></svg>
+      <span class="lbl">Switch</span>
+    </button>
     <button class="rail-btn" id="gsearch-open-btn" aria-label="Search everything" data-tip="Search everything (Ctrl+K)">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
       <span class="lbl">Search</span>
@@ -2655,8 +2660,8 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
     <!-- Work -->
     <section id="view-work">
       <div id="wk-scroll">
-        <h2>Productivity<span class="beta-tag" data-note="Cross-project aggregation, goals, streaks, and medals are newer and still being tuned.">Beta</span></h2>
-        <p class="or-lede">Rest days, worked days, and anything you've planned — across every project, one-off or recurring, with links to your entries.</p>
+        <h2>Productivity<span class="beta-tag" data-note="Goals, streaks, and medals are newer and still being tuned.">Beta</span></h2>
+        <p class="or-lede">Rest days, worked days, and anything you've planned for this project — one-off or recurring, with links to your entries.</p>
         <div class="wk-group wk-group-plan">
           <div class="wk-group-label">Plan</div>
           <div class="wk-group-cards">
@@ -2704,10 +2709,6 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
             <button class="popout-btn" id="popout-btn-timer" data-popout="timer" aria-label="Pop out timer" data-tip="Pop out timer" title="Pop out timer — stays on top while you work elsewhere">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             </button>
-          </div>
-          <div class="wk-row" id="wk-project-row" style="font-size:12px;color:var(--ink-mute)">
-            <span>Log to</span>
-            <select id="wk-project-picker" aria-label="Project to attribute this session to"></select>
           </div>
           <div id="wk-elapsed">0:00</div>
           <div class="wk-row">
@@ -2821,6 +2822,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
           </div>
         </div>
         <div class="hub-content" id="hub-content-picker" hidden>
+          <div class="ov-sect-head"><span>Projects</span><button class="foot-btn" id="projects-breakdown-btn" style="min-height:30px;padding:5px 10px;font-size:11px">View breakdown</button></div>
           <div class="hub-tiles" id="project-cards"></div>
         </div>
       </div>
@@ -2851,7 +2853,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
     <section id="view-management">
       <div id="mgmt-scroll">
         <h2>Management<span class="beta-tag" data-note="Budget and product tracking are new and still being tuned.">Beta</span></h2>
-        <p class="or-lede">Real-world budget and the products or deliverables you're building — shared across every project.</p>
+        <p class="or-lede">Real-world budget and the products or deliverables you're building on this project.</p>
 
         <div class="wk-group wk-group-budget">
           <div class="wk-group-label">Budget</div>
@@ -3062,8 +3064,6 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
       </div>
       <div class="set-view" id="set-view-display-work" data-view="display-work">
         <div id="set-work-toggles"></div>
-        <div class="set-group-title" style="margin-top:18px">Session logging</div>
-        <div id="set-work-behavior-toggles"></div>
       </div>
       <div class="set-view" id="set-view-editor" data-view="editor">
         <div class="set-group-title">Pasting</div>
@@ -3288,7 +3288,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
    to read from the `dev` branch's version.json instead of `main`'s, so a
    dev build never gets nagged about (or accidentally offered) a main-line
    release, and vice versa. */
-var APP_VERSION = "0.7.0-dev";
+var APP_VERSION = "0.7.5-dev";
 var UPDATE_CHANNEL = APP_VERSION.toLowerCase().indexOf("dev") > -1 ? "dev" : "main";
 var UPDATE_CHECK_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/version.json";
 var UPDATE_HTML_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/Notebook.html";
@@ -3499,7 +3499,7 @@ var MEDAL_DEFS = {
 // when creating any other, same as the built-ins here.
 var PROJECT_TYPE_PRESETS = [
   { key: "blank", label: "Blank", builtin: true,
-    desc: "Nothing hidden — pick and choose what shows yourself.",
+    desc: "Nothing hidden to start — you'll be walked through setup to pick and choose yourself.",
     hidden: { railTabs: [], homeTiles: [] } },
   { key: "novel", label: "Novel / Story", builtin: true,
     desc: "Manuscript pages, a world bible for characters and places, and a plot timeline. Hides Oracle and Management to start.",
@@ -4248,21 +4248,21 @@ function loadSnapshotsAsync(key) {
    project is active" now for project-scoped fields, and a live alias onto
    `workspace` for the shared ones (see GLOBAL_FIELDS below). This means
    none of the hundreds of existing `state.pages` / `state.sessions` / …
-   references anywhere else in the app had to change for projects — or for
-   sessions/plans/goals/streaks/medals going global with them — to work. */
+   references anywhere else in the app had to change for projects to work. */
 var workspace = null;
 // Fields that live at the workspace level, shared by every project, rather
-// than inside any one project's own blob: settings (§0b), and — per the
-// Productivity merge — sessions/plans/goals/streaks/medals/rest days, each
-// session/plan carrying its own optional `projectId` instead. `state`
-// exposes all of these under the names it's always used; attachGlobalFields()
-// points state's copy at workspace's before a project's data loads or
-// normalizes, and syncGlobalFieldsBack() resyncs workspace afterward in
-// case normalizeState() rebuilt one as a new object/array rather than
-// editing in place (it does, for a few of these — see normalizeState).
-var GLOBAL_FIELDS = ["settings", "sessions", "plans", "restDays", "restTokens", "restTokensV2", "runningSession",
-  "weeklyTarget", "weeklyGoals", "medalProgress", "bestStreak", "overachieve", "medalPrestige", "medalBest", "medalHistory",
-  "lastGoalWeekAwarded", "goalTokenCheckedThrough", "budget", "budgetLimit", "budgets", "products", "customProjectTypes"];
+// than inside any one project's own blob. Sessions/plans/goals/streaks/
+// medals/rest days/budget/products used to be here too (the "Productivity
+// merge") but that pooled every project's work and money together with no
+// way to tell them apart — they're project-scoped again as of v5 (see
+// migrateGlobalProductivityToPerProject). Only true cross-project meta
+// stays global: display/behavior preferences, and reusable project-type
+// presets. `state` exposes both of these under the names it's always used;
+// attachGlobalFields() points state's copy at workspace's before a
+// project's data loads or normalizes, and syncGlobalFieldsBack() resyncs
+// workspace afterward in case normalizeState() rebuilt one as a new
+// object rather than editing in place.
+var GLOBAL_FIELDS = ["settings", "customProjectTypes"];
 function attachGlobalFields() { GLOBAL_FIELDS.forEach(function (k) { state[k] = workspace[k]; }); }
 function syncGlobalFieldsBack() { GLOBAL_FIELDS.forEach(function (k) { workspace[k] = state[k]; }); }
 function blankProjectMeta(id, name) {
@@ -4289,7 +4289,7 @@ function freshWorkspace() {
   var s = blankState();
   var pid = uid();
   tagOwnSessionsAndPlans(s, pid);
-  var w = { version: 4, activeProjectId: pid, projects: [blankProjectMeta(pid, "General")] };
+  var w = { version: 5, activeProjectId: pid, projects: [blankProjectMeta(pid, "General")] };
   Object.assign(w, seedGlobalFieldsFrom(s));
   return { workspace: w, projState: s };
 }
@@ -4302,7 +4302,7 @@ function wrapFlatStateAsWorkspace(s) {
   var meta = blankProjectMeta(pid, "General");
   meta.stats = { pages: s.pages.length, entries: s.entries.length, timelines: s.timelines.length };
   tagOwnSessionsAndPlans(s, pid);
-  var w = { version: 4, activeProjectId: pid, projects: [meta] };
+  var w = { version: 5, activeProjectId: pid, projects: [meta] };
   Object.assign(w, seedGlobalFieldsFrom(s));
   return { workspace: w, projState: s };
 }
@@ -4316,6 +4316,16 @@ function workspaceFromRaw(raw) {
   if (!w.settings) w.settings = w.globalSettings || blankState().settings;
   return w;
 }
+// The field set that lived at the workspace level between the v3→v4
+// migration (below) and v4→v5 (further below) — i.e. while sessions/plans/
+// goals/streaks/medals/rest days/budget/products were shared across every
+// project instead of scoped to one. Named explicitly here rather than
+// reused from GLOBAL_FIELDS, since that constant now means something
+// different (just settings/customProjectTypes) — both migrations need the
+// *old* meaning to know what they're moving.
+var LEGACY_GLOBAL_PRODUCTIVITY_FIELDS = ["restDays", "restTokens", "restTokensV2", "runningSession",
+  "weeklyTarget", "weeklyGoals", "medalProgress", "bestStreak", "overachieve", "medalPrestige", "medalBest", "medalHistory",
+  "lastGoalWeekAwarded", "goalTokenCheckedThrough", "budget", "budgetLimit", "budgets", "products"];
 // One-time upgrade for a workspace saved before sessions/plans/goals/
 // streaks/medals went global (v3 → v4): pulls each project's own copy of
 // those fields, tags sessions/plans with their project's id, and merges
@@ -4343,12 +4353,57 @@ function migrateWorkspaceToGlobalProductivity(w, activeState) {
     donor = donor || activeState;
     w.sessions = allSessions;
     w.plans = allPlans;
-    GLOBAL_FIELDS.forEach(function (k) {
-      if (k === "sessions" || k === "plans") return; // already merged above, not donor-copied
+    LEGACY_GLOBAL_PRODUCTIVITY_FIELDS.forEach(function (k) {
       w[k] = k === "runningSession" ? null : donor[k]; // never resurrect a live timer across a migration
     });
     delete w.globalSettings;
     w.version = 4;
+  });
+}
+// One-time downgrade for a workspace saved when sessions/plans/goals/
+// streaks/medals/rest days/budget/products were shared workspace-wide
+// (v4 → v5): each becomes project-scoped again, the same way pages/entries
+// always were. Sessions/plans already carry a projectId (tagged by the
+// v3→v4 migration, or as they were logged), so they split apart losslessly.
+// Medals/streaks/rest tokens/budget/products have no such tag — there was
+// never more than one copy — so, mirroring v3→v4's own donor logic just
+// inverted, whichever project logged the most sessions keeps that history;
+// every other project starts fresh on those fronts specifically (its own
+// pages/entries/session history is untouched either way).
+function migrateGlobalProductivityToPerProject(w, activeState) {
+  if ((w.version || 0) >= 5) return Promise.resolve();
+  var ids = w.projects.map(function (p) { return p.id; });
+  return Promise.all(ids.map(function (id) {
+    if (id === w.activeProjectId) return Promise.resolve(activeState);
+    return loadBlob(projectKey(id)).then(function (raw) { return stateFromRaw(raw); }).catch(function () { return null; });
+  })).then(function (states) {
+    var allSessions = Array.isArray(w.sessions) ? w.sessions : [];
+    var allPlans = Array.isArray(w.plans) ? w.plans : [];
+    var donorId = w.activeProjectId, donorCount = -1;
+    ids.forEach(function (pid) {
+      var count = allSessions.filter(function (sess) { return sess.projectId === pid; }).length;
+      if (count > donorCount) { donorCount = count; donorId = pid; }
+    });
+    var saves = [];
+    states.forEach(function (s, i) {
+      var pid = ids[i];
+      var target = (pid === w.activeProjectId) ? activeState : s;
+      if (!target) return; // a project blob that failed to load stays untouched — better than losing it
+      target.sessions = allSessions.filter(function (sess) { return sess.projectId === pid; });
+      target.plans = allPlans.filter(function (p) { return p.projectId === pid; });
+      target.runningSession = (pid === w.activeProjectId) ? (w.runningSession || null) : null;
+      if (pid === donorId) {
+        LEGACY_GLOBAL_PRODUCTIVITY_FIELDS.forEach(function (k) { if (k !== "runningSession") target[k] = w[k]; });
+      }
+      if (target !== activeState) {
+        var blob = {};
+        Object.keys(target).forEach(function (k) { if (GLOBAL_FIELDS.indexOf(k) === -1) blob[k] = target[k]; });
+        saves.push(saveBlob(projectKey(pid), JSON.stringify(blob)));
+      }
+    });
+    LEGACY_GLOBAL_PRODUCTIVITY_FIELDS.concat(["sessions", "plans"]).forEach(function (k) { delete w[k]; });
+    w.version = 5;
+    return Promise.all(saves);
   });
 }
 // Resolves with { workspace, state }: workspace-record first (normal case
@@ -4384,7 +4439,9 @@ function loadWorkspaceAsync() {
       });
     }, Promise.resolve(null)).then(function (found) {
       if (!found) { var fresh = freshWorkspace(); found = { workspace: fresh.workspace, state: fresh.projState }; }
-      return migrateWorkspaceToGlobalProductivity(found.workspace, found.state).then(function () { return found; });
+      return migrateWorkspaceToGlobalProductivity(found.workspace, found.state)
+        .then(function () { return migrateGlobalProductivityToPerProject(found.workspace, found.state); })
+        .then(function () { return found; });
     });
   });
 }
@@ -4435,10 +4492,10 @@ function persist() {
   state.activity[dayKey()] = (state.activity[dayKey()] || 0) + 1;
   var keys = Object.keys(state.activity).sort();
   while (keys.length > 180) delete state.activity[keys.shift()];
-  // Global fields (settings/sessions/plans/goals/medals/rest days) are
-  // saved once, inside the workspace record below — writing them into
-  // every project's own blob too would duplicate a potentially large,
-  // fast-growing shared dataset across every project on every save.
+  // Global fields (settings, reusable project-type presets) are saved once,
+  // inside the workspace record below. Everything else — sessions, plans,
+  // goals, medals, budget, products, pages, entries — is this project's
+  // own, so it goes into this project's own blob.
   var projectBlob = {};
   Object.keys(state).forEach(function (k) { if (GLOBAL_FIELDS.indexOf(k) === -1) projectBlob[k] = state[k]; });
   saveBlob(projectKey(workspace.activeProjectId), JSON.stringify(projectBlob), function () {
@@ -4512,16 +4569,16 @@ var RAIL_ITEMS = [
   { key: "timelines", label: "Timelines", tip: "Timelines", scope: "project", recommended: true,
     desc: "Epochs and eras with dated events, plus a visual relationship map. On: appears in the sidebar. Off: hidden from the sidebar; your timelines still exist and reappear when you turn this back on.",
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="22"/><circle cx="12" cy="6" r="2.2" fill="currentColor" stroke="none"/><circle cx="12" cy="13" r="2.2" fill="currentColor" stroke="none"/><circle cx="12" cy="20" r="2.2" fill="currentColor" stroke="none"/></svg>' },
-  { key: "productivity", label: "Productivity", tip: "Productivity — plans, work & goals", scope: "workspace", beta: true,
-    betaNote: "Cross-project goals, streaks, and medals are newer and still being tuned.",
-    desc: "Calendar, session timer, weekly goals, streaks and medals — shared across every project. On: appears in the sidebar. Off: hidden from the sidebar; your plans and logged sessions are untouched.",
+  { key: "productivity", label: "Productivity", tip: "Productivity — plans, work & goals", scope: "project", beta: true,
+    betaNote: "Goals, streaks, and medals are newer and still being tuned.",
+    desc: "Calendar, session timer, weekly goals, streaks and medals for this project. On: appears in the sidebar. Off: hidden from the sidebar; your plans and logged sessions are untouched.",
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="16" rx="2"/><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/></svg>' },
   { key: "oracle", label: "Oracle", tip: "Oracle — connection prompts", scope: "project", beta: true,
     desc: "Draws two entries together and asks what connects them — a prompt generator for building relationships in your world. On: appears in the sidebar. Off: hidden from the sidebar; nothing is lost, it's just out of the way until you want it.",
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>' },
-  { key: "management", label: "Management", tip: "Management — budget & products", scope: "workspace", beta: true,
+  { key: "management", label: "Management", tip: "Management — budget & products", scope: "project", beta: true,
     betaNote: "Budget and product tracking are new and still being tuned.",
-    desc: "Track real-world income/expenses and the products or deliverables you're building — shared across every project. On: appears in the sidebar. Off: hidden from the sidebar; your budget and product data are untouched.",
+    desc: "Track real-world income/expenses and the products or deliverables you're building on this project. On: appears in the sidebar. Off: hidden from the sidebar; your budget and product data are untouched.",
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2.5" y="7" width="19" height="13" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M2.5 12.5h19"/><circle cx="12" cy="12.5" r="1.4" fill="currentColor" stroke="none"/></svg>' }
 ];
 function railItem(key) { return RAIL_ITEMS.find(function (r) { return r.key === key; }) || null; }
@@ -8302,7 +8359,7 @@ function startStopWork(labelOverride) {
     var secs = Math.floor((Date.now() - rs.startTs) / 1000);
     state.runningSession = null;
     if (secs >= 10) {
-      state.sessions.unshift({ id: uid(), ts: rs.startTs, seconds: secs, label: rs.label || "Work", note: "", projectId: rs.projectId || null });
+      state.sessions.unshift({ id: uid(), ts: rs.startTs, seconds: secs, label: rs.label || "Work", note: "", projectId: workspace.activeProjectId });
       toast("Logged " + fmtDur(secs) + (rs.label ? " on " + rs.label : ""));
     } else toast("Too short to log (under 10s)");
     persist();
@@ -8311,40 +8368,13 @@ function startStopWork(labelOverride) {
     // addEventListener("click", startStopWork) instead passes the click
     // Event as this argument, so only trust it when it's actually a string.
     var lbl = typeof labelOverride === "string" ? labelOverride : ($("wk-label") ? $("wk-label").value : "");
-    ensureWkPickedProjectId();
-    state.runningSession = { startTs: Date.now(), label: lbl.trim(), projectId: wkPickedProjectId };
+    state.runningSession = { startTs: Date.now(), label: lbl.trim(), projectId: workspace.activeProjectId };
     persist();
   }
   renderWorkTab();
   Popout.renderPipTimer();
 }
 var wkSort = "new", wkFilter = null;
-// Which project new timer sessions / manual logs are attributed to. Starts
-// undefined so it only ever defaults once per Work-tab visit (from the
-// autoAssignActiveProject preference), not every re-render — but always
-// mirrors a currently-running session's own projectId if one exists, since
-// that's already-decided ground truth, not a fresh default.
-var wkPickedProjectId;
-function ensureWkPickedProjectId() {
-  if (state.runningSession) { wkPickedProjectId = state.runningSession.projectId || null; return; }
-  if (wkPickedProjectId === undefined) {
-    wkPickedProjectId = (state.settings && state.settings.autoAssignActiveProject !== false) ? workspace.activeProjectId : null;
-  }
-}
-function renderWorkProjectPicker() {
-  ensureWkPickedProjectId();
-  var sel = $("wk-project-picker");
-  var built = buildProjectSelect(wkPickedProjectId, "Project to attribute logged time to");
-  sel.innerHTML = built.innerHTML;
-  sel.value = wkPickedProjectId || "";
-}
-$("wk-project-picker").addEventListener("change", function () {
-  wkPickedProjectId = this.value || null;
-  // Changing the project mid-session re-attributes the whole running
-  // session, not just what's logged from this point on — matches "editing
-  // after the fact" being the other place this can be changed.
-  if (state.runningSession) { state.runningSession.projectId = wkPickedProjectId; scheduleSave(); }
-});
 var wkWeekOffset = 0, wkEditingGoal = false;
 var wkSelMode = false, wkSel = {};
 function weekRangeLabel(ts) {
@@ -8397,24 +8427,6 @@ function renderTimingPill() {
   $("nt-time").textContent = fmtClock((Date.now() - r.startTs) / 1000);
   $("nt-label").textContent = (r.label && r.label.trim()) ? r.label : "Working";
 }
-// Shared <select> builder for "which project does this belong to" pickers
-// (the timer's project row, editing a past session afterward, and any
-// future feature that needs the same choice) — one project list, one place
-// that knows how to render it as options.
-function buildProjectSelect(currentId, ariaLabel) {
-  var sel = el("select");
-  sel.setAttribute("aria-label", ariaLabel || "Project");
-  var none = el("option", null, "No project");
-  none.value = "";
-  sel.appendChild(none);
-  workspace.projects.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (p) {
-    var opt = el("option", null, p.name || "Untitled project");
-    opt.value = p.id;
-    sel.appendChild(opt);
-  });
-  sel.value = currentId || "";
-  return sel;
-}
 function editSessionModal(s) {
   openModal("Edit session", "");
   var extra = $modal("modal-extra");
@@ -8439,9 +8451,7 @@ function editSessionModal(s) {
   minsI.style.cssText = hoursI.style.cssText;
   var durWrap = el("div"); durWrap.style.cssText = "display:flex;align-items:center;gap:6px;flex:1";
   durWrap.append(hoursI, el("span", null, "h"), minsI, el("span", null, "m"));
-  var projI = buildProjectSelect(s.projectId, "Project this session belongs to");
-  projI.style.cssText = dateI.style.cssText;
-  field("Date", dateI); field("Time", timeI); field("Label", labelI); field("Duration", durWrap); field("Project", projI);
+  field("Date", dateI); field("Time", timeI); field("Label", labelI); field("Duration", durWrap);
   var row = $modal("modal-row");
   var cancel = el("button", null, "Cancel");
   cancel.addEventListener("click", closeModal);
@@ -8459,7 +8469,6 @@ function editSessionModal(s) {
     m = isFinite(m) && m >= 0 ? m : 0;
     var secs = Math.round(h * 3600 + m * 60);
     if (secs >= 0) s.seconds = secs;
-    s.projectId = projI.value || null;
     closeModal(); persist(); renderWorkTab();
     toast("Session updated");
   });
@@ -8472,7 +8481,6 @@ function renderWorkTab() {
   $("wk-card-bylabel").style.display = hiddenWork.indexOf("bylabel") > -1 ? "none" : "";
   $("wk-card-sessions").style.display = hiddenWork.indexOf("sessions") > -1 ? "none" : "";
   $("wk-card-achievements").style.display = hiddenWork.indexOf("achievements") > -1 ? "none" : "";
-  renderWorkProjectPicker();
   checkMedalLevelUps();
   renderAchievements();
   renderRestRow();
@@ -8807,8 +8815,7 @@ $("wk-label").addEventListener("input", function () {
 function commitLoggedTime(dateKey, secs) {
   var p = dateKey.split("-");
   var ts = new Date(+p[0], +p[1] - 1, +p[2], 12, 0, 0).getTime();
-  ensureWkPickedProjectId();
-  state.sessions.unshift({ id: uid(), ts: ts, seconds: secs, label: $("wk-label").value.trim() || "Work", note: "", projectId: wkPickedProjectId });
+  state.sessions.unshift({ id: uid(), ts: ts, seconds: secs, label: $("wk-label").value.trim() || "Work", note: "", projectId: workspace.activeProjectId });
   $("wk-hours").value = ""; $("wk-mins").value = ""; $("wk-log-date").value = dayKey();
   persist(); renderWorkTab();
   toast("Logged " + fmtDur(secs).trim() + (dateKey === dayKey() ? "" : " on " + dateKey));
@@ -9665,7 +9672,18 @@ function createProject() {
     document.body.dataset.tab = "hub";
     document.querySelectorAll(".rail-btn").forEach(function (b) { b.classList.toggle("active", b.dataset.tab === "hub"); });
     initStaticTagTooltips();
-    transitionHomeView(false); // animate open into the new project's (empty) dashboard
+    if (typeKey === "blank") {
+      // A blank project has no preset steering what's visible — onboarding
+      // is exactly that same "what do you want to see" walkthrough new
+      // installs get, just re-run for this one project (its own hidden.*
+      // fields, not global anymore, so this is meaningful every time now,
+      // not just on the very first project ever created).
+      homeView = "dashboard";
+      renderHubContent();
+      openOnboarding();
+    } else {
+      transitionHomeView(false); // animate open into the new project's (empty) dashboard
+    }
   }
   ok.addEventListener("click", go);
   nameInp.addEventListener("keydown", function (e) { if (e.key === "Enter") go(); });
@@ -9677,10 +9695,10 @@ function deleteProject(id) {
   workspace.projects = workspace.projects.filter(function (p) { return p.id !== id; });
   idbDelete(projectKey(id)).catch(function () {});
   idbDelete(projectSnapKey(id)).catch(function () {});
-  // sessions/plans that belonged to the deleted project are shared-storage
-  // history now, not bundled inside its own blob — leave them tagged with
-  // its (now orphaned) id rather than silently deleting logged work; they
-  // just show as "no project" once that id no longer resolves to a name.
+  // Sessions, plans, budget, products, medals — everything scoped to this
+  // project — live inside its own blob (projectKey above), so deleting that
+  // blob already takes all of it with it. Nothing orphaned to clean up
+  // elsewhere.
   if (workspace.activeProjectId === id) {
     workspace.activeProjectId = workspace.projects[0].id;
     saveWorkspace();
@@ -9724,6 +9742,147 @@ function openProjectDashboard(id) {
   var toggle = $("hub-working-on");
   if (toggle) toggle.addEventListener("click", function () { transitionHomeView(homeView !== "picker"); });
 })();
+
+// Quick-swap: same project cards as the Home picker (reusing its card
+// visuals via .hub-tile/.proj-tile), but reachable from anywhere via the
+// rail button or Ctrl/Cmd+P, and — unlike openProjectDashboard, which
+// always lands you on Home — it stays on whatever tab you were already on,
+// only falling back to Home if that room happens to be hidden in the
+// project you're switching to. Closing it (Cancel, Escape, backdrop click)
+// just closes the overlay; there's no tab to "return to" because it never
+// left one.
+function openQuickSwap() {
+  openModal("Switch project", "");
+  var extra = $modal("modal-extra");
+  var list = el("div");
+  var projects = (workspace.projects || []).slice().sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+  projects.forEach(function (meta) {
+    var row = el("div", "sess-row selectable");
+    var isCurrent = meta.id === workspace.activeProjectId;
+    row.title = isCurrent ? "Current project" : "Switch to this project";
+    var nm = el("span", "nm", meta.name || "Untitled project");
+    if (isCurrent) nm.appendChild(el("span", "recommended-tag", "Current"));
+    var stats = meta.stats || {};
+    var descBits = [];
+    if (stats.pages) descBits.push(stats.pages + " page" + (stats.pages === 1 ? "" : "s"));
+    if (stats.entries) descBits.push(stats.entries + " entr" + (stats.entries === 1 ? "y" : "ies"));
+    row.append(nm, el("span", "mgmt-cat", descBits.length ? descBits.join(" \u00b7 ") : "Empty so far"));
+    row.addEventListener("click", function () { quickSwapToProject(meta.id); });
+    list.appendChild(row);
+  });
+  extra.appendChild(list);
+  var modalRow = $modal("modal-row");
+  var breakdown = el("button", null, "View breakdown");
+  breakdown.addEventListener("click", function () { closeModal(); openProjectsBreakdownModal(); });
+  var manage = el("button", null, "Manage all projects");
+  manage.addEventListener("click", function () { closeModal(); setTab("hub"); transitionHomeView(true); });
+  var cancel = el("button", "primary", "Cancel");
+  cancel.addEventListener("click", closeModal);
+  modalRow.append(breakdown, manage, cancel);
+}
+function quickSwapToProject(id) {
+  if (id === workspace.activeProjectId) { closeModal(); return; }
+  var stayTab = state.sel.tab;
+  closeModal();
+  switchToProject(id).then(function () {
+    normalizeState(state);
+    syncGlobalFieldsBack();
+    applyHiddenSettings();
+    var hiddenRail = (state.hidden && state.hidden.railTabs) || [];
+    state.sel.tab = hiddenRail.indexOf(stayTab) > -1 ? "hub" : stayTab;
+    document.body.dataset.tab = state.sel.tab;
+    document.querySelectorAll(".rail-btn").forEach(function (b) { b.classList.toggle("active", b.dataset.tab === state.sel.tab); });
+    initStaticTagTooltips();
+    homeView = "dashboard";
+    renderAll();
+    var meta = projectMeta(id);
+    toast("Switched to " + (meta ? meta.name : "project"));
+  });
+}
+$("quickswap-open-btn").addEventListener("click", openQuickSwap);
+$("projects-breakdown-btn").addEventListener("click", openProjectsBreakdownModal);
+
+// Read-only cross-project summary — loads every *other* project's own
+// blob straight from storage (never switches into them, so nothing about
+// the currently active project changes) and totals up the same kinds of
+// numbers each project already tracks for itself: hours/sessions,
+// wallet, products, and pages/entries/timelines. A project blob that
+// fails to load is skipped rather than blowing up the whole view.
+function projectStatsFrom(s) {
+  var hours = (s.sessions || []).reduce(function (sum, x) { return sum + (x.seconds || 0); }, 0) / 3600;
+  var wallet = (s.budget || []).reduce(function (sum, b) { return sum + (b.kind === "income" ? b.amount : -b.amount); }, 0);
+  return {
+    hours: hours, sessions: (s.sessions || []).length, wallet: wallet, products: (s.products || []).length,
+    pages: (s.pages || []).length, entries: (s.entries || []).length, timelines: (s.timelines || []).length
+  };
+}
+function mgmtStatItem(label, value) {
+  var item = el("div", "mgmt-summary-item");
+  item.appendChild(el("span", "lbl", label));
+  item.appendChild(el("span", "val", value));
+  return item;
+}
+function openProjectsBreakdownModal() {
+  openModal("Projects breakdown", "");
+  var extra = $modal("modal-extra");
+  extra.appendChild(el("div", "note", "Loading every project\u2026"));
+  var modalRow = $modal("modal-row");
+  var close = el("button", "primary", "Close");
+  close.addEventListener("click", closeModal);
+  modalRow.appendChild(close);
+  var metas = (workspace.projects || []).slice();
+  Promise.all(metas.map(function (meta) {
+    if (meta.id === workspace.activeProjectId) return Promise.resolve(state);
+    return loadBlob(projectKey(meta.id)).then(function (raw) { return stateFromRaw(raw); }).catch(function () { return null; });
+  })).then(function (states) {
+    extra.innerHTML = "";
+    var wrap = el("div", "cal-plan-form");
+    var totals = { hours: 0, sessions: 0, wallet: 0, products: 0, pages: 0, entries: 0, timelines: 0 };
+    var rows = [];
+    states.forEach(function (s, i) {
+      if (!s) return;
+      var meta = metas[i];
+      var st = projectStatsFrom(s);
+      rows.push({ meta: meta, st: st });
+      totals.hours += st.hours; totals.sessions += st.sessions; totals.wallet += st.wallet;
+      totals.products += st.products; totals.pages += st.pages; totals.entries += st.entries; totals.timelines += st.timelines;
+    });
+    rows.sort(function (a, b) { return b.st.hours - a.st.hours; });
+    rows.forEach(function (r) {
+      var box = el("div", "wk-card");
+      box.style.marginBottom = "10px";
+      var title = el("div", "set-group-title", r.meta.name || "Untitled project");
+      if (r.meta.id === workspace.activeProjectId) title.appendChild(el("span", "recommended-tag", "Current"));
+      box.appendChild(title);
+      var grid = el("div", "mgmt-summary");
+      grid.append(
+        mgmtStatItem("Hours", r.st.hours.toFixed(1) + "h"),
+        mgmtStatItem("Sessions", String(r.st.sessions)),
+        mgmtStatItem("Wallet", fmtMoney(r.st.wallet)),
+        mgmtStatItem("Products", String(r.st.products))
+      );
+      box.appendChild(grid);
+      box.appendChild(el("div", "note", r.st.pages + " page" + (r.st.pages === 1 ? "" : "s") + " \u00b7 " + r.st.entries + " entr" + (r.st.entries === 1 ? "y" : "ies") + " \u00b7 " + r.st.timelines + " timeline" + (r.st.timelines === 1 ? "" : "s")));
+      wrap.appendChild(box);
+    });
+    if (!rows.length) wrap.appendChild(el("div", "empty", "Couldn't load any projects."));
+    else {
+      var totalBox = el("div", "wk-card good");
+      totalBox.appendChild(el("div", "set-group-title", "Total \u2014 " + rows.length + (rows.length === 1 ? " project" : " projects")));
+      var totalGrid = el("div", "mgmt-summary");
+      totalGrid.append(
+        mgmtStatItem("Hours", totals.hours.toFixed(1) + "h"),
+        mgmtStatItem("Sessions", String(totals.sessions)),
+        mgmtStatItem("Wallet", fmtMoney(totals.wallet)),
+        mgmtStatItem("Products", String(totals.products))
+      );
+      totalBox.appendChild(totalGrid);
+      totalBox.appendChild(el("div", "note", totals.pages + " pages \u00b7 " + totals.entries + " entries \u00b7 " + totals.timelines + " timelines, across everything"));
+      wrap.appendChild(totalBox);
+    }
+    extra.appendChild(wrap);
+  });
+}
 
 /* ════════════════ CALENDAR ════════════════ */
 var calViewTs = monthStartTs(Date.now());
@@ -9910,13 +10069,12 @@ function renderCalDetail() {
       var nm = el("span", "nm", s.label || "Untitled");
       var dur = el("span", "dur", fmtDur(s.seconds));
       top.append(nm, dur);
-      var meta = projectMeta(s.projectId);
-      var when = el("div", "cal-sess-meta", (meta ? meta.name : "No project") + " · " + localTimeStr(s.ts));
+      var when = el("div", "cal-sess-meta", localTimeStr(s.ts));
       info.append(top, when);
       var actions = el("div", "cal-sess-actions");
       var edit = el("button", "tiny-x", "✎");
-      edit.setAttribute("aria-label", "Edit session date, time, project, or label");
-      edit.title = "Edit date / time / project / label";
+      edit.setAttribute("aria-label", "Edit session date, time, or label");
+      edit.title = "Edit date / time / label";
       edit.addEventListener("click", function () { editSessionModal(s); });
       var x = el("button", "tiny-x", "✕");
       x.setAttribute("aria-label", "Delete session");
@@ -10233,16 +10391,13 @@ function openPlanModal(existing, defaultDateKey, presetTask) {
   var dateRow = el("div", "cal-field-row");
   dateRow.append(field("Start date", dateInp), field("Through (optional)", spanEndInp));
 
-  ensureWkPickedProjectId();
-  var projectSel = buildProjectSelect(existing ? existing.projectId : wkPickedProjectId, "Project this plan belongs to");
-
   var scheduleSection = el("div", "cal-plan-section");
   scheduleSection.append(field("Repeat", repeatSel), weeklyField, everyNField, untilField);
 
   var linkSection = el("div", "cal-plan-section");
   linkSection.append(el("div", "cal-field-lbl", "Linked entry"), linkWrap);
 
-  form.append(field("Title", titleInp), field("Notes", detailInp), dateRow, field("Project", projectSel), taskRow, scheduleSection, linkSection);
+  form.append(field("Title", titleInp), field("Notes", detailInp), dateRow, taskRow, scheduleSection, linkSection);
   extra.append(form);
 
   var row = $modal("modal-row");
@@ -10267,7 +10422,7 @@ function openPlanModal(existing, defaultDateKey, presetTask) {
     } else if (repeatSel.value === "every_n_days") {
       rec = { freq: "every_n_days", n: Math.max(1, Math.floor(+nInp.value || 1)), until: untilInp.value || null };
     }
-    var projectId = projectSel.value || null;
+    var projectId = workspace.activeProjectId;
     if (existing) {
       existing.title = title; existing.detail = detail; existing.date = date; existing.durationDays = durationDays;
       existing.recurrence = rec; existing.isTask = taskCb.checked; existing.linkedEntryId = linkedId; existing.projectId = projectId;
@@ -11651,12 +11806,6 @@ var WORK_SECTION_ITEMS = [
   { key: "sessions", label: "Sessions list", desc: "Every logged session, individually editable, deletable, and filterable — also where Merge lives. On: shown on the Productivity page. Off: hidden — sessions are still recorded and still count toward your totals, you'd just lose the detailed list view (and Merge) until you turn it back on.", recommended: true },
   { key: "achievements", label: "Medals & achievements", desc: "Earn medals for streaks, total hours, and goal weeks — each with escalating tiers. On: shown on the Productivity page. Off: hidden — medal progress keeps accumulating in the background either way.", beta: true }
 ];
-var WORK_BEHAVIOR_ITEMS = [
-  { key: "autoAssignActiveProject", label: "Attribute sessions to the active project",
-    desc: "On (default): starting the timer or logging time tags that session with whichever project is \u201cWorking on\u201d at the time — you can still change it via the picker or by editing the session afterward. Off: new sessions log with no project attached unless you set one yourself.",
-    recommended: true,
-    recommendedNote: "Work sessions, goals, streaks, and medals are shared across every project — this is just what lets each project's own hours stay accurate too. Leaving it off still totals fine overall, individual projects just won't have anything to show." }
-];
 function applyHiddenSettings() {
   var hiddenRail = (state.hidden && state.hidden.railTabs) || [];
   document.querySelectorAll(".rail-btn[data-tab]").forEach(function (b) {
@@ -12234,7 +12383,6 @@ function buildSettingsIndex() {
   add("Sections", "Sections shown on Home", "display-home-sections");
   HOME_SECTION_ITEMS.forEach(function (it) { add(it.label, it.desc, "display-home-sections"); });
   add("Productivity", "Which cards show on the Productivity tab", "display-work");
-  WORK_BEHAVIOR_ITEMS.forEach(function (it) { add(it.label, it.desc, "display-work"); });
   WORK_SECTION_ITEMS.forEach(function (it) { add(it.label, it.desc, "display-work"); });
   add("Editor", "Paste behaviour and typing shortcuts", "editor");
   EDITOR_PASTE_ITEMS.forEach(function (it) { add(it.label, it.desc, "editor"); });
@@ -12331,10 +12479,7 @@ function renderSettingsPanel() {
   else if (view === "display-rail") buildToggleGroup($("set-rail-toggles"), RAIL_TOGGLE_ITEMS, "railTabs");
   else if (view === "display-home-tiles") buildToggleGroup($("set-home-tiles-toggles"), HOME_TILE_ITEMS, "homeTiles");
   else if (view === "display-home-sections") buildToggleGroup($("set-home-sections-toggles"), HOME_SECTION_ITEMS, "homeSections");
-  else if (view === "display-work") {
-    buildToggleGroup($("set-work-toggles"), WORK_SECTION_ITEMS, "workSections");
-    buildBoolToggleGroup($("set-work-behavior-toggles"), WORK_BEHAVIOR_ITEMS);
-  }
+  else if (view === "display-work") buildToggleGroup($("set-work-toggles"), WORK_SECTION_ITEMS, "workSections");
   else if (view === "style") renderStyleSettings();
   else if (view === "editor") renderEditorSettings();
   else if (view === "library") buildTagManagerUI($("set-tags-inline"));
@@ -12387,12 +12532,9 @@ var SETTINGS_CATEGORIES = [
   },
   {
     key: "work", title: "What should Productivity show?",
-    lede: "Productivity combines your calendar with a session timer, weekly goals, streaks, and medals — shared across every project. These sections are optional extras on top of it.",
+    lede: "Productivity combines your calendar with a session timer, weekly goals, streaks, and medals. These sections are optional extras on top of it.",
     render: function (c) {
       buildToggleGroup(c.appendChild(el("div")), WORK_SECTION_ITEMS, "workSections");
-      var group = el("div", "set-group-title", "Session logging"); group.style.marginTop = "18px";
-      c.appendChild(group);
-      buildBoolToggleGroup(c.appendChild(el("div")), WORK_BEHAVIOR_ITEMS);
     }
   },
   {
@@ -12681,27 +12823,17 @@ $("onboard-scroll").addEventListener("scroll", updateOnboardScrollCue);
 window.addEventListener("resize", function () {
   if ($("onboard-overlay").classList.contains("show")) updateOnboardScrollCue();
 });
-// Import replaces "this project," but sessions/plans are shared workspace
-// storage now — swapping `state` wholesale would silently wipe out every
-// *other* project's sessions/plans too, since state.sessions is just an
-// alias onto workspace.sessions. Instead: tag the imported file's own
-// sessions/plans with the current project's id, splice them into the
-// shared arrays in place of that project's previous ones (other projects'
-// entries untouched), adopt its goals/medals/settings as the new shared
-// values (matching the "replace everything" the confirm dialog already
-// promises), then alias `state` back onto the updated workspace.
+// Import replaces "this project" — sessions, plans, budget, products, and
+// everything else project-scoped just come along with `s` directly now.
+// Only settings/customProjectTypes (GLOBAL_FIELDS) are still shared, so
+// those alone get pulled from the *current* workspace after the swap
+// rather than adopted from the imported file, matching "this replaces the
+// project, not your app-wide preferences."
 function applyImportedState(s) {
-  var pid = workspace.activeProjectId;
-  var importedSessions = (s.sessions || []).map(function (x) { x.projectId = pid; return x; });
-  var importedPlans = (s.plans || []).map(function (x) { x.projectId = pid; return x; });
-  workspace.sessions = (workspace.sessions || []).filter(function (x) { return x.projectId !== pid; }).concat(importedSessions);
-  workspace.plans = (workspace.plans || []).filter(function (x) { return x.projectId !== pid; }).concat(importedPlans);
-  GLOBAL_FIELDS.forEach(function (k) {
-    if (k === "sessions" || k === "plans") return; // merged above, not wholesale-adopted
-    if (s[k] !== undefined) workspace[k] = s[k];
-  });
+  var keepGlobal = {};
+  GLOBAL_FIELDS.forEach(function (k) { keepGlobal[k] = state[k]; });
   state = s;
-  attachGlobalFields(); // state.sessions/plans/settings/etc now point at the updated workspace copies
+  GLOBAL_FIELDS.forEach(function (k) { state[k] = keepGlobal[k]; });
 }
 function openOnboarding() {
   onboardStep = 0;
@@ -13251,22 +13383,18 @@ function downloadText(filename, text, mime) {
 }
 function exportJSON() {
   flushSave();
-  var pid = workspace.activeProjectId;
-  // Sessions/plans are shared workspace-level storage now (see the
-  // Productivity merge) — exporting "this project" means its own slice of
-  // that shared log, not every project's, and not the unassigned ones.
-  var ownSessions = state.sessions.filter(function (s) { return s.projectId === pid; });
-  var ownPlans = state.plans.filter(function (p) { return p.projectId === pid; });
+  // Everything here is this project's own data now — no more filtering a
+  // shared session/plan pool down to "just this project's slice."
   var payload = {
     app: "notebook", version: 2, exportedAt: new Date().toISOString(),
     notebooks: state.notebooks, pages: state.pages, topics: state.topics,
     entries: state.entries, entryTypes: state.entryTypes,
     timelines: state.timelines, activity: state.activity,
-    sessions: ownSessions, weeklyTarget: state.weeklyTarget, weeklyGoals: state.weeklyGoals, graphPos: state.graphPos,
+    sessions: state.sessions, weeklyTarget: state.weeklyTarget, weeklyGoals: state.weeklyGoals, graphPos: state.graphPos,
     tagPresets: state.tagPresets, settings: state.settings, hidden: state.hidden, projectType: state.projectType,
     medalProgress: state.medalProgress, bestStreak: state.bestStreak,
     overachieve: state.overachieve, restDays: state.restDays, restTokens: state.restTokens, restTokensV2: state.restTokensV2,
-    plans: ownPlans,
+    plans: state.plans,
     lastGoalWeekAwarded: state.lastGoalWeekAwarded, goalTokenCheckedThrough: state.goalTokenCheckedThrough,
     medalPrestige: state.medalPrestige, medalBest: state.medalBest, medalHistory: state.medalHistory,
     budget: state.budget, budgetLimit: state.budgetLimit, budgets: state.budgets, products: state.products,
@@ -13964,6 +14092,7 @@ document.addEventListener("keydown", function (e) {
   }
   else if (mod && e.key.toLowerCase() === "n") { e.preventDefault(); if (state.sel.tab === "entries") newEntry(); else newPage(); }
   else if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); exportJSON(); }
+  else if (mod && e.key.toLowerCase() === "p") { e.preventDefault(); openQuickSwap(); }
   else if (e.key === "Escape") {
     if ($("gsearch-overlay").classList.contains("show")) closeGlobalSearch();
     else if ($modal("overlay").classList.contains("show")) closeModal();
