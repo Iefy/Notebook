@@ -2661,7 +2661,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
     <section id="view-work">
       <div id="wk-scroll">
         <h2>Productivity<span class="beta-tag" data-note="Goals, streaks, and medals are newer and still being tuned.">Beta</span></h2>
-        <p class="or-lede">Rest days, worked days, and anything you've planned for this project — one-off or recurring, with links to your entries.</p>
+        <p class="or-lede">Rest days, worked days, and anything you've planned — across every project, one-off or recurring, with links to your entries.</p>
         <div class="wk-group wk-group-plan">
           <div class="wk-group-label">Plan</div>
           <div class="wk-group-cards">
@@ -4252,17 +4252,21 @@ function loadSnapshotsAsync(key) {
 var workspace = null;
 // Fields that live at the workspace level, shared by every project, rather
 // than inside any one project's own blob. Sessions/plans/goals/streaks/
-// medals/rest days/budget/products used to be here too (the "Productivity
-// merge") but that pooled every project's work and money together with no
-// way to tell them apart — they're project-scoped again as of v5 (see
-// migrateGlobalProductivityToPerProject). Only true cross-project meta
-// stays global: display/behavior preferences, and reusable project-type
-// presets. `state` exposes both of these under the names it's always used;
+// medals/rest days went project-scoped for one release (v5) and back
+// again as of v6 — splitting Productivity apart per-project turned out to
+// be more confusing than useful in practice (nobody wants their weekly
+// goal or streak reset just by switching projects mid-week), so it's
+// shared again, same as it always was before v5. Management (budget/
+// products) stayed project-scoped — that split is still in effect. See
+// migrateProductivityBackToGlobal for the v5→v6 migration that re-merges
+// this. `state` exposes all of these under the names it's always used;
 // attachGlobalFields() points state's copy at workspace's before a
 // project's data loads or normalizes, and syncGlobalFieldsBack() resyncs
 // workspace afterward in case normalizeState() rebuilt one as a new
 // object rather than editing in place.
-var GLOBAL_FIELDS = ["settings", "customProjectTypes"];
+var GLOBAL_FIELDS = ["settings", "customProjectTypes", "sessions", "plans", "restDays", "restTokens", "restTokensV2",
+  "runningSession", "weeklyTarget", "weeklyGoals", "medalProgress", "bestStreak", "overachieve", "medalPrestige",
+  "medalBest", "medalHistory", "lastGoalWeekAwarded", "goalTokenCheckedThrough"];
 function attachGlobalFields() { GLOBAL_FIELDS.forEach(function (k) { state[k] = workspace[k]; }); }
 function syncGlobalFieldsBack() { GLOBAL_FIELDS.forEach(function (k) { workspace[k] = state[k]; }); }
 function blankProjectMeta(id, name) {
@@ -4289,7 +4293,7 @@ function freshWorkspace() {
   var s = blankState();
   var pid = uid();
   tagOwnSessionsAndPlans(s, pid);
-  var w = { version: 5, activeProjectId: pid, projects: [blankProjectMeta(pid, "General")] };
+  var w = { version: 6, activeProjectId: pid, projects: [blankProjectMeta(pid, "General")] };
   Object.assign(w, seedGlobalFieldsFrom(s));
   return { workspace: w, projState: s };
 }
@@ -4302,7 +4306,7 @@ function wrapFlatStateAsWorkspace(s) {
   var meta = blankProjectMeta(pid, "General");
   meta.stats = { pages: s.pages.length, entries: s.entries.length, timelines: s.timelines.length };
   tagOwnSessionsAndPlans(s, pid);
-  var w = { version: 5, activeProjectId: pid, projects: [meta] };
+  var w = { version: 6, activeProjectId: pid, projects: [meta] };
   Object.assign(w, seedGlobalFieldsFrom(s));
   return { workspace: w, projState: s };
 }
@@ -4397,12 +4401,76 @@ function migrateGlobalProductivityToPerProject(w, activeState) {
       }
       if (target !== activeState) {
         var blob = {};
-        Object.keys(target).forEach(function (k) { if (GLOBAL_FIELDS.indexOf(k) === -1) blob[k] = target[k]; });
+        // V5_GLOBAL_FIELDS, not the current GLOBAL_FIELDS — this function
+        // represents what "global" meant at v5 specifically (just settings/
+        // customProjectTypes), and that meaning has since changed again
+        // (v6 restored Productivity to global). Using the live GLOBAL_FIELDS
+        // here would exclude sessions/plans/medals from the blob entirely.
+        Object.keys(target).forEach(function (k) { if (V5_GLOBAL_FIELDS.indexOf(k) === -1) blob[k] = target[k]; });
         saves.push(saveBlob(projectKey(pid), JSON.stringify(blob)));
       }
     });
     LEGACY_GLOBAL_PRODUCTIVITY_FIELDS.concat(["sessions", "plans"]).forEach(function (k) { delete w[k]; });
     w.version = 5;
+    return Promise.all(saves);
+  });
+}
+var V5_GLOBAL_FIELDS = ["settings", "customProjectTypes"];
+// Productivity-specific subset of LEGACY_GLOBAL_PRODUCTIVITY_FIELDS — the
+// fields that go back to being shared in v6, while Management (budget/
+// budgetLimit/budgets/products) stays project-scoped. Splitting
+// Productivity apart per-project (v5) turned out to be more confusing than
+// useful in practice — nobody wants their weekly goal or streak reset just
+// by switching projects mid-week — so this un-does that half of v4→v5
+// while leaving Management's per-project split alone.
+var PRODUCTIVITY_GLOBAL_FIELDS = ["restDays", "restTokens", "restTokensV2", "runningSession",
+  "weeklyTarget", "weeklyGoals", "medalProgress", "bestStreak", "overachieve", "medalPrestige", "medalBest", "medalHistory",
+  "lastGoalWeekAwarded", "goalTokenCheckedThrough"];
+// One-time re-merge (v5 → v6): Productivity's sessions/plans/goals/streaks/
+// medals/rest days go back to being shared across every project — the same
+// pooling v3→v4 originally set up, re-applied on top of whatever's now
+// scattered across each project's own blob from the brief per-project
+// period. Sessions/plans already carry a projectId either way, so they
+// merge losslessly; medals/streaks/rest tokens have no per-project
+// attribution, so whichever project logged the most sessions donates that
+// state — the same donor logic every migration here uses. Management stays
+// exactly as project-scoped as it already was; only Productivity moves.
+function migrateProductivityBackToGlobal(w, activeState) {
+  if ((w.version || 0) >= 6) return Promise.resolve();
+  var ids = w.projects.map(function (p) { return p.id; });
+  return Promise.all(ids.map(function (id) {
+    if (id === w.activeProjectId) return Promise.resolve(activeState);
+    return loadBlob(projectKey(id)).then(function (raw) { return stateFromRaw(raw); }).catch(function () { return null; });
+  })).then(function (states) {
+    var allSessions = [], allPlans = [], donor = null, donorCount = -1;
+    states.forEach(function (s, i) {
+      if (!s) return;
+      var pid = ids[i];
+      (s.sessions || []).forEach(function (sess) { if (!sess.projectId) sess.projectId = pid; allSessions.push(sess); });
+      (s.plans || []).forEach(function (p) { if (!p.projectId) p.projectId = pid; allPlans.push(p); });
+      if ((s.sessions || []).length > donorCount) { donorCount = s.sessions.length; donor = s; }
+    });
+    donor = donor || activeState;
+    w.sessions = allSessions;
+    w.plans = allPlans;
+    PRODUCTIVITY_GLOBAL_FIELDS.forEach(function (k) {
+      w[k] = k === "runningSession" ? null : donor[k]; // never resurrect a live timer across a migration
+    });
+    // Strip Productivity's fields out of every other project's own blob —
+    // they're dead weight there now (this project's own copy in `state`
+    // gets rewritten normally through the usual persist() path once boot()
+    // runs, so it isn't included here). Management fields are left alone.
+    var saves = [];
+    states.forEach(function (s, i) {
+      var pid = ids[i];
+      if (!s || pid === w.activeProjectId) return;
+      var blob = {};
+      Object.keys(s).forEach(function (k) {
+        if (["sessions", "plans"].concat(PRODUCTIVITY_GLOBAL_FIELDS).indexOf(k) === -1) blob[k] = s[k];
+      });
+      saves.push(saveBlob(projectKey(pid), JSON.stringify(blob)));
+    });
+    w.version = 6;
     return Promise.all(saves);
   });
 }
@@ -4441,6 +4509,7 @@ function loadWorkspaceAsync() {
       if (!found) { var fresh = freshWorkspace(); found = { workspace: fresh.workspace, state: fresh.projState }; }
       return migrateWorkspaceToGlobalProductivity(found.workspace, found.state)
         .then(function () { return migrateGlobalProductivityToPerProject(found.workspace, found.state); })
+        .then(function () { return migrateProductivityBackToGlobal(found.workspace, found.state); })
         .then(function () { return found; });
     });
   });
@@ -4492,10 +4561,11 @@ function persist() {
   state.activity[dayKey()] = (state.activity[dayKey()] || 0) + 1;
   var keys = Object.keys(state.activity).sort();
   while (keys.length > 180) delete state.activity[keys.shift()];
-  // Global fields (settings, reusable project-type presets) are saved once,
-  // inside the workspace record below. Everything else — sessions, plans,
-  // goals, medals, budget, products, pages, entries — is this project's
-  // own, so it goes into this project's own blob.
+  // Global fields (settings, reusable project-type presets, and all of
+  // Productivity — sessions/plans/goals/medals/rest days) are saved once,
+  // inside the workspace record below. Management (budget/products) and
+  // everything else — pages, entries, timelines — is this project's own,
+  // so it goes into this project's own blob.
   var projectBlob = {};
   Object.keys(state).forEach(function (k) { if (GLOBAL_FIELDS.indexOf(k) === -1) projectBlob[k] = state[k]; });
   saveBlob(projectKey(workspace.activeProjectId), JSON.stringify(projectBlob), function () {
@@ -4569,9 +4639,9 @@ var RAIL_ITEMS = [
   { key: "timelines", label: "Timelines", tip: "Timelines", scope: "project", recommended: true,
     desc: "Epochs and eras with dated events, plus a visual relationship map. On: appears in the sidebar. Off: hidden from the sidebar; your timelines still exist and reappear when you turn this back on.",
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="22"/><circle cx="12" cy="6" r="2.2" fill="currentColor" stroke="none"/><circle cx="12" cy="13" r="2.2" fill="currentColor" stroke="none"/><circle cx="12" cy="20" r="2.2" fill="currentColor" stroke="none"/></svg>' },
-  { key: "productivity", label: "Productivity", tip: "Productivity — plans, work & goals", scope: "project", beta: true,
+  { key: "productivity", label: "Productivity", tip: "Productivity — plans, work & goals", scope: "workspace", beta: true,
     betaNote: "Goals, streaks, and medals are newer and still being tuned.",
-    desc: "Calendar, session timer, weekly goals, streaks and medals for this project. On: appears in the sidebar. Off: hidden from the sidebar; your plans and logged sessions are untouched.",
+    desc: "Calendar, session timer, weekly goals, streaks and medals — shared across every project, with a filter to view just one. On: appears in the sidebar. Off: hidden from the sidebar; your plans and logged sessions are untouched.",
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="16" rx="2"/><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/></svg>' },
   { key: "oracle", label: "Oracle", tip: "Oracle — connection prompts", scope: "project", beta: true,
     desc: "Draws two entries together and asks what connects them — a prompt generator for building relationships in your world. On: appears in the sidebar. Off: hidden from the sidebar; nothing is lost, it's just out of the way until you want it.",
@@ -8608,9 +8678,36 @@ function renderWorkTab() {
     b.addEventListener("click", function () { wkSort = o[0]; renderWorkTab(); });
     sortRow.appendChild(b);
   });
+  // Sessions/plans/goals/streaks/medals are shared across every project —
+  // this is the "view just one" half of that: doesn't change what counts
+  // toward your goal or medals, just narrows the sessions list below.
+  // Only worth showing once there's actually more than one project to
+  // narrow to.
+  if (workspace.projects.length > 1) {
+    var projSel = el("select", "wk-sort-btn");
+    projSel.setAttribute("aria-label", "Filter sessions by project");
+    var allOpt = el("option", null, "All projects"); allOpt.value = "";
+    projSel.appendChild(allOpt);
+    workspace.projects.slice().sort(function (a, b) { return (a.name || "").localeCompare(b.name || ""); }).forEach(function (p) {
+      var opt = el("option", null, p.name || "Untitled project"); opt.value = p.id;
+      projSel.appendChild(opt);
+    });
+    projSel.value = (wkFilter && wkFilter.type === "project") ? wkFilter.value : "";
+    projSel.addEventListener("change", function () {
+      if (!this.value) { wkFilter = null; }
+      else {
+        var meta = projectMeta(this.value);
+        wkFilter = { type: "project", value: this.value, label: meta ? meta.name : "Project" };
+      }
+      renderWorkTab();
+    });
+    sortRow.appendChild(projSel);
+  }
   if (wkFilter) {
     var chip = el("span", "wk-filter");
-    chip.appendChild(document.createTextNode((wkFilter.type === "day" ? "On " : "“") + wkFilter.label + (wkFilter.type === "day" ? "" : "”")));
+    var chipPrefix = wkFilter.type === "day" ? "On " : wkFilter.type === "project" ? "" : "\u201c";
+    var chipSuffix = wkFilter.type === "day" || wkFilter.type === "project" ? "" : "\u201d";
+    chip.appendChild(document.createTextNode(chipPrefix + wkFilter.label + chipSuffix));
     var clr = el("button", null, "✕"); clr.setAttribute("aria-label", "Clear filter");
     clr.addEventListener("click", function () { wkFilter = null; renderWorkTab(); });
     chip.appendChild(clr);
@@ -8633,6 +8730,7 @@ function renderWorkTab() {
   if (wkFilter) {
     rows = rows.filter(function (s) {
       if (wkFilter.type === "day") return dayKey(s.ts) === wkFilter.value;
+      if (wkFilter.type === "project") return (s.projectId || null) === wkFilter.value;
       return ((s.label || "Untitled").trim() || "Untitled") === wkFilter.value;
     });
   }
@@ -9802,17 +9900,21 @@ function quickSwapToProject(id) {
 $("quickswap-open-btn").addEventListener("click", openQuickSwap);
 $("projects-breakdown-btn").addEventListener("click", openProjectsBreakdownModal);
 
-// Read-only cross-project summary — loads every *other* project's own
-// blob straight from storage (never switches into them, so nothing about
-// the currently active project changes) and totals up the same kinds of
-// numbers each project already tracks for itself: hours/sessions,
-// wallet, products, and pages/entries/timelines. A project blob that
+// Read-only cross-project summary — Management (wallet/products) and
+// pages/entries/timelines come from each *other* project's own blob
+// (loaded straight from storage; never switches into them, so nothing
+// about the currently active project changes). Sessions/plans are shared
+// again though, not saved per-project blob anymore — so hours/session
+// count per project come from the one shared pool already in memory
+// (state.sessions), filtered by each session's own projectId tag, the
+// same way the Sessions list's project filter works. A project blob that
 // fails to load is skipped rather than blowing up the whole view.
-function projectStatsFrom(s) {
-  var hours = (s.sessions || []).reduce(function (sum, x) { return sum + (x.seconds || 0); }, 0) / 3600;
+function projectStatsFrom(s, pid) {
+  var ownSessions = state.sessions.filter(function (x) { return x.projectId === pid; });
+  var hours = ownSessions.reduce(function (sum, x) { return sum + (x.seconds || 0); }, 0) / 3600;
   var wallet = (s.budget || []).reduce(function (sum, b) { return sum + (b.kind === "income" ? b.amount : -b.amount); }, 0);
   return {
-    hours: hours, sessions: (s.sessions || []).length, wallet: wallet, products: (s.products || []).length,
+    hours: hours, sessions: ownSessions.length, wallet: wallet, products: (s.products || []).length,
     pages: (s.pages || []).length, entries: (s.entries || []).length, timelines: (s.timelines || []).length
   };
 }
@@ -9837,14 +9939,20 @@ function openProjectsBreakdownModal() {
   })).then(function (states) {
     extra.innerHTML = "";
     var wrap = el("div", "cal-plan-form");
-    var totals = { hours: 0, sessions: 0, wallet: 0, products: 0, pages: 0, entries: 0, timelines: 0 };
+    wrap.appendChild(el("div", "note", "Hours and sessions are shared across every project — this splits them by which project was active when logged. Wallet and products are each project's own."));
+    // Hours/sessions total straight from the shared pool, not summed from
+    // each project's filtered subset — a session with no projectId (or one
+    // belonging to a deleted project) wouldn't show up in any row above,
+    // and this way the total's still accurate either way.
+    var allHours = state.sessions.reduce(function (sum, x) { return sum + (x.seconds || 0); }, 0) / 3600;
+    var totals = { hours: allHours, sessions: state.sessions.length, wallet: 0, products: 0, pages: 0, entries: 0, timelines: 0 };
     var rows = [];
     states.forEach(function (s, i) {
       if (!s) return;
       var meta = metas[i];
-      var st = projectStatsFrom(s);
+      var st = projectStatsFrom(s, meta.id);
       rows.push({ meta: meta, st: st });
-      totals.hours += st.hours; totals.sessions += st.sessions; totals.wallet += st.wallet;
+      totals.wallet += st.wallet;
       totals.products += st.products; totals.pages += st.pages; totals.entries += st.entries; totals.timelines += st.timelines;
     });
     rows.sort(function (a, b) { return b.st.hours - a.st.hours; });
@@ -10069,7 +10177,7 @@ function renderCalDetail() {
       var nm = el("span", "nm", s.label || "Untitled");
       var dur = el("span", "dur", fmtDur(s.seconds));
       top.append(nm, dur);
-      var when = el("div", "cal-sess-meta", localTimeStr(s.ts));
+      var when = el("div", "cal-sess-meta", (projectMeta(s.projectId) ? projectMeta(s.projectId).name + " \u00b7 " : "") + localTimeStr(s.ts));
       info.append(top, when);
       var actions = el("div", "cal-sess-actions");
       var edit = el("button", "tiny-x", "✎");
@@ -12827,17 +12935,25 @@ $("onboard-scroll").addEventListener("scroll", updateOnboardScrollCue);
 window.addEventListener("resize", function () {
   if ($("onboard-overlay").classList.contains("show")) updateOnboardScrollCue();
 });
-// Import replaces "this project" — sessions, plans, budget, products, and
-// everything else project-scoped just come along with `s` directly now.
-// Only settings/customProjectTypes (GLOBAL_FIELDS) are still shared, so
-// those alone get pulled from the *current* workspace after the swap
-// rather than adopted from the imported file, matching "this replaces the
-// project, not your app-wide preferences."
+// Import replaces "this project." Sessions/plans are shared across every
+// project again, so swapping `state` wholesale would wipe out every
+// *other* project's sessions/plans too, since state.sessions is just an
+// alias onto workspace.sessions. Instead: tag the imported file's own
+// sessions/plans with the current project's id and splice them into the
+// shared arrays in place of this project's previous slice (other
+// projects' entries untouched) — everything else (goals, medals, rest
+// days, settings, pages, entries, budget, products) comes from `s`
+// directly, since the imported file already carries its own copy of all
+// of that.
 function applyImportedState(s) {
-  var keepGlobal = {};
-  GLOBAL_FIELDS.forEach(function (k) { keepGlobal[k] = state[k]; });
+  var pid = workspace.activeProjectId;
+  var importedSessions = (s.sessions || []).map(function (x) { x.projectId = pid; return x; });
+  var importedPlans = (s.plans || []).map(function (x) { x.projectId = pid; return x; });
+  var mergedSessions = (state.sessions || []).filter(function (x) { return x.projectId !== pid; }).concat(importedSessions);
+  var mergedPlans = (state.plans || []).filter(function (x) { return x.projectId !== pid; }).concat(importedPlans);
   state = s;
-  GLOBAL_FIELDS.forEach(function (k) { state[k] = keepGlobal[k]; });
+  state.sessions = mergedSessions;
+  state.plans = mergedPlans;
 }
 function openOnboarding() {
   onboardStep = 0;
@@ -13387,18 +13503,22 @@ function downloadText(filename, text, mime) {
 }
 function exportJSON() {
   flushSave();
-  // Everything here is this project's own data now — no more filtering a
-  // shared session/plan pool down to "just this project's slice."
+  var pid = workspace.activeProjectId;
+  // Sessions/plans are shared across every project again (see
+  // GLOBAL_FIELDS) — exporting "this project" means its own slice of that
+  // shared log, not every project's, and not the unassigned ones.
+  var ownSessions = state.sessions.filter(function (s) { return s.projectId === pid; });
+  var ownPlans = state.plans.filter(function (p) { return p.projectId === pid; });
   var payload = {
     app: "notebook", version: 2, exportedAt: new Date().toISOString(),
     notebooks: state.notebooks, pages: state.pages, topics: state.topics,
     entries: state.entries, entryTypes: state.entryTypes,
     timelines: state.timelines, activity: state.activity,
-    sessions: state.sessions, weeklyTarget: state.weeklyTarget, weeklyGoals: state.weeklyGoals, graphPos: state.graphPos,
+    sessions: ownSessions, weeklyTarget: state.weeklyTarget, weeklyGoals: state.weeklyGoals, graphPos: state.graphPos,
     tagPresets: state.tagPresets, settings: state.settings, hidden: state.hidden, projectType: state.projectType,
     medalProgress: state.medalProgress, bestStreak: state.bestStreak,
     overachieve: state.overachieve, restDays: state.restDays, restTokens: state.restTokens, restTokensV2: state.restTokensV2,
-    plans: state.plans,
+    plans: ownPlans,
     lastGoalWeekAwarded: state.lastGoalWeekAwarded, goalTokenCheckedThrough: state.goalTokenCheckedThrough,
     medalPrestige: state.medalPrestige, medalBest: state.medalBest, medalHistory: state.medalHistory,
     budget: state.budget, budgetLimit: state.budgetLimit, budgets: state.budgets, products: state.products,
