@@ -3100,9 +3100,13 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
         <div class="set-group-title">Storage</div>
         <div id="set-data-stats" class="set-stats"></div>
         <div class="set-group-title" style="margin-top:18px">Actions</div>
-        <button class="set-cat-btn" id="export-btn">
+        <button class="set-cat-btn" id="export-project-btn">
           <span class="set-cat-icon set-icon-red"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M4 19h16"/></svg></span>
-          <span class="set-cat-main"><span>Export JSON</span><span class="set-cat-desc">Download a full backup file</span></span>
+          <span class="set-cat-main"><span>Export this project</span><span class="set-cat-desc">Just what's in the project you're currently in</span></span>
+        </button>
+        <button class="set-cat-btn" id="export-full-btn">
+          <span class="set-cat-icon set-icon-red"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span>
+          <span class="set-cat-main"><span>Export everything</span><span class="set-cat-desc">Every project, plus shared settings and Productivity — same as Ctrl/Cmd+S</span></span>
         </button>
         <button class="set-cat-btn" id="import-btn">
           <span class="set-cat-icon set-icon-red"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><polyline points="7 14 12 9 17 14"/><path d="M4 19h16"/></svg></span>
@@ -3154,7 +3158,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
       </div>
       <div class="set-view" id="set-view-snapshots" data-view="snapshots">
         <div class="set-note-banner">
-          Snapshots live in this browser only — clearing site data or switching devices loses them. For a copy that actually leaves the browser, use <b>Export JSON</b> in Preferences → Data.
+          Snapshots live in this browser only — clearing site data or switching devices loses them. For a copy that actually leaves the browser, use <b>Export everything</b> in Preferences → Data (or Ctrl/Cmd+S).
         </div>
         <div class="set-group-title">Automatic</div>
         <div class="snap-config-card">
@@ -3654,7 +3658,7 @@ function dayKey(ts) {
 
 /* ── State ── */
 function welcomeBody() {
-  return "# Welcome to Notebook\n\nA quiet, local-first studio for your worlds. The rooms, on the left rail (you just picked which ones to show):\n\n- **Home** (the ❧) — your launcher and dashboard: live counts, a *Continue* tile back to your last edit, an activity heat-grid, pinned and recent items\n- **Pages** — rich-text notes grouped into notebooks\n- **Entries** — your world bible: characters, places, factions, concepts and more, with attributes, sections, and links between entries\n- **Timelines** — epochs and eras, each with status, summaries, dated events, and linked entries\n- **Map** (inside Timelines) — every entry as a node sized by how connected it is, arranged along the timeline by era; filter by type, search, focus a node to spotlight its neighbours, and trace the path between any two\n- **Work** — a session timer, a weekly goal, and medals for streaks, hours, and goal weeks\n- **Oracle** — draws two entries together and asks what connects them; tag entries with words like *rival* or *haunted* to sharpen the prompts\n\n## Writing in Pages\n\nThe toolbar handles headings, lists, quotes, code, and links, but you can also just type:\n\n- `1.` or `-` then a space starts a list — press **Tab** inside a list to nest it a level, **Shift+Tab** to lift it back out\n- Paste keeps its formatting (bold, links, lists…); typed web addresses turn into links on their own\n- **Focus** in the toolbar dims every paragraph but the one you're in\n\n## Work & medals\n\nLog sessions, set a weekly hour goal, and build a streak. Weeks get graded **Met → Exceeded → Crushed → Legendary**, and the same tiers apply to medals for your streak, your total hours, and how many weeks you've hit goal — each tier looks a little richer than the last, and Legendary earns a crown.\n\n## Keep your work safe\n\nEverything stays in this browser. In **Preferences \u2192 Data**, use **Export JSON** for a full backup and **Import** to bring it back \u2014 Notebook also reads old Suitebook exports, converting entries, lore pages, timelines, events, and work sessions. **Preferences \u2192 Snapshots** also keeps automatic restore points, but those live in this browser too \u2014 Export is the only copy that leaves it.\n\n> Ctrl+N new page · Ctrl+B bold · Ctrl+K search · Ctrl+S save now\n\nChanged your mind about any of this? Everything you picked at setup — and a lot more — lives in **Preferences**, including a way to run through setup again.";
+  return "# Welcome to Notebook\n\nA quiet, local-first studio for your worlds. The rooms, on the left rail (you just picked which ones to show):\n\n- **Home** (the ❧) — your launcher and dashboard: live counts, a *Continue* tile back to your last edit, an activity heat-grid, pinned and recent items\n- **Pages** — rich-text notes grouped into notebooks\n- **Entries** — your world bible: characters, places, factions, concepts and more, with attributes, sections, and links between entries\n- **Timelines** — epochs and eras, each with status, summaries, dated events, and linked entries\n- **Map** (inside Timelines) — every entry as a node sized by how connected it is, arranged along the timeline by era; filter by type, search, focus a node to spotlight its neighbours, and trace the path between any two\n- **Work** — a session timer, a weekly goal, and medals for streaks, hours, and goal weeks\n- **Oracle** — draws two entries together and asks what connects them; tag entries with words like *rival* or *haunted* to sharpen the prompts\n\n## Writing in Pages\n\nThe toolbar handles headings, lists, quotes, code, and links, but you can also just type:\n\n- `1.` or `-` then a space starts a list — press **Tab** inside a list to nest it a level, **Shift+Tab** to lift it back out\n- Paste keeps its formatting (bold, links, lists…); typed web addresses turn into links on their own\n- **Focus** in the toolbar dims every paragraph but the one you're in\n\n## Work & medals\n\nLog sessions, set a weekly hour goal, and build a streak. Weeks get graded **Met → Exceeded → Crushed → Legendary**, and the same tiers apply to medals for your streak, your total hours, and how many weeks you've hit goal — each tier looks a little richer than the last, and Legendary earns a crown.\n\n## Keep your work safe\n\nEverything stays in this browser. In **Preferences \u2192 Data**, **Export everything** backs up every project plus your shared settings and Productivity data \u2014 Ctrl/Cmd+S does the same thing instantly. **Export this project** is there too, for just what you’re currently working on. **Import** brings either back \u2014 Notebook also reads old Suitebook exports, converting entries, lore pages, timelines, events, and work sessions. **Preferences \u2192 Snapshots** also keeps automatic restore points, but those live in this browser too \u2014 Export is the only copy that leaves it.\n\n> Ctrl+N new page · Ctrl+B bold · Ctrl+K search · Ctrl+S export everything\n\nChanged your mind about any of this? Everything you picked at setup — and a lot more — lives in **Preferences**, including a way to run through setup again.";
 }
 function blankState() {
   var nbId = uid();
@@ -8586,7 +8590,11 @@ function renderWorkTab() {
 
   var hours = ws / 3600;
   var tier = goalSet ? weekGoalTier(hours, goal, !isCurrent, priorWeekWasIntense(viewTs)) : null;
-  var pct = goal > 0 ? Math.min(100, hours / goal * 100) : 0;
+  // A 0-hour goal is trivially met the instant the week starts (any hours
+  // logged, including none, is >= 0) — goal > 0 as the gate meant a 0-hour
+  // goal always showed a completely empty bar, indistinguishable at a
+  // glance from no goal being set at all.
+  var pct = goalSet ? (goal > 0 ? Math.min(100, hours / goal * 100) : 100) : 0;
   var prog = $("wk-progress");
   prog.style.display = goalSet ? "" : "none";
   prog.className = "wk-progress" + (tier ? " tier-" + tier.cls : "");
@@ -12503,7 +12511,8 @@ function buildSettingsIndex() {
   add("Manage types", "Categories, colours, and custom traits", "library-types");
   add("Manage topics", "Rename, delete, and see where they're referenced", "library-topics");
   add("Data", "Export, import, clean up", "data");
-  add("Export JSON", "Download a full backup file", "data");
+  add("Export this project", "Just what's in the project you're currently in", "data");
+  add("Export everything", "Every project, plus shared settings and Productivity — same as Ctrl/Cmd+S", "data");
   add("Import…", "Restore from a Notebook or Suitebook export", "data");
   add("Clean up…", "Selectively remove old data", "data-cleanup");
   add("Filter sessions", "Narrow down which sessions clean-up affects", "data-cleanup-filters");
@@ -13175,7 +13184,7 @@ function renderUpdateModal(data, isDowngrade) {
   // hint banners used in Settings) rather than a whole titled callout with
   // its own bulleted steps — this isn't the main content of the screen.
   var howTo = el("div", "set-note-banner");
-  howTo.innerHTML = "<b>Before you download:</b> export your save first (Preferences \u2192 Data \u2192 Export JSON), just in case. This doesn't install anything automatically \u2014 you'll replace your old Notebook.html with the downloaded file yourself, then reload.";
+  howTo.innerHTML = "<b>Before you download:</b> export your save first (Preferences \u2192 Data \u2192 Export everything, or Ctrl/Cmd+S), just in case. This doesn't install anything automatically \u2014 you'll replace your old Notebook.html with the downloaded file yourself, then reload.";
   body.appendChild(howTo);
 }
 function showUpdateModal(data, isDowngrade) {
@@ -13527,8 +13536,58 @@ function exportJSON() {
   downloadText("notebook-export-" + new Date().toISOString().slice(0, 10) + ".json", JSON.stringify(payload, null, 2), "application/json");
   toast("Exported " + state.pages.length + " pages, " + state.entries.length + " entries, " + state.timelines.length + " timelines");
 }
-$("export-btn").addEventListener("click", exportJSON);
-$("storage-banner-export").addEventListener("click", exportJSON);
+// Full export: every project's own data, plus everything shared at the
+// workspace level (Productivity — sessions/plans/goals/streaks/medals/rest
+// days — and settings/project-type presets). exportJSON() above only ever
+// covered "this project's slice"; this is the actual "back up everything"
+// action, so it's what Ctrl/Cmd+S does, and it's offered as a second
+// choice next to the single-project export in Preferences → Data. Each
+// project's own section is shaped exactly like a single-project export
+// (same fields exportJSON produces), just bundled together with the
+// shared data around it rather than downloaded separately per project.
+function exportFullBackup() {
+  flushSave();
+  var metas = (workspace.projects || []).slice();
+  return Promise.all(metas.map(function (meta) {
+    if (meta.id === workspace.activeProjectId) return Promise.resolve(state);
+    return loadBlob(projectKey(meta.id)).then(function (raw) { return stateFromRaw(raw); }).catch(function () { return null; });
+  })).then(function (states) {
+    var projects = [];
+    states.forEach(function (s, i) {
+      if (!s) return;
+      var meta = metas[i];
+      var ownSessions = state.sessions.filter(function (x) { return x.projectId === meta.id; });
+      var ownPlans = state.plans.filter(function (x) { return x.projectId === meta.id; });
+      projects.push({
+        id: meta.id, name: meta.name, icon: meta.icon, type: meta.type,
+        notebooks: s.notebooks, pages: s.pages, topics: s.topics,
+        entries: s.entries, entryTypes: s.entryTypes, tagPresets: s.tagPresets,
+        timelines: s.timelines, activity: s.activity, graphPos: s.graphPos, graphLaidOut: s.graphLaidOut,
+        hidden: s.hidden, projectType: s.projectType,
+        budget: s.budget, budgetLimit: s.budgetLimit, budgets: s.budgets, products: s.products,
+        sessions: ownSessions, plans: ownPlans
+      });
+    });
+    var payload = {
+      app: "notebook", version: 2, full: true, exportedAt: new Date().toISOString(),
+      activeProjectId: workspace.activeProjectId,
+      shared: {
+        settings: state.settings, customProjectTypes: state.customProjectTypes,
+        weeklyTarget: state.weeklyTarget, weeklyGoals: state.weeklyGoals,
+        medalProgress: state.medalProgress, bestStreak: state.bestStreak, overachieve: state.overachieve,
+        medalPrestige: state.medalPrestige, medalBest: state.medalBest, medalHistory: state.medalHistory,
+        restDays: state.restDays, restTokens: state.restTokens, restTokensV2: state.restTokensV2,
+        lastGoalWeekAwarded: state.lastGoalWeekAwarded, goalTokenCheckedThrough: state.goalTokenCheckedThrough
+      },
+      projects: projects
+    };
+    downloadText("notebook-full-export-" + new Date().toISOString().slice(0, 10) + ".json", JSON.stringify(payload, null, 2), "application/json");
+    toast("Exported everything \u2014 " + projects.length + (projects.length === 1 ? " project" : " projects"));
+  });
+}
+$("export-project-btn").addEventListener("click", exportJSON);
+$("export-full-btn").addEventListener("click", exportFullBackup);
+$("storage-banner-export").addEventListener("click", exportFullBackup);
 $("storage-banner-dismiss").addEventListener("click", function () { $("storage-banner").classList.remove("visible"); });
 if (nbRecovered) $("recovery-banner").classList.add("visible");
 $("recovery-banner-download").addEventListener("click", function () {
@@ -14215,7 +14274,7 @@ document.addEventListener("keydown", function (e) {
     openGlobalSearch();
   }
   else if (mod && e.key.toLowerCase() === "n") { e.preventDefault(); if (state.sel.tab === "entries") newEntry(); else newPage(); }
-  else if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); exportJSON(); }
+  else if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); exportFullBackup(); }
   else if (mod && e.key.toLowerCase() === "p") { e.preventDefault(); openQuickSwap(); }
   else if (e.key === "Escape") {
     if ($("gsearch-overlay").classList.contains("show")) closeGlobalSearch();
