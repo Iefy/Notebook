@@ -1964,7 +1964,7 @@ html.no-dblclick-cursor .dbl-clickable { cursor: pointer; }
   padding: 24px;
 }
 .onboard-overlay.show { display: flex; }
-#onboard-panel, #update-panel {
+#onboard-panel, #update-panel, #patchnotes-panel {
   width: 460px; max-width: 100%; max-height: 88vh;
   background: var(--surf); border: 1px solid var(--border); border-radius: calc(14px * var(--radius-scale, 1));
   box-shadow: 0 24px 60px rgba(0,0,0,0.55);
@@ -12918,18 +12918,12 @@ function renderUpdateModal(data, isDowngrade) {
     body.appendChild(el("p", "onboard-lede", "Version " + data.version + " is out."));
   }
   entries.forEach(function (e) { body.appendChild(changelogEntryBox(e, isDowngrade ? "warn" : "good")); });
-  // Installing this is a manual file swap — there's no in-app auto-update,
-  // so spell out exactly what "Download update" actually does and does not
-  // do, every time the modal shows, on both upgrades and downgrades.
-  var howTo = el("div", "onboard-callout");
-  howTo.appendChild(el("div", "onboard-callout-title", "Before you update"));
-  var howToList = el("ul", "onboard-list");
-  [
-    "Export your save first, just in case \u2014 Preferences \u2192 Data \u2192 Export JSON.",
-    "Click \u201cDownload update\u201d below, then replace your old Notebook.html with the downloaded file.",
-    "Reload this page (or reopen the file) to start using it."
-  ].forEach(function (line) { howToList.appendChild(el("li", null, line)); });
-  howTo.appendChild(howToList);
+  // Installing this is a manual file swap — there's no in-app auto-update.
+  // Worth a reminder every time, but as a single compact line (matching the
+  // hint banners used in Settings) rather than a whole titled callout with
+  // its own bulleted steps — this isn't the main content of the screen.
+  var howTo = el("div", "set-note-banner");
+  howTo.innerHTML = "<b>Before you download:</b> export your save first (Preferences \u2192 Data \u2192 Export JSON), just in case. This doesn't install anything automatically \u2014 you'll replace your old Notebook.html with the downloaded file yourself, then reload.";
   body.appendChild(howTo);
 }
 function showUpdateModal(data, isDowngrade) {
