@@ -6,11 +6,12 @@
       "date": "2026-08-06",
       "changes": [
         {
-          "text": "[rework] Productivity and Management are now per-project instead of shared across all of them",
+          "text": "[rework] Management is per-project now; Productivity stays shared across all of them, with a filter to view just one",
           "sub": [
-            "Sessions, plans, weekly goals, streaks, medals, rest days, budget, and products all belong to whichever project you're in now — a Poetry project and a client-work project no longer pool the same hours and the same wallet",
-            "Existing saves are migrated automatically, once: session and plan history splits back apart correctly since each one was already tagged with its project; medals/streaks/rest tokens/budget/products (which were never tagged per-project) go to whichever project logged the most sessions, and every other project starts fresh on those fronts specifically",
-            "The now-pointless \"which project does this belong to\" pickers are gone from the timer, plan editor, and session editor — a session can only ever belong to the project you're currently in, so the \"Attribute sessions to the active project\" setting is gone too"
+            "Budget and products belong to whichever project you're in — a Poetry project and a client-work project no longer share the same wallet",
+            "Sessions, plans, weekly goals, streaks, medals, and rest days are still pooled across every project like before — splitting those apart per-project turned out to be more confusing than useful, since nobody wants their weekly goal or streak reset just by switching projects mid-week",
+            "New: a project filter on the Sessions list narrows the view down to one project's own hours without changing what counts toward your goal, streak, or medals",
+            "Existing saves are migrated automatically: Management's data splits apart by whichever project logged the most sessions (nothing was ever tagged per-project before), and Productivity's data is re-merged back into one shared pool"
           ]
         },
         {
@@ -26,7 +27,7 @@
           "text": "[new] Two new ways to move between projects",
           "sub": [
             "Quick-swap — a \"Switch\" button in the sidebar, or Ctrl/Cmd+P — jumps straight to another project without sending you to Home first; closing it drops you back on whatever page you were already on",
-            "Projects breakdown, from the Projects menu or quick-swap, totals your hours, sessions, wallet, products, and page/entry/timeline counts across every project — read-only, without switching into any of them"
+            "Projects breakdown, from the Projects menu or quick-swap, splits hours and sessions by which project was active when logged (Productivity's own totals are shared, same as always), plus each project's own wallet, products, and page/entry/timeline counts — read-only, without switching into any of them"
           ]
         },
         {
@@ -71,7 +72,15 @@
           ]
         },
         "[fix] Budgets and products weren't included in full JSON exports or selective snapshot restores — they are now",
-        "[fix] Investments didn't count toward budget spending limits — putting money into an investment is still money leaving your wallet, so it counts against a budget's limit the same as an expense now"
+        "[fix] Investments didn't count toward budget spending limits — putting money into an investment is still money leaving your wallet, so it counts against a budget's limit the same as an expense now",
+        "[fix] A weekly goal set to 0 hours showed a completely empty progress bar, indistinguishable from no goal being set — it now correctly shows as met (a 0-hour goal always is)",
+        {
+          "text": "[new] Export is now two separate choices: this project, or everything",
+          "sub": [
+            "Ctrl/Cmd+S now always does a full export — every project, plus shared settings and Productivity — instead of just the current project",
+            "Preferences → Data offers both: \"Export this project\" (the old single-project export) and \"Export everything\" (new, same as Ctrl/Cmd+S)"
+          ]
+        }
       ]
     },
     {
