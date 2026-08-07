@@ -3485,6 +3485,15 @@ function isPresetType(key) { return TYPE_PRESETS.some(function (t) { return t.ke
    legendaryComplete is a separate, higher number — a buffer zone between entering
    Legendary and fully completing it. Entering just changes the badge; completing
    is what unlocks prestige for that medal. */
+// A hard ceiling on the rest-token stockpile, independent of how it got
+// there. The intended rate (checkGoalWeekTokenAward / checkOverachieveProgress)
+// is already ~1-2/week, but the one-time historical-replay migration below
+// has twice now produced an inflated stockpile after later migrations
+// changed which project's session history it replayed against — this cap
+// means that class of bug can't produce an absurd number again even if it
+// recurs, and also just keeps a stockpile meaningful (nobody is banking 89
+// rest days).
+var REST_TOKEN_CAP = 10;
 var MEDAL_DEFS = {
   streak: { label: "Streak", noun: "days, personal best", thresholds: [3, 7, 14, 25], legendaryComplete: 30, desc: "Your longest run of consecutive worked days, ever. Breaks don't cost you this — it only ever goes up." },
   volume: { label: "Hours logged", noun: "total hours", thresholds: [5, 20, 50, 80], legendaryComplete: 100, desc: "Total hours logged across every session, lifetime." },
@@ -3788,7 +3797,7 @@ function normalizeState(s) {
   s.activity = s.activity && typeof s.activity === "object" ? s.activity : {};
   s.restDays = s.restDays && typeof s.restDays === "object" ? s.restDays : {};
   Object.keys(s.restDays).forEach(function (k) { if (!s.restDays[k]) delete s.restDays[k]; });
-  s.restTokens = Math.max(0, +s.restTokens || 0);
+  s.restTokens = Math.min(REST_TOKEN_CAP, Math.max(0, +s.restTokens || 0));
   // one-time migration: earlier versions handed out a rest token for every
   // single medal tier crossed, with no ceiling — a save with a long history
   // could cross a dozen-plus tiers the first time medals were computed, and
@@ -3829,7 +3838,7 @@ function normalizeState(s) {
     }
     earned += (s.overachieve && s.overachieve.record) || 0;
     var spent = Object.keys(s.restDays || {}).filter(function (k) { return s.restDays[k]; }).length;
-    s.restTokens = Math.max(0, earned - spent);
+    s.restTokens = Math.min(REST_TOKEN_CAP, Math.max(0, earned - spent));
   });
   safe("plans", function () {
     s.plans = (Array.isArray(s.plans) ? s.plans : []).map(function (p) {
@@ -7946,7 +7955,7 @@ function checkOverachieveProgress() {
       // week's rest tokens — hitting the plain weekly goal earns one
       // (see checkGoalWeekTokenAward), clearing this earns a second, so a
       // strong week tops out around 2 tokens instead of an unbounded pile.
-      state.restTokens = (state.restTokens || 0) + 1;
+      state.restTokens = Math.min(REST_TOKEN_CAP, (state.restTokens || 0) + 1);
       changed = true;
     }
     state.overachieve.checkedThrough = pastKey;
@@ -7958,7 +7967,7 @@ function checkOverachieveProgress() {
     state.overachieve.record++;
     state.overachieve.lastClearedWeek = wk;
     state.overachieve.challenge = Math.round((state.overachieve.challenge + overachieveStep()) * 2) / 2;
-    state.restTokens = (state.restTokens || 0) + 1;
+    state.restTokens = Math.min(REST_TOKEN_CAP, (state.restTokens || 0) + 1);
     changed = true;
   }
   return changed;
@@ -8178,10 +8187,20 @@ function checkGoalWeekTokenAward() {
   while (wTs < curTs) {
     var pastKey = weekKey(wTs);
     var pastGoalSet = state.weeklyGoals.hasOwnProperty(pastKey);
-    var pastGoal = pastGoalSet ? state.weeklyGoals[pastKey] : state.weeklyTarget;
+    // An explicit goal for that week counts regardless of age, but the
+    // "assume this week's goal was today's default" fallback only applies
+    // within a recent window — trusting it indefinitely is how a stale or
+    // desynced checkedThrough cursor (a data migration, a long stretch
+    // away from the app) could replay a large chunk of real session
+    // history against a guessed goal and hand out a speculative pile of
+    // tokens all at once. REST_TOKEN_CAP bounds the worst case either way,
+    // but weeks this old genuinely aren't a reliable enough guess to award
+    // from at all.
+    var weeksAgo = Math.round((curTs - wTs) / (7 * 86400000));
+    var pastGoal = pastGoalSet ? state.weeklyGoals[pastKey] : (weeksAgo <= 8 ? state.weeklyTarget : null);
     var pastHrs = weekSecondsFor(wTs) / 3600;
     if (pastGoal > 0 && pastHrs >= pastGoal && state.lastGoalWeekAwarded !== pastKey) {
-      state.restTokens = (state.restTokens || 0) + 1;
+      state.restTokens = Math.min(REST_TOKEN_CAP, (state.restTokens || 0) + 1);
       state.lastGoalWeekAwarded = pastKey;
       changed = true;
     }
@@ -8193,7 +8212,7 @@ function checkGoalWeekTokenAward() {
   var goal = goalSet ? state.weeklyGoals[wk] : state.weeklyTarget;
   var hrs = weekSeconds() / 3600;
   if (goal > 0 && hrs >= goal && state.lastGoalWeekAwarded !== wk) {
-    state.restTokens = (state.restTokens || 0) + 1;
+    state.restTokens = Math.min(REST_TOKEN_CAP, (state.restTokens || 0) + 1);
     state.lastGoalWeekAwarded = wk;
     changed = true;
   }
@@ -8863,9 +8882,11 @@ function renderRestRow() {
   var tokens = state.restTokens || 0;
   $("wk-rest-note").textContent = rested
     ? "Today is a rest day — your streak is frozen, not broken."
-    : tokens > 0
-      ? tokens + " rest token" + (tokens === 1 ? "" : "s") + " earned — spend one anytime, no pressure to."
-      : "Hit your weekly goal to earn a rest token — clear the overachieve challenge too and earn a second.";
+    : tokens >= REST_TOKEN_CAP
+      ? tokens + " rest tokens banked (the max) — spend one anytime, no pressure to."
+      : tokens > 0
+        ? tokens + " rest token" + (tokens === 1 ? "" : "s") + " earned — spend one anytime, no pressure to."
+        : "Hit your weekly goal to earn a rest token — clear the overachieve challenge too and earn a second.";
   var btn = $("wk-rest-btn");
   btn.textContent = rested ? "Undo rest day" : "Take a rest day";
   btn.dataset.mode = rested ? "undo" : "take";
@@ -8887,7 +8908,7 @@ function undoRestDay() {
   var today = dayKey();
   if (!isRestedDay(today)) return;
   delete state.restDays[today];
-  state.restTokens = (state.restTokens || 0) + 1;
+  state.restTokens = Math.min(REST_TOKEN_CAP, (state.restTokens || 0) + 1);
   persist();
   renderWorkTab();
   toast("Rest day undone — token refunded.");
@@ -8954,7 +8975,7 @@ $("wk-log").addEventListener("click", function () {
         "Refund rest day & log",
         function () {
           delete state.restDays[dateKey];
-          state.restTokens = (state.restTokens || 0) + 1;
+          state.restTokens = Math.min(REST_TOKEN_CAP, (state.restTokens || 0) + 1);
           commitLoggedTime(dateKey, secs);
         }
       );
