@@ -22,6 +22,15 @@
             "Print opens your browser's print dialog directly, always using the plain light layout regardless of the export format chosen"
           ]
         },
+        {
+          "text": "[new] Rest token history",
+          "sub": [
+            "A History link next to your rest token count shows every token you've earned or spent, newest first, grouped by month",
+            "Each entry says why \u2014 hit weekly goal, cleared overachieve challenge, spent on a specific day, or refunded from undoing a rest day or logging work after marking one",
+            "Filter to just Earned or just Spent",
+            "Existing saves with a token balance already banked get a single \"starting balance\" entry so the log doesn't start out looking empty"
+          ]
+        },
         "[fix] Renaming a notebook: pressing spacebar partway through typing a multi-word name could exit the rename early, making it hard to type past the first word",
         "[fix] The patch notes panel was missing from the shared dialog styling that Update/Onboarding use, so it rendered without sizing, background, or layout \u2014 now matches the update-available screen it was always meant to look like",
         {
