@@ -4064,7 +4064,7 @@ function normalizeState(s) {
     s.restTokens = Math.min(REST_TOKEN_CAP, Math.max(0, earned - spent));
   });
   safe("restTokenLog", function () {
-    s.restTokenLog = (Array.isArray(s.restTokenLog) ? s.restTokenLog : []).filter(function (h) {
+    var list = (Array.isArray(s.restTokenLog) ? s.restTokenLog : []).filter(function (h) {
       return h && typeof h === "object" && typeof h.ts === "number" && typeof h.delta === "number" && h.delta !== 0;
     }).map(function (h) {
       return {
@@ -4073,6 +4073,23 @@ function normalizeState(s) {
         weekKey: typeof h.weekKey === "string" ? h.weekKey : null,
         dayKey: typeof h.dayKey === "string" ? h.dayKey : null
       };
+    });
+    // A week can only ever earn +1 for its goal and +1 for its overachieve
+    // clear, and a day can only be spent once — collapse any repeats already
+    // sitting in the save (from before pushRestTokenLog guarded against this
+    // itself, or two popout windows racing) down to a single entry each,
+    // keeping the earliest. Sorted oldest-first first so "earliest" is well
+    // defined regardless of what order they happen to be stored in.
+    list.sort(function (a, b) { return a.ts - b.ts; });
+    var seen = {};
+    s.restTokenLog = list.filter(function (e) {
+      var key = null;
+      if (e.weekKey && (e.reason === "goal" || e.reason === "overachieve")) key = "w:" + e.reason + ":" + e.weekKey;
+      else if (e.dayKey && e.reason === "spend") key = "d:" + e.dayKey;
+      if (!key) return true;
+      if (seen[key]) return false;
+      seen[key] = true;
+      return true;
     });
     if (s.restTokenLog.length > 500) s.restTokenLog.splice(0, s.restTokenLog.length - 500);
   });
@@ -8446,16 +8463,56 @@ function ensureOverachieveChallenge() {
    already moved past the week that cleared it. Weeks before this fix shipped
    aren't backfilled (there's no per-week ledger to check them safely against
    without risking a double-count), but nothing slips through from here on. */
-// One entry per earn/spend/refund, so "Rest token history" (showRestTokenLogModal,
+// One entry per earn/spend, so "Rest token history" (showRestTokenLogModal,
 // near takeRestDay below) can show where every token came from and where it
-// went — not just the current running balance.
+// went — not just the current running balance. Refunds are handled by
+// removeRestTokenLogSpend() below instead of logging a third kind of entry —
+// see its comment for why.
+//
+// ts matters here, not just for sorting: earlier this always used Date.now(),
+// so a week's worth of missed goal-checks catching up all at once (see the
+// backfill loops below) landed a pile of entries that all claimed to have
+// happened "today", bunched at the top of the list regardless of which past
+// week they actually belonged to. Callers now pass an explicit ts for
+// anything backdated (an already-past week, or a spend for a picked date);
+// it only defaults to "now" for something that's genuinely happening live.
+//
+// A given week can only ever earn +1 for hitting its goal and +1 for
+// clearing the overachieve challenge — never more, no matter how many times
+// the code that checks for those runs (a re-render, the periodic tick, two
+// popout windows open at once). Likewise a specific day can only be spent
+// once. So before adding an entry, check whether one already exists for the
+// same reason + week/day and skip it if so — a repeat call is a duplicate
+// check, not a second real event, and shouldn't leave a second line behind.
 function pushRestTokenLog(delta, reason, extra) {
   if (!Array.isArray(state.restTokenLog)) state.restTokenLog = [];
-  state.restTokenLog.push({
-    ts: Date.now(), delta: delta, reason: reason,
-    weekKey: (extra && extra.weekKey) || null, dayKey: (extra && extra.dayKey) || null
-  });
+  var weekKey = (extra && extra.weekKey) || null;
+  var dayKeyVal = (extra && extra.dayKey) || null;
+  if (weekKey || dayKeyVal) {
+    var dup = state.restTokenLog.some(function (e) {
+      return e.reason === reason && e.weekKey === weekKey && e.dayKey === dayKeyVal;
+    });
+    if (dup) return;
+  }
+  var ts = (extra && extra.ts) || Date.now();
+  state.restTokenLog.push({ ts: ts, delta: delta, reason: reason, weekKey: weekKey, dayKey: dayKeyVal });
   if (state.restTokenLog.length > 500) state.restTokenLog.splice(0, state.restTokenLog.length - 500);
+}
+// A refund (undoing today's rest day, or logging work after marking a day
+// rested) fully cancels the original spend — the token never really left.
+// Rather than logging a second, offsetting entry (which left both a
+// "Spent" and a "Refunded" line behind for something that nets out to
+// nothing happening), this finds that original "spend" entry for the same
+// day and removes it outright, so the history simply reads as if it never
+// happened. If no matching entry is found — an edited/migrated log, or a
+// spend logged before this existed — it's a silent no-op; there's nothing
+// safe to remove.
+function removeRestTokenLogSpend(dayKeyStr) {
+  if (!Array.isArray(state.restTokenLog)) return;
+  for (var i = state.restTokenLog.length - 1; i >= 0; i--) {
+    var e = state.restTokenLog[i];
+    if (e.reason === "spend" && e.dayKey === dayKeyStr) { state.restTokenLog.splice(i, 1); return; }
+  }
 }
 function checkOverachieveProgress() {
   ensureOverachieveChallenge();
@@ -8475,7 +8532,7 @@ function checkOverachieveProgress() {
       // (see checkGoalWeekTokenAward), clearing this earns a second, so a
       // strong week tops out around 2 tokens instead of an unbounded pile.
       state.restTokens = Math.min(REST_TOKEN_CAP, (state.restTokens || 0) + 1);
-      pushRestTokenLog(1, "overachieve", { weekKey: pastKey });
+      pushRestTokenLog(1, "overachieve", { weekKey: pastKey, ts: weekKeyToTs(pastKey) + 6 * 86400000 });
       changed = true;
     }
     state.overachieve.checkedThrough = pastKey;
@@ -8722,7 +8779,7 @@ function checkGoalWeekTokenAward() {
     var pastHrs = weekSecondsFor(wTs) / 3600;
     if (pastGoal > 0 && pastHrs >= pastGoal && state.lastGoalWeekAwarded !== pastKey) {
       state.restTokens = Math.min(REST_TOKEN_CAP, (state.restTokens || 0) + 1);
-      pushRestTokenLog(1, "goal", { weekKey: pastKey });
+      pushRestTokenLog(1, "goal", { weekKey: pastKey, ts: weekKeyToTs(pastKey) + 6 * 86400000 });
       state.lastGoalWeekAwarded = pastKey;
       changed = true;
     }
@@ -9419,26 +9476,66 @@ function renderRestRow() {
 /* ── Rest token history — where each token came from and where it went,
    not just the running balance renderRestRow shows. Mirrors the Medal
    history modal (showMedalHistoryModal) almost exactly: same month-grouped
-   list, same filter-chip pattern, same modal shell. */
+   list, same filter-chip pattern, same modal shell.
+   Two things kept this cluttered before: entries got merged by week below
+   (goal + overachieve both key off weekKey, so a strong week showed as two
+   near-identical "Earned" lines instead of one), and every entry's ts is
+   now backdated properly (see pushRestTokenLog) instead of defaulting to
+   "now", so a catch-up pass over several missed weeks no longer bunches
+   them all under today. */
 function restTokenDayLabel(dayKeyStr) {
   return dayKeyStr ? new Date(dayKeyToTs(dayKeyStr)).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
 }
+var REST_TOKEN_EARN_REASON_LABEL = { goal: "hit weekly goal", overachieve: "cleared overachieve challenge" };
 function restTokenLogLabel(entry) {
+  if (entry.grouped) {
+    var parts = entry.reasons.map(function (r) { return REST_TOKEN_EARN_REASON_LABEL[r] || r; });
+    return "Earned " + entry.delta + " \u2014 " + parts.join(" + ") + " (" + weekRangeLabel(weekKeyToTs(entry.weekKey)) + ")";
+  }
   if (entry.reason === "goal") return "Earned \u2014 hit weekly goal (" + weekRangeLabel(weekKeyToTs(entry.weekKey)) + ")";
   if (entry.reason === "overachieve") return "Earned \u2014 cleared overachieve challenge (" + weekRangeLabel(weekKeyToTs(entry.weekKey)) + ")";
   if (entry.reason === "spend") return "Spent \u2014 rest day on " + restTokenDayLabel(entry.dayKey);
+  // Legacy — earlier versions logged an explicit "Refunded" entry alongside
+  // the spend instead of removeRestTokenLogSpend() cancelling it outright.
+  // Kept only so any of those already sitting in someone's save still
+  // render sensibly; nothing generates these anymore.
   if (entry.reason === "refund-undo") return "Refunded \u2014 undid rest day on " + restTokenDayLabel(entry.dayKey);
   if (entry.reason === "refund-logged") return "Refunded \u2014 logged work after marking " + restTokenDayLabel(entry.dayKey) + " as rested";
   if (entry.reason === "starting-balance") return "Starting balance carried over";
   return entry.delta > 0 ? "Earned" : "Spent";
 }
 function restTokenLogMonthLabel(ts) { return new Date(ts).toLocaleDateString(undefined, { month: "long", year: "numeric" }); }
+// Merges goal + overachieve entries that share a weekKey into one combined
+// row — a week that cleared both no longer takes two lines to say so. Spend
+// (and any legacy refund) entries are left alone; each already represents
+// one distinct, meaningful day rather than something that piles up.
+function groupRestTokenLogItems(items) {
+  var out = [], weekGroups = {};
+  items.forEach(function (it) {
+    if (it.delta > 0 && it.weekKey && REST_TOKEN_EARN_REASON_LABEL.hasOwnProperty(it.reason)) {
+      var g = weekGroups[it.weekKey];
+      if (!g) {
+        g = { grouped: true, weekKey: it.weekKey, delta: 0, reasons: [], ts: it.ts };
+        weekGroups[it.weekKey] = g;
+        out.push(g);
+      }
+      g.delta += it.delta;
+      if (g.reasons.indexOf(it.reason) === -1) g.reasons.push(it.reason);
+      if (it.ts > g.ts) g.ts = it.ts;
+    } else {
+      out.push(it);
+    }
+  });
+  out.sort(function (a, b) { return b.ts - a.ts; });
+  return out;
+}
 var restTokenLogFilter = "all";
 function renderRestTokenLogList(container) {
   container.innerHTML = "";
   var items = (state.restTokenLog || []).slice().sort(function (a, b) { return b.ts - a.ts; });
   if (restTokenLogFilter === "earned") items = items.filter(function (it) { return it.delta > 0; });
   else if (restTokenLogFilter === "spent") items = items.filter(function (it) { return it.delta < 0; });
+  items = groupRestTokenLogItems(items);
   if (!items.length) {
     var empty = el("div", null, restTokenLogFilter === "all" ? "No rest token activity yet \u2014 hit a weekly goal to earn your first one." : "Nothing yet for this filter.");
     empty.style.cssText = "font-size:12.5px;color:var(--ink-mute);padding:8px 2px";
@@ -9506,7 +9603,7 @@ function takeRestDay() {
   if (isRestedDay(today) || (state.restTokens || 0) <= 0) return;
   state.restDays[today] = true;
   state.restTokens--;
-  pushRestTokenLog(-1, "spend", { dayKey: today });
+  pushRestTokenLog(-1, "spend", { dayKey: today, ts: dayKeyToTs(today) });
   persist();
   renderWorkTab();
   toast("Enjoy the day off — your streak is frozen, not broken.");
@@ -9518,7 +9615,7 @@ function undoRestDay() {
   if (!isRestedDay(today)) return;
   delete state.restDays[today];
   state.restTokens = Math.min(REST_TOKEN_CAP, (state.restTokens || 0) + 1);
-  pushRestTokenLog(1, "refund-undo", { dayKey: today });
+  removeRestTokenLogSpend(today);
   persist();
   renderWorkTab();
   toast("Rest day undone — token refunded.");
@@ -9543,7 +9640,7 @@ function openMarkRestDayModal() {
     if ((state.restTokens || 0) <= 0) { closeModal(); toast("No rest tokens to spend yet."); return; }
     state.restDays[k] = true;
     state.restTokens--;
-    pushRestTokenLog(-1, "spend", { dayKey: k });
+    pushRestTokenLog(-1, "spend", { dayKey: k, ts: dayKeyToTs(k) });
     persist(); renderWorkTab();
     closeModal();
     toast("Marked " + k + " as a rest day.");
@@ -9588,7 +9685,7 @@ $("wk-log").addEventListener("click", function () {
         function () {
           delete state.restDays[dateKey];
           state.restTokens = Math.min(REST_TOKEN_CAP, (state.restTokens || 0) + 1);
-          pushRestTokenLog(1, "refund-logged", { dayKey: dateKey });
+          removeRestTokenLogSpend(dateKey);
           commitLoggedTime(dateKey, secs);
         }
       );
