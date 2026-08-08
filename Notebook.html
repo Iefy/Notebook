@@ -273,6 +273,7 @@ body.no-storage #storage-banner.visible { display: flex; }
   padding: 8px; min-height: 38px;
   border-radius: var(--radius);
   font-size: 13.5px; color: var(--ink);
+  cursor: pointer;
   transition: background 0.12s;
 }
 .nb-row:hover { background: var(--surf2); }
@@ -331,6 +332,14 @@ body.no-storage #storage-banner.visible { display: flex; }
 .li-tag { cursor: pointer; }
 .t-chip.tag-chip .t-x { margin-left: 5px; opacity: 0.7; font-size: 10px; }
 .type-dot { width: 7px; height: 7px; border-radius: calc(2px * var(--radius-scale, 1)); flex-shrink: 0; }
+
+/* Task-completion rings — shown on notebook rows (aggregate across its
+   pages) and page rows (that page's own tasks), only once at least one
+   task exists. Hover/tap shows a "#/# done" tooltip via the shared
+   #wk-tip element (see showTip/hideTip). */
+.task-ring { display: inline-flex; flex-shrink: 0; cursor: default; }
+.task-ring svg { display: block; }
+.nb-row .task-ring, .li-top .task-ring { margin: 0 1px; }
 
 /* type filter chips (entries tab) */
 #type-chips {
@@ -457,6 +466,50 @@ body.saved-flash .save-rule::after { transform: scaleX(1); }
 #pg-rich:focus { outline: none; }
 #view-page.is-empty #pg-edit-wrap { display: none; }
 #view-page:not(.is-empty) .view-empty { display: none; }
+
+/* ── Page tasks panel — sits in the blank space to the right of the
+   760px-capped prose column on wide screens; collapses to a slim tab on
+   narrow ones. See applyPgTasksPanelState() / setPgTasksCollapsed(). ── */
+#ed-body { flex-direction: row; }
+#ed-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pg-tasks-panel { width: 280px; flex-shrink: 0; border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; background: var(--bg); }
+.pg-tasks-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.pg-tasks-head h3 { font-size: 12px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--ink-dim); flex: 1; }
+.pg-tasks-count { font-size: 11px; color: var(--ink-mute); }
+.pg-tasks-collapse-btn { width: 26px; height: 26px; display: grid; place-items: center; border-radius: var(--radius); color: var(--ink-mute); flex-shrink: 0; }
+.pg-tasks-collapse-btn:hover { background: var(--surf2); color: var(--ink-hi); }
+.pg-tasks-list { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 8px; }
+.pg-task-row { display: flex; align-items: flex-start; gap: 7px; padding: 6px 4px; border-radius: calc(6px * var(--radius-scale, 1)); }
+.pg-task-row:hover { background: var(--surf2); }
+.pg-task-row:hover .pg-task-del, .pg-task-row:hover .pg-task-edit { opacity: 1; }
+.pg-task-row input[type="checkbox"] { width: 15px; height: 15px; margin-top: 2px; flex-shrink: 0; accent-color: var(--sage); }
+.pg-task-text { flex: 1; min-width: 0; font-size: 12.5px; color: var(--ink); line-height: 1.5; word-break: break-word; cursor: text; padding: 1px 0; }
+.pg-task-row.done .pg-task-text { color: var(--ink-mute); text-decoration: line-through; }
+.pg-task-text-input { flex: 1; min-width: 0; font-size: 12.5px; color: var(--ink); background: var(--surf2); border: 1px solid var(--sage-bd); border-radius: 4px; padding: 1px 4px; }
+.pg-task-due-label { font-size: 10px; color: var(--ink-mute); flex-shrink: 0; align-self: center; white-space: nowrap; text-align: right; }
+/* Task states, at a glance — color on the due-date text only (no border
+   accent): blue = hasn't started yet, sage = in its window / due later
+   today or soon, red = past its due date, plain gray = no due date at all.
+   done (checked) always overrides to muted+struck regardless of state —
+   see .pg-task-row.done above. */
+.pg-task-row.upcoming .pg-task-due-label { color: var(--blue); }
+.pg-task-row.active .pg-task-due-label { color: var(--sage); }
+.pg-task-row.overdue .pg-task-due-label { color: var(--red); }
+.pg-task-edit { opacity: 0; flex-shrink: 0; width: 18px; height: 18px; display: grid; place-items: center; color: var(--ink-mute); border-radius: 3px; }
+.pg-task-edit:hover { color: var(--ink-hi); background: var(--surf3); }
+.pg-task-del { opacity: 0; flex-shrink: 0; width: 18px; height: 18px; display: grid; place-items: center; color: var(--ink-mute); border-radius: 3px; }
+.pg-task-del:hover { color: var(--red); }
+.pg-tasks-empty { padding: 14px 8px; font-size: 12px; color: var(--ink-mute); text-align: center; }
+.pg-tasks-add-row { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--border); flex-shrink: 0; }
+#pg-tasks-add-input { flex: 1; min-width: 0; font-size: 12.5px; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surf2); color: var(--ink); }
+#pg-tasks-add-due { width: 74px; flex-shrink: 0; font-size: 11px; color: var(--ink-mute); background: var(--surf2); border: 1px solid var(--border); border-radius: var(--radius); }
+.pg-tasks-collapsed-tab {
+  display: none; flex-shrink: 0; width: 30px; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  border-left: 1px solid var(--border); color: var(--ink-mute); padding: 10px 0;
+}
+.pg-tasks-collapsed-label { writing-mode: vertical-rl; font-size: 11px; letter-spacing: 0.03em; }
+.pg-tasks-collapsed-tab:hover { background: var(--surf2); color: var(--ink-hi); }
+@media (max-width: 900px) { .pg-tasks-panel { width: 240px; } }
 
 .prose h1, .prose h2, .prose h3 {
   font-family: var(--serif); color: var(--ink-hi); font-weight: 600;
@@ -1929,6 +1982,13 @@ body[data-tab="oracle"] #panel { display: none; }
   border-radius: calc(5px * var(--radius-scale, 1)); padding: 1px 5px; margin-left: 6px; vertical-align: 1px;
   cursor: help;
 }
+.experimental-tag {
+  display: inline-flex; align-items: center;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--blue); background: rgba(139,156,179,0.16); border: 1px solid rgba(139,156,179,0.4);
+  border-radius: calc(5px * var(--radius-scale, 1)); padding: 1px 5px; margin-left: 6px; vertical-align: 1px;
+  cursor: help;
+}
 /* Patch-note change tags — a changelog line starting with "[bug]", "[new]",
    etc. (see parseChangeLine / changeTagStyle) gets rendered as one of these
    pills instead of the literal bracket text. Known tag words map to a
@@ -1965,7 +2025,7 @@ html.no-dblclick-cursor .dbl-clickable { cursor: pointer; }
   padding: 24px;
 }
 .onboard-overlay.show { display: flex; }
-#onboard-panel, #update-panel {
+#onboard-panel, #update-panel, #patchnotes-panel {
   width: 460px; max-width: 100%; max-height: 88vh;
   background: var(--surf); border: 1px solid var(--border); border-radius: calc(14px * var(--radius-scale, 1));
   box-shadow: 0 24px 60px rgba(0,0,0,0.55);
@@ -2012,6 +2072,34 @@ html.no-dblclick-cursor .dbl-clickable { cursor: pointer; }
 .onboard-import-row { display: flex; justify-content: flex-end; margin-bottom: 12px; }
 .onboard-import-link { font-size: 11.5px; color: var(--ink-mute); text-decoration: underline; text-underline-offset: 2px; }
 .onboard-import-link:hover { color: var(--sage); }
+/* Export page — a print-dialog-style layout: options on the left, a live
+   preview on the right. Reuses .onboard-overlay for the backdrop and
+   .onboard-actions for the footer buttons. */
+#pgexport-panel {
+  width: 720px; max-width: 100%; height: 560px; max-height: 88vh;
+  background: var(--surf); border: 1px solid var(--border); border-radius: calc(14px * var(--radius-scale, 1));
+  box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.pgexport-head { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 16px var(--pad) 0; }
+.pgexport-head h2 { font-family: var(--serif); font-size: 18px; color: var(--ink-hi); }
+.pgexport-head button { color: var(--ink-mute); }
+.pgexport-head button:hover { color: var(--ink-hi); }
+.pgexport-body { flex: 1; min-height: 0; display: flex; gap: 0; padding: 14px var(--pad) 0; }
+.pgexport-opts { width: 200px; flex-shrink: 0; padding-right: 16px; border-right: 1px solid var(--border); overflow-y: auto; }
+.pgexport-opt-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 8px; }
+.pgexport-format-switch { display: flex; border: 1px solid var(--border); border-radius: calc(8px * var(--radius-scale, 1)); overflow: hidden; }
+.pgexport-format-switch button { flex: 1; padding: 7px 0; font-size: 12.5px; color: var(--ink-dim); background: var(--surf2); }
+.pgexport-format-switch button.active { background: var(--sage-bg); color: var(--sage); font-weight: 600; }
+.pgexport-check { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: var(--ink); padding: 7px 0; cursor: pointer; line-height: 1.4; }
+.pgexport-check input { width: 15px; height: 15px; flex-shrink: 0; accent-color: var(--sage); margin-top: 1px; }
+.pgexport-hint { color: var(--ink-mute); }
+.pgexport-note { font-size: 11px; color: var(--ink-mute); margin-top: 14px; word-break: break-all; }
+.pgexport-preview-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; padding-left: 16px; }
+.pgexport-preview-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 8px; }
+.pgexport-preview { flex: 1; min-height: 0; border: 1px solid var(--border); border-radius: calc(8px * var(--radius-scale, 1)); background: var(--surf2); overflow: hidden; }
+.pgexport-preview iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+.pgexport-preview pre { width: 100%; height: 100%; margin: 0; padding: 12px; box-sizing: border-box; overflow: auto; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 11.5px; line-height: 1.55; color: var(--ink); white-space: pre-wrap; word-break: break-word; }
 .onboard-progress { display: flex; gap: 6px; margin-bottom: 16px; }
 .onboard-progress span { height: 4px; flex: 1; border-radius: calc(2px * var(--radius-scale, 1)); background: var(--border); }
 .onboard-progress span.done, .onboard-progress span.current { background: var(--sage); }
@@ -2462,6 +2550,9 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
             Pages
           </button>
           <input id="pg-title-input" class="title-input pg-title-inline" placeholder="Untitled" aria-label="Page title" autocomplete="off">
+          <button class="bar-btn" id="export-pg-btn" aria-label="Export page" title="Export or print this page">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 15V4"/><path d="M7.5 8.5 12 4l4.5 4.5"/><path d="M20.5 15v4a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-4"/></svg>
+          </button>
           <button class="bar-btn" id="pin-pg-btn" aria-label="Pin page" title="Pin">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 17v5"/><path d="M9 3h6l1 7 2.5 2.5a1 1 0 0 1-.7 1.7H6.2a1 1 0 0 1-.7-1.7L8 10z"/></svg>
           </button>
@@ -2481,25 +2572,45 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
           <p class="tagpick-hint">Tag pages with the same labels you use on entries. Tap one to add it, or type a new one below.</p>
         </details>
         <div id="ed-body">
-          <div id="pg-toolbar" role="toolbar" aria-label="Formatting">
-            <button data-cmd="bold" title="Bold (Ctrl+B)" aria-label="Bold"><b>B</b></button>
-            <button data-cmd="italic" title="Italic (Ctrl+I)" aria-label="Italic"><i>I</i></button>
-            <span class="sep"></span>
-            <button data-cmd="h2" title="Heading" aria-label="Heading">H2</button>
-            <button data-cmd="h3" title="Subheading" aria-label="Subheading">H3</button>
-            <span class="sep"></span>
-            <button data-cmd="ul" title="Bulleted list" aria-label="Bulleted list">• List</button>
-            <button data-cmd="ol" title="Numbered list" aria-label="Numbered list">1. List</button>
-            <button data-cmd="quote" title="Quote" aria-label="Quote">❝</button>
-            <button data-cmd="code" title="Code block" aria-label="Code block">‹/›</button>
-            <span class="sep"></span>
-            <button data-cmd="link" title="Link — web address or topic" aria-label="Link — web address or topic">Link</button>
-            <button data-cmd="clear" title="Clear formatting" aria-label="Clear formatting">Clear</button>
-            <span class="sep"></span>
-            <button id="focus-toggle-btn" title="Focus mode — dim everything but the current paragraph" aria-label="Toggle focus mode" aria-pressed="false">Focus</button>
-            <span class="tb-wordcount"><span id="word-count">0 words</span></span>
+          <div id="ed-main">
+            <div id="pg-toolbar" role="toolbar" aria-label="Formatting">
+              <button data-cmd="bold" title="Bold (Ctrl+B)" aria-label="Bold"><b>B</b></button>
+              <button data-cmd="italic" title="Italic (Ctrl+I)" aria-label="Italic"><i>I</i></button>
+              <span class="sep"></span>
+              <button data-cmd="h2" title="Heading" aria-label="Heading">H2</button>
+              <button data-cmd="h3" title="Subheading" aria-label="Subheading">H3</button>
+              <span class="sep"></span>
+              <button data-cmd="ul" title="Bulleted list" aria-label="Bulleted list">• List</button>
+              <button data-cmd="ol" title="Numbered list" aria-label="Numbered list">1. List</button>
+              <button data-cmd="quote" title="Quote" aria-label="Quote">❝</button>
+              <button data-cmd="code" title="Code block" aria-label="Code block">‹/›</button>
+              <span class="sep"></span>
+              <button data-cmd="link" title="Link — web address or topic" aria-label="Link — web address or topic">Link</button>
+              <button data-cmd="clear" title="Clear formatting" aria-label="Clear formatting">Clear</button>
+              <span class="sep"></span>
+              <button id="focus-toggle-btn" title="Focus mode — dim everything but the current paragraph" aria-label="Toggle focus mode" aria-pressed="false">Focus</button>
+              <span class="tb-wordcount"><span id="word-count">0 words</span></span>
+            </div>
+            <div id="pg-rich" class="prose" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Page body" spellcheck="true" data-placeholder="Write here. Use the toolbar for headings, lists, quotes…"></div>
           </div>
-          <div id="pg-rich" class="prose" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Page body" spellcheck="true" data-placeholder="Write here. Use the toolbar for headings, lists, quotes…"></div>
+          <div id="pg-tasks-panel" class="pg-tasks-panel">
+            <div class="pg-tasks-head">
+              <h3>Tasks</h3>
+              <span class="pg-tasks-count" id="pg-tasks-count"></span>
+              <button class="pg-tasks-collapse-btn" id="pg-tasks-collapse-btn" aria-label="Collapse tasks panel" title="Collapse">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+            <div class="pg-tasks-list" id="pg-tasks-list"></div>
+            <div class="pg-tasks-add-row">
+              <input id="pg-tasks-add-input" type="text" placeholder="Add a task…" aria-label="New task">
+              <input id="pg-tasks-add-due" type="date" aria-label="Due date (optional)">
+            </div>
+          </div>
+          <button class="pg-tasks-collapsed-tab" id="pg-tasks-collapsed-tab" aria-label="Show tasks panel" title="Tasks">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+            <span class="pg-tasks-collapsed-label">Tasks</span>
+          </button>
         </div>
       </div>
       <div class="view-empty">
@@ -2832,7 +2943,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
     <!-- Oracle -->
     <section id="view-oracle">
       <div id="or-scroll">
-        <div class="or-eyebrow">Oracle <span class="beta-tag" style="letter-spacing:normal" data-note="Prompt variety is still growing — expect repeats until the pool is bigger.">Beta</span></div>
+        <div class="or-eyebrow">Oracle <span class="experimental-tag" style="letter-spacing:normal" data-note="Prompt variety is still growing — expect repeats until the pool is bigger.">Experimental</span></div>
         <h2>Draw a connection</h2>
         <p class="or-lede">The Oracle pulls two entries from your world and asks what lies between them. Tag your characters and places with words like <em>rival</em>, <em>haunted</em>, or <em>longing</em> and the prompts sharpen.</p>
         <div class="or-controls">
@@ -3275,6 +3386,44 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
   </div>
 </div>
 
+<!-- Export page — format + options on the left, live preview on the right,
+     styled after a browser print dialog (see pgExport* in the script below). -->
+<div id="pgexport-overlay" class="onboard-overlay">
+  <div id="pgexport-panel" role="dialog" aria-modal="true" aria-label="Export page">
+    <div class="pgexport-head">
+      <h2>Export page</h2>
+      <button id="pgexport-close" aria-label="Close export">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+      </button>
+    </div>
+    <div class="pgexport-body">
+      <div class="pgexport-opts">
+        <div class="pgexport-opt-label">Format</div>
+        <div class="pgexport-format-switch" role="tablist" aria-label="Export format">
+          <button type="button" data-fmt="html" role="tab" aria-selected="true" class="active">HTML</button>
+          <button type="button" data-fmt="md" role="tab" aria-selected="false">Markdown</button>
+        </div>
+        <div class="pgexport-opt-label" style="margin-top:16px">Include</div>
+        <label class="pgexport-check"><input type="checkbox" id="pgexp-opt-title" checked> Title</label>
+        <label class="pgexport-check"><input type="checkbox" id="pgexp-opt-meta" checked> Notebook &amp; last-updated date</label>
+        <label class="pgexport-check"><input type="checkbox" id="pgexp-opt-tags" checked> Tags</label>
+        <label class="pgexport-check" id="pgexp-theme-row"><input type="checkbox" id="pgexp-opt-theme" checked> Match app theme <span class="pgexport-hint">(HTML only)</span></label>
+        <div class="pgexport-note" id="pgexport-filename"></div>
+      </div>
+      <div class="pgexport-preview-wrap">
+        <div class="pgexport-preview-label">Preview</div>
+        <div class="pgexport-preview" id="pgexport-preview"></div>
+      </div>
+    </div>
+    <div class="onboard-actions">
+      <button id="pgexport-print" title="Open your browser's print dialog for this page">Print…</button>
+      <div style="flex:1"></div>
+      <button id="pgexport-cancel">Cancel</button>
+      <button id="pgexport-download" class="primary">Download</button>
+    </div>
+  </div>
+</div>
+
 
 <script>
 "use strict";
@@ -3292,7 +3441,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
    to read from the `dev` branch's version.json instead of `main`'s, so a
    dev build never gets nagged about (or accidentally offered) a main-line
    release, and vice versa. */
-var APP_VERSION = "0.7.5-dev";
+var APP_VERSION = "0.8.0-dev";
 var UPDATE_CHANNEL = APP_VERSION.toLowerCase().indexOf("dev") > -1 ? "dev" : "main";
 var UPDATE_CHECK_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/version.json";
 var UPDATE_HTML_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/Notebook.html";
@@ -3438,6 +3587,78 @@ function pageToHtml(p) {
   var looksLikeHtml = /^<\s*[a-z][a-z0-9]*[\s>\/]/i.test(trimmed);
   p.body = trimmed ? (looksLikeHtml ? sanitizeHtml(body) : sanitizeHtml(renderMd(body))) : "";
   p.format = "html";
+}
+
+/* Inverse of renderMd() — turns the sanitized rich-text HTML a page stores
+   back into the same flavor of markdown renderMd() knows how to read. Used
+   by the page-export feature (Export… on a page, format: Markdown). Mapping
+   is deliberately kept symmetric with ALLOWED_TAGS/renderMd rather than
+   trying to support arbitrary HTML — nested lists collapse to a flat one,
+   which matches what the editor itself can produce today. */
+function mdEscapeText(s) {
+  return String(s).replace(/[\\`*_[\]]/g, "\\$&");
+}
+function htmlToMarkdown(html) {
+  var root = document.createElement("div");
+  root.innerHTML = String(html == null ? "" : html);
+  var lines = [];
+  function inline(node) {
+    var out = "";
+    Array.prototype.forEach.call(node.childNodes, function (ch) {
+      if (ch.nodeType === 3) { out += mdEscapeText(ch.nodeValue); return; }
+      if (ch.nodeType !== 1) return;
+      var tag = ch.tagName;
+      if (tag === "BR") { out += "  \n"; }
+      else if (tag === "STRONG" || tag === "B") { out += "**" + inline(ch) + "**"; }
+      else if (tag === "EM" || tag === "I") { out += "*" + inline(ch) + "*"; }
+      else if (tag === "S" || tag === "DEL") { out += "~~" + inline(ch) + "~~"; }
+      else if (tag === "CODE") { out += "`" + ch.textContent + "`"; }
+      else if (tag === "U") { out += "<u>" + inline(ch) + "</u>"; }
+      else if (tag === "A") {
+        var href = ch.getAttribute("href") || "";
+        var text = inline(ch) || href;
+        if (ch.className === "topic-link" || !href || href === "#") out += text;
+        else out += "[" + text + "](" + href + ")";
+      } else { out += inline(ch); }
+    });
+    return out;
+  }
+  function block(node) {
+    Array.prototype.forEach.call(node.children, function (ch) {
+      var tag = ch.tagName;
+      if (tag === "H1" || tag === "H2" || tag === "H3") {
+        lines.push(new Array(Number(tag[1]) + 1).join("#") + " " + inline(ch).trim(), "");
+      } else if (tag === "P") {
+        var t = inline(ch).trim();
+        if (t) lines.push(t);
+        lines.push("");
+      } else if (tag === "BLOCKQUOTE") {
+        inline(ch).trim().split("\n").forEach(function (l) { lines.push("> " + l); });
+        lines.push("");
+      } else if (tag === "PRE") {
+        var code = ch.querySelector("code");
+        lines.push("```", (code ? code.textContent : ch.textContent).replace(/\n$/, ""), "```", "");
+      } else if (tag === "UL" || tag === "OL") {
+        var i = 1;
+        Array.prototype.forEach.call(ch.children, function (li) {
+          if (li.tagName !== "LI") return;
+          var prefix;
+          if (li.classList.contains("task")) {
+            var cb = li.querySelector('input[type="checkbox"]');
+            prefix = "- [" + (cb && cb.checked ? "x" : " ") + "] ";
+          } else {
+            prefix = tag === "OL" ? (i++ + ". ") : "- ";
+          }
+          lines.push(prefix + inline(li).trim());
+        });
+        lines.push("");
+      } else if (tag === "DIV") {
+        block(ch);
+      }
+    });
+  }
+  block(root);
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
 }
 
 /* ── Constants ── */
@@ -3867,6 +4088,12 @@ function normalizeState(s) {
         doneDates: Array.isArray(p.doneDates) ? p.doneDates.filter(function (d) { return typeof d === "string"; }) : [],
         linkedEntryId: typeof p.linkedEntryId === "string" ? p.linkedEntryId : null,
         linkedProductId: typeof p.linkedProductId === "string" ? p.linkedProductId : null,
+        // Tasks added from a page's Tasks panel (see pageTasksOf()). "date"
+        // still holds a real day-key even when noDue is set — it's reused
+        // as the doneDates bookkeeping key (see togglePlanDone) — it's just
+        // not surfaced or treated as an actual due date in the UI.
+        linkedPageId: typeof p.linkedPageId === "string" ? p.linkedPageId : null,
+        noDue: !!p.noDue,
         color: typeof p.color === "string" ? p.color : null,
         durationDays: Math.max(0, Math.min(365, Math.floor(+p.durationDays || 0))),
         createdAt: +p.createdAt || Date.now(),
@@ -4146,6 +4373,10 @@ function normalizeState(s) {
       popoutPagesSize: ["compact", "cozy", "large"].indexOf(st.popoutPagesSize) > -1 ? st.popoutPagesSize : "cozy",
       onboarded: st.onboarded === undefined ? true : !!st.onboarded,
       dismissedUpdateVersion: typeof st.dismissedUpdateVersion === "string" ? st.dismissedUpdateVersion : "",
+      // null = "no explicit choice yet", so the page tasks panel falls back
+      // to a width-based default (collapsed on narrow screens) instead of
+      // always starting one way — see pgTasksIsCollapsed().
+      pgTasksCollapsed: st.pgTasksCollapsed == null ? null : !!st.pgTasksCollapsed,
       sessionCleanupFilters: {
         after: (st.sessionCleanupFilters && st.sessionCleanupFilters.after) || "",
         before: (st.sessionCleanupFilters && st.sessionCleanupFilters.before) || "",
@@ -4156,7 +4387,7 @@ function normalizeState(s) {
     };
   });
   if (!s.settings || typeof s.settings !== "object") {
-    s.settings = { pastePlainText: false, autoListShortcuts: true, autoLinkUrls: true, accent: DEFAULT_ACCENT, density: "cozy", cornerStyle: "soft", bgTone: "ink", headingFont: "classic", calmMode: false, dblClickCursor: true, autoAssignActiveProject: true, snapshots: { intervalMin: 10, keep: 5 }, popoutTimerShowTotal: true, popoutTimerShowLabel: true, popoutTimerShowGoal: true, popoutTimerSize: "cozy", popoutPagesShowSearch: true, popoutPagesShowNotebooks: true, popoutPagesSize: "cozy", onboarded: true, dismissedUpdateVersion: "", sessionCleanupFilters: { after: "", before: "", minMinutes: "", maxMinutes: "", labels: [] } };
+    s.settings = { pastePlainText: false, autoListShortcuts: true, autoLinkUrls: true, accent: DEFAULT_ACCENT, density: "cozy", cornerStyle: "soft", bgTone: "ink", headingFont: "classic", calmMode: false, dblClickCursor: true, autoAssignActiveProject: true, snapshots: { intervalMin: 10, keep: 5 }, popoutTimerShowTotal: true, popoutTimerShowLabel: true, popoutTimerShowGoal: true, popoutTimerSize: "cozy", popoutPagesShowSearch: true, popoutPagesShowNotebooks: true, popoutPagesSize: "cozy", onboarded: true, dismissedUpdateVersion: "", pgTasksCollapsed: null, sessionCleanupFilters: { after: "", before: "", minMinutes: "", maxMinutes: "", labels: [] } };
   }
   if (!s.hidden || typeof s.hidden !== "object") {
     s.hidden = { railTabs: [], homeTiles: [], homeSections: [], workSections: [] };
@@ -4665,7 +4896,8 @@ var RAIL_ITEMS = [
     betaNote: "Goals, streaks, and medals are newer and still being tuned.",
     desc: "Calendar, session timer, weekly goals, streaks and medals — shared across every project, with a filter to view just one. On: appears in the sidebar. Off: hidden from the sidebar; your plans and logged sessions are untouched.",
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="16" rx="2"/><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/></svg>' },
-  { key: "oracle", label: "Oracle", tip: "Oracle — connection prompts", scope: "project", beta: true,
+  { key: "oracle", label: "Oracle", tip: "Oracle — connection prompts", scope: "project", experimental: true,
+    experimentalNote: "Prompt variety is still growing — expect repeats until the pool is bigger.",
     desc: "Draws two entries together and asks what connects them — a prompt generator for building relationships in your world. On: appears in the sidebar. Off: hidden from the sidebar; nothing is lost, it's just out of the way until you want it.",
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>' },
   { key: "management", label: "Management", tip: "Management — budget & products", scope: "project", beta: true,
@@ -5128,11 +5360,23 @@ var elNbList = $("nb-list"), elPgList = $("pg-list"), elSearchPg = $("search-pg"
 
 var dragNbId = null;
 function makeNbRow(nb) {
-  var row = el("button", "nb-row" + (nb.id === state.sel.nb && !elSearchPg.value ? " active" : ""));
+  // Deliberately a <div role="button">, not a native <button> — a real
+  // button's built-in "Space/Enter activates" handling doesn't check
+  // whether the button itself has focus, only whether the key event
+  // reached it while un-stopped. That meant Space typed into the rename
+  // <input> nested inside it (see startRenameNb) could still trigger the
+  // row's own click and blow away the in-progress edit, even with
+  // stopPropagation() on the input's own keydown. A div has no such
+  // built-in behavior, so keyboard activation is wired up by hand below.
+  var row = el("div", "nb-row" + (nb.id === state.sel.nb && !elSearchPg.value ? " active" : ""));
+  row.setAttribute("role", "button");
+  row.tabIndex = 0;
   row.draggable = true;
   row.dataset.nbId = nb.id;
   var dot = el("span", "nb-dot"); dot.style.background = nb.color;
   var name = el("span", "nb-name", nb.name);
+  var nbTasks = notebookTaskCounts(nb.id);
+  var ring = maybeTaskRing(nbTasks.done, nbTasks.total, 18);
   var count = el("span", "nb-count", String(pagesOf(nb.id).length));
   var menu = el("span", "nb-menu-btn", "⋯");
   menu.draggable = false;
@@ -5145,15 +5389,28 @@ function makeNbRow(nb) {
   });
   if (nb.pinned) {
     var pinInd = el("span", "nb-pin-ind"); pinInd.innerHTML = PIN_SVG; pinInd.setAttribute("aria-hidden", "true");
-    row.append(dot, name, pinInd, count, menu);
+    row.append(dot, name, pinInd);
+    if (ring) row.append(ring);
+    row.append(count, menu);
   } else {
-    row.append(dot, name, count, menu);
+    row.append(dot, name);
+    if (ring) row.append(ring);
+    row.append(count, menu);
   }
   row.addEventListener("click", function () {
     state.sel.nb = nb.id;
     elSearchPg.value = "";
     scheduleSave();
     renderPagesTab();
+  });
+  row.addEventListener("keydown", function (e) {
+    // Only act when the row itself is the key's target — a descendant like
+    // the rename <input> or the menu button already stops propagation for
+    // the keys it cares about, so this shouldn't normally see them anyway;
+    // the check is just a belt-and-suspenders guard against ever hijacking
+    // a keystroke meant for something nested inside the row.
+    if (e.target !== row) return;
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); row.click(); }
   });
   row.addEventListener("dragstart", function (e) {
     dragNbId = nb.id;
@@ -5245,6 +5502,9 @@ function renderPages() {
     if (p.pinned) { var pin = el("span", "li-pin"); pin.innerHTML = PIN_SVG; top.appendChild(pin); }
     var t = el("span", "li-title" + (p.title ? "" : " untitled"), p.title || "Untitled");
     top.appendChild(t);
+    var pgTasks = pageTaskCounts(p.id);
+    var ring = maybeTaskRing(pgTasks.done, pgTasks.total, 18);
+    if (ring) top.appendChild(ring);
     var snip = el("div", "li-snip", htmlToText(p.body).slice(0, 90) || "No text yet");
     var meta = el("div", "li-meta");
     meta.appendChild(el("span", null, relTime(p.updatedAt)));
@@ -5263,12 +5523,13 @@ var pgRichLoaded = null;
 function renderPageEditor() {
   var p = curPage();
   $("view-page").classList.toggle("is-empty", !p);
-  if (!p) { pgRichLoaded = null; return; }
+  if (!p) { pgRichLoaded = null; renderPgTasks(null); return; }
   if ($("pg-title-input").value !== p.title) $("pg-title-input").value = p.title;
   if (pgRichLoaded !== p.id) { $("pg-rich").innerHTML = sanitizeHtml(p.body || ""); pgRichLoaded = p.id; setFocusMode(false); }
   renderPgTagPicker(p);
   $("pin-pg-btn").classList.toggle("pin-on", !!p.pinned);
   updatePgMeta(p);
+  renderPgTasks(p);
   if (typeof renderTopicBackBar === "function") renderTopicBackBar();
   if (pendingTopicScroll) {
     var scrollId = pendingTopicScroll;
@@ -5289,6 +5550,216 @@ function updatePgMeta(p) {
   // pg-updated removed from header
 }
 function renderPagesTab() { renderNbs(); renderPages(); renderPageEditor(); }
+
+/* ── Page tasks (right-side panel) ──
+   Tasks made from a page live in the same state.plans array Productivity's
+   Calendar "Tasks" card already uses (isTask: true) — a page task is just
+   one tagged with linkedPageId, so toggling/editing/deleting stays wired
+   into the exact same code (togglePlanDone, openPlanModal, confirmDeletePlan)
+   Productivity uses, and it shows up there automatically. A task with no
+   due date gets noDue: true; its "date" field still holds a real day-key
+   (today, at creation) purely as the doneDates bookkeeping key — it's never
+   shown or treated as an actual due date. */
+function pageTasksOf(pageId) {
+  return state.plans.filter(function (p) { return p.isTask && p.linkedPageId === pageId; });
+}
+function pageTaskCounts(pageId) {
+  var arr = pageTasksOf(pageId), done = 0;
+  arr.forEach(function (p) { if (p.doneDates.indexOf(p.date) > -1) done++; });
+  return { done: done, total: arr.length };
+}
+function notebookTaskCounts(nbId) {
+  var done = 0, total = 0;
+  pagesOf(nbId).forEach(function (p) {
+    var c = pageTaskCounts(p.id);
+    done += c.done; total += c.total;
+  });
+  return { done: done, total: total };
+}
+function addPageTask(page, text, dueKey) {
+  text = String(text || "").trim();
+  if (!text || !page) return;
+  state.plans.push({
+    id: uid(), title: text.slice(0, 200), detail: "", date: dueKey || dayKey(), recurrence: null, exceptions: {},
+    isTask: true, doneDates: [], linkedEntryId: null, linkedProductId: null, linkedPageId: page.id,
+    noDue: !dueKey, color: null, durationDays: 0, createdAt: Date.now(), projectId: workspace.activeProjectId
+  });
+  scheduleSave();
+}
+function togglePageTaskDone(taskId) {
+  var p = state.plans.find(function (x) { return x.id === taskId; });
+  if (!p) return;
+  togglePlanDone(p.id, p.date);
+  renderPgTasks(curPage());
+  renderPagesTab();
+}
+function deletePageTask(taskId) {
+  state.plans = state.plans.filter(function (x) { return x.id !== taskId; });
+  scheduleSave();
+  renderPgTasks(curPage());
+  renderPagesTab();
+}
+function setPageTaskDue(taskId, dueKeyOrEmpty) {
+  var p = state.plans.find(function (x) { return x.id === taskId; });
+  if (!p) return;
+  if (dueKeyOrEmpty) { p.date = dueKeyOrEmpty; p.noDue = false; }
+  else p.noDue = true;
+  scheduleSave();
+  renderPgTasks(curPage());
+  renderPagesTab();
+}
+function startEditPgTaskText(t, textEl) {
+  var input = el("input", "pg-task-text-input");
+  input.type = "text"; input.value = t.title; input.setAttribute("aria-label", "Task text");
+  textEl.replaceWith(input);
+  input.focus(); input.select();
+  function commit() { t.title = input.value.trim() || t.title; scheduleSave(); renderPgTasks(curPage()); }
+  input.addEventListener("blur", commit);
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") input.blur();
+    if (e.key === "Escape") { input.value = t.title; input.blur(); }
+  });
+}
+// "Aug 12" told you the date but not whether that's urgent — this instead
+// says how far off it is, which is what you actually want at a glance in
+// a compact panel. Productivity's own Calendar list keeps absolute dates
+// (it already groups by Overdue/Today/Upcoming, and shows date ranges for
+// multi-day plans), so this is deliberately just for the page panel.
+//
+// A task's actual due date is date + durationDays (the "Through" field in
+// the Edit modal), not the bare start date — a task can be scheduled to
+// start in the future and not be due yet, be currently in its date range,
+// or be overdue once its end date has passed. This distinguishes all three
+// so the panel can show each one differently (see .pg-task-row.upcoming/
+// .active/.overdue below) instead of only ever showing "days until start".
+function daysBetweenKeys(aKey, bKey) { return Math.round((dayKeyToTs(bKey) - dayKeyToTs(aKey)) / 86400000); }
+function pgTaskDueState(t, todayKeyIn) {
+  var todayKey = todayKeyIn || dayKey();
+  if (t.noDue) return { state: "none", label: "" };
+  var dueEnd = addDaysToKey(t.date, t.durationDays || 0);
+  var ranged = (t.durationDays || 0) > 0;
+  // Kept short on purpose ("3d" not "3 days") — this sits in a narrow
+  // fixed-width column next to the task text and was getting clipped.
+  if (t.date > todayKey) {
+    var untilStart = daysBetweenKeys(todayKey, t.date);
+    var verb = ranged ? "Starts" : "Due";
+    return { state: "upcoming", label: untilStart === 1 ? verb + " tomorrow" : verb + " " + untilStart + "d" };
+  }
+  if (dueEnd < todayKey) {
+    var od = daysBetweenKeys(dueEnd, todayKey);
+    return { state: "overdue", label: od === 1 ? "1d overdue" : od + "d overdue" };
+  }
+  if (dueEnd === todayKey) return { state: "active", label: "Due today" };
+  var left = daysBetweenKeys(todayKey, dueEnd);
+  return { state: "active", label: left === 1 ? "Due tomorrow" : "Due " + left + "d" };
+}
+function renderPgTasks(p) {
+  var listEl = $("pg-tasks-list");
+  if (!listEl) return;
+  listEl.innerHTML = "";
+  if (!p) { $("pg-tasks-count").textContent = ""; return; }
+  var todayKey = dayKey();
+  var tasks = pageTasksOf(p.id).slice().sort(function (a, b) {
+    var ad = a.doneDates.indexOf(a.date) > -1, bd = b.doneDates.indexOf(b.date) > -1;
+    if (ad !== bd) return ad ? 1 : -1;
+    if (!a.noDue && !b.noDue && a.date !== b.date) return a.date < b.date ? -1 : 1;
+    if (a.noDue !== b.noDue) return a.noDue ? 1 : -1;
+    return a.createdAt - b.createdAt;
+  });
+  var doneCount = 0;
+  tasks.forEach(function (t) { if (t.doneDates.indexOf(t.date) > -1) doneCount++; });
+  $("pg-tasks-count").textContent = tasks.length ? (doneCount + "/" + tasks.length) : "";
+  if (!tasks.length) { listEl.appendChild(el("div", "pg-tasks-empty", "No tasks yet.")); return; }
+  tasks.forEach(function (t) {
+    var done = t.doneDates.indexOf(t.date) > -1;
+    var due = done ? { state: "none", label: "" } : pgTaskDueState(t, todayKey);
+    var row = el("div", "pg-task-row" + (done ? " done" : "") + (due.state !== "none" ? " " + due.state : ""));
+    var cb = el("input"); cb.type = "checkbox"; cb.checked = done;
+    cb.setAttribute("aria-label", "Mark task done");
+    cb.addEventListener("change", function () { togglePageTaskDone(t.id); });
+    row.appendChild(cb);
+    var text = el("span", "pg-task-text", t.title || "Untitled task");
+    text.addEventListener("click", function () { startEditPgTaskText(t, text); });
+    row.appendChild(text);
+    var dueLbl = el("span", "pg-task-due-label" + (t.noDue ? "" : " set"),
+      t.noDue ? "" : (done ? new Date(dayKeyToTs(t.date)).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : due.label));
+    if (t.recurrence) dueLbl.textContent = (dueLbl.textContent ? dueLbl.textContent + " \u00b7 " : "") + "repeats";
+    row.appendChild(dueLbl);
+    var editBtn = el("button", "pg-task-edit");
+    editBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>';
+    editBtn.setAttribute("aria-label", "Edit task \u2014 due date, notes, and repeat");
+    editBtn.title = "Edit \u2014 due date, notes, repeat";
+    editBtn.addEventListener("click", function () { openPlanModal(t, t.date); });
+    row.appendChild(editBtn);
+    var del = el("button", "pg-task-del", "\u00d7");
+    del.setAttribute("aria-label", "Delete task");
+    del.addEventListener("click", function () { deletePageTask(t.id); });
+    row.appendChild(del);
+    listEl.appendChild(row);
+  });
+}
+$("pg-tasks-add-input").addEventListener("keydown", function (e) {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  var p = curPage(); if (!p) return;
+  addPageTask(p, this.value, $("pg-tasks-add-due").value || null);
+  this.value = ""; $("pg-tasks-add-due").value = "";
+  renderPgTasks(p); renderPagesTab();
+});
+// Default is width-based (roomy screens start expanded, since that's blank
+// space today; narrow ones start collapsed) until the person explicitly
+// toggles it once, after which their choice sticks — see settings.pgTasksCollapsed.
+function pgTasksDefaultCollapsed() { return window.innerWidth < 1200; }
+function pgTasksIsCollapsed() {
+  return state.settings.pgTasksCollapsed == null ? pgTasksDefaultCollapsed() : !!state.settings.pgTasksCollapsed;
+}
+function setPgTasksCollapsed(val) {
+  state.settings.pgTasksCollapsed = !!val;
+  scheduleSave();
+  applyPgTasksPanelState();
+}
+function applyPgTasksPanelState() {
+  var collapsed = pgTasksIsCollapsed();
+  $("pg-tasks-panel").style.display = collapsed ? "none" : "flex";
+  $("pg-tasks-collapsed-tab").style.display = collapsed ? "flex" : "none";
+}
+$("pg-tasks-collapse-btn").addEventListener("click", function () { setPgTasksCollapsed(true); });
+$("pg-tasks-collapsed-tab").addEventListener("click", function () { setPgTasksCollapsed(false); });
+
+/* ── Task-completion rings (notebook rows + page rows) ──
+   Hidden entirely when there are zero tasks; otherwise a small ring that
+   fills clockwise, with a "#/# done" tooltip via the shared #wk-tip element.
+   The unfilled track uses --ink-mute (not --border) specifically so the
+   ring reads as present the moment a task exists, even at 0% done — a
+   --border track was nearly invisible against the row background and made
+   it look like nothing was there until the first task got checked off. */
+var TASK_RING_C = 2 * Math.PI * 8;
+function taskRingEl(done, total, size) {
+  size = size || 20;
+  var wrap = el("span", "task-ring");
+  wrap.style.width = size + "px"; wrap.style.height = size + "px";
+  var frac = total ? done / total : 0;
+  wrap.innerHTML = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 20 20" aria-hidden="true">' +
+    '<circle cx="10" cy="10" r="8" fill="none" stroke="var(--ink-mute)" stroke-width="2.5"></circle>' +
+    '<circle cx="10" cy="10" r="8" fill="none" stroke="var(--sage)" stroke-width="2.5" stroke-linecap="round" transform="rotate(-90 10 10)" ' +
+      'style="stroke-dasharray:' + TASK_RING_C + ';stroke-dashoffset:' + (TASK_RING_C * (1 - frac)) + '"></circle></svg>';
+  function tipHtml() { return "<b>" + done + "/" + total + "</b> done"; }
+  wrap.addEventListener("mouseenter", function () { showTip(wrap, tipHtml()); });
+  wrap.addEventListener("mouseleave", hideTip);
+  wrap.addEventListener("click", function (e) {
+    e.preventDefault(); e.stopPropagation();
+    var tip = $("wk-tip");
+    if (tip.classList.contains("show")) hideTip(); else showTip(wrap, tipHtml());
+  });
+  return wrap;
+}
+// Returns null (nothing to append) when there are zero tasks, rather than
+// an empty ring — an untouched page/notebook should look exactly as it
+// does today.
+function maybeTaskRing(done, total, size) {
+  return total ? taskRingEl(done, total, size) : null;
+}
+
 
 function openPage(id, viaTopic) {
   state.sel.pg = id;
@@ -5329,9 +5800,19 @@ function startRenameNb(nb) {
   function commit() { nb.name = input.value.trim() || nb.name; scheduleSave(); renderPagesTab(); }
   input.addEventListener("blur", commit);
   input.addEventListener("keydown", function (e) {
+    // The row this input lives in is a <button> (for click-to-select /
+    // keyboard nav), so any key event that isn't stopped here bubbles up to
+    // it. Browsers treat Space (and Enter) on a focused button as "activate
+    // it" — that fired the row's click handler mid-rename, which switched
+    // notebooks and re-rendered the list out from under the input, making it
+    // look like the keystroke "submitted" the name. Stopping propagation
+    // keeps the key from ever reaching the button so typing behaves like a
+    // normal text field.
+    e.stopPropagation();
     if (e.key === "Enter") input.blur();
     if (e.key === "Escape") { input.value = nb.name; input.blur(); }
   });
+  input.addEventListener("keypress", function (e) { e.stopPropagation(); });
   input.addEventListener("click", function (e) { e.stopPropagation(); });
 }
 
@@ -9521,7 +10002,7 @@ function renderHubContent() {
   var tileCtx = { le: le, curGoalSet: curGoalSet, curGoal: curGoal, wkHours: wkHours, wkNudge: wkNudge, mgmtBalance: mgmtBalance };
   var tiles = HOME_TILE_DEFS.map(function (d) {
     var t = d.build(tileCtx);
-    t.key = d.key; t.label = d.label; t.icon = d.icon; if (d.beta) t.beta = true;
+    t.key = d.key; t.label = d.label; t.icon = d.icon; if (d.beta) t.beta = true; if (d.experimental) t.experimental = true;
     return t;
   });
   var hiddenTiles = state.hidden.homeTiles || [];
@@ -9535,6 +10016,7 @@ function renderHubContent() {
     tile.appendChild(glyphEl);
     var labelEl = el("span", "ht-label", t.label);
     if (t.beta) labelEl.appendChild(tagBadge("beta", "Beta"));
+    if (t.experimental) labelEl.appendChild(tagBadge("experimental", "Experimental"));
     tile.appendChild(labelEl);
     tile.appendChild(el("span", "ht-desc", t.desc));
     var stat = el("span", "ht-stat");
@@ -10300,7 +10782,10 @@ function renderCalDetail() {
    open-ended recurring tasks from generating occurrences forever. */
 function taskInstancesInRange(startTs, endTs) {
   var out = [];
-  state.plans.filter(function (p) { return p.isTask; }).forEach(function (p) {
+  // noDue tasks (from a page's Tasks panel, with no due date set) aren't
+  // tied to any calendar day, so they're excluded from this scan entirely —
+  // renderCalTasks() lists them separately under "No due date".
+  state.plans.filter(function (p) { return p.isTask && !p.noDue; }).forEach(function (p) {
     for (var ts = startTs; ts <= endTs; ts += 86400000) {
       var k = dayKey(ts);
       if (isValidOccurrenceStart(p, k) && !(p.exceptions && p.exceptions[k] === "skip")) {
@@ -10337,9 +10822,20 @@ function renderCalTasks() {
     });
   })();
   done.sort(function (a, b) { return a.occStart > b.occStart ? -1 : 1; });
+  // noDue tasks (added from a page's Tasks panel with no due date) never
+  // enter `instances` — taskInstancesInRange() skips them — so they're
+  // collected separately here and shown in their own group.
+  var noDuePending = [], noDueDoneList = [];
+  state.plans.forEach(function (p) {
+    if (!p.isTask || !p.noDue) return;
+    var inst = { plan: p, occStart: p.date, duration: 0 };
+    (p.doneDates.indexOf(p.date) > -1 ? noDueDoneList : noDuePending).push(inst);
+  });
+  noDuePending.sort(function (a, b) { return a.plan.createdAt - b.plan.createdAt; });
+  done = done.concat(noDueDoneList);
   var list = $("cal-tasks-list");
   list.innerHTML = "";
-  var pendingCount = overdue.length + dueToday.length + upcoming.length;
+  var pendingCount = overdue.length + dueToday.length + upcoming.length + noDuePending.length;
   $("cal-tasks-note").textContent = pendingCount
     ? pendingCount + " open task" + (pendingCount === 1 ? "" : "s") + (overdue.length ? " \u00b7 " + overdue.length + " overdue" : "")
     : "No open tasks \u2014 add one, or add a plan and mark it as a task.";
@@ -10352,19 +10848,21 @@ function renderCalTasks() {
     var p = inst.plan, occStart = inst.occStart;
     var done2 = p.doneDates.indexOf(occStart) > -1;
     var dueEnd = addDaysToKey(occStart, inst.duration);
-    var overdue2 = !done2 && dueEnd < todayKey;
+    var overdue2 = !done2 && !p.noDue && dueEnd < todayKey;
     var row = el("div", "cal-plan-row" + (overdue2 ? " overdue" : "") + (done2 ? " checked" : ""));
     var cb = el("button", "cal-plan-check" + (done2 ? " checked" : ""));
     cb.setAttribute("aria-label", "Toggle done");
     cb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
-    cb.addEventListener("click", function () { togglePlanDone(p.id, occStart); });
+    cb.addEventListener("click", function () { togglePlanDone(p.id, occStart); renderPgTasks(curPage()); renderPagesTab(); });
     row.appendChild(cb);
     var main = el("div", "cal-plan-main");
     var head = el("div", "cal-plan-head");
     head.appendChild(el("div", "cal-plan-title", p.title || "(untitled task)"));
     var actions = el("div", "cal-plan-actions");
-    var jumpBtn = el("button", "foot-btn", "View");
+    var linkedPage = p.linkedPageId ? pgById(p.linkedPageId) : null;
+    var jumpBtn = el("button", "foot-btn", linkedPage ? "Open page" : "View");
     jumpBtn.addEventListener("click", function () {
+      if (linkedPage) { openPage(linkedPage.id); return; }
       calViewTs = monthStartTs(dayKeyToTs(occStart));
       calSelectedDay = occStart;
       renderCalendarTab();
@@ -10372,15 +10870,16 @@ function renderCalTasks() {
     var editBtn = el("button", "foot-btn", "Edit");
     editBtn.addEventListener("click", function () { openPlanModal(p, occStart); });
     var delBtn = el("button", "foot-btn", "Delete");
-    delBtn.addEventListener("click", function () { confirmDeletePlan(p, occStart); });
+    delBtn.addEventListener("click", function () { confirmDeletePlan(p, occStart); renderPgTasks(curPage()); renderPagesTab(); });
     actions.append(jumpBtn, editBtn, delBtn);
     head.appendChild(actions);
     main.appendChild(head);
-    var dateLbl = new Date(dayKeyToTs(occStart)).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    var dateLbl = p.noDue ? "No due date" : new Date(dayKeyToTs(occStart)).toLocaleDateString(undefined, { month: "short", day: "numeric" })
       + (inst.duration > 0 ? "\u2013" + new Date(dayKeyToTs(dueEnd)).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "");
     var metaEl = el("div", "cal-plan-meta");
     var metaBits = [dateLbl];
     if (p.recurrence) metaBits.push(recurrenceLabel(p.recurrence));
+    if (linkedPage) metaBits.push("on page: " + (linkedPage.title || "Untitled"));
     if (p.linkedEntryId) { var linked = entById(p.linkedEntryId); if (linked) metaBits.push("linked: " + linked.name); }
     if (p.linkedProductId) { metaBits.push("from Management"); }
     metaEl.textContent = metaBits.join(" \u00b7 ");
@@ -10391,6 +10890,7 @@ function renderCalTasks() {
   group("Overdue", overdue);
   group("Today", dueToday);
   group("Upcoming", upcoming);
+  group("No due date", noDuePending);
   if (done.length) group("Completed", done.slice(0, 10));
 }
 $("cal-add-task-btn").addEventListener("click", function () { openPlanModal(null, calSelectedDay || dayKey(), true); });
@@ -10463,6 +10963,31 @@ function openPlanModal(existing, defaultDateKey, presetTask) {
   var taskRow = el("label", "cal-form-check");
   var taskCb = el("input"); taskCb.type = "checkbox"; taskCb.checked = existing ? !!existing.isTask : !!presetTask;
   taskRow.append(taskCb, document.createTextNode("Track as a task, with a done / not done checkbox"));
+  // A page's own task list only ever holds tasks — unchecking this here
+  // would silently turn it into a plain calendar plan while leaving it
+  // sitting in that page's Tasks panel, which doesn't make sense (that's
+  // the whole reason it's there). So for a task opened via a page's Edit
+  // button, skip offering the choice at all and just keep it a task.
+  var isPageLinked = existing && !!existing.linkedPageId;
+  if (isPageLinked) { taskCb.checked = true; taskRow.style.display = "none"; }
+
+  // Only meaningful for tasks — a plain calendar plan's date is the event
+  // itself, but a task can be a bare to-do with nothing scheduled. Checking
+  // this hides the date fields below (see syncTaskUI); "date" still gets
+  // saved under the hood as the doneDates bookkeeping key, it's just not
+  // shown or treated as a real due date anywhere in the UI.
+  var noDueRow = el("label", "cal-form-check");
+  var noDueCb = el("input"); noDueCb.type = "checkbox"; noDueCb.checked = existing ? !!existing.noDue : false;
+  noDueRow.append(noDueCb, document.createTextNode("No due date \u2014 just a plain to-do"));
+
+  var dateRow = el("div", "cal-field-row");
+  dateRow.append(field("Start date", dateInp), field("Through (optional)", spanEndInp));
+  function syncTaskUI() {
+    noDueRow.style.display = taskCb.checked ? "flex" : "none";
+    dateRow.style.display = (taskCb.checked && noDueCb.checked) ? "none" : "flex";
+  }
+  taskCb.addEventListener("change", syncTaskUI);
+  noDueCb.addEventListener("change", syncTaskUI);
 
   var repeatSel = el("select");
   [["none", "Doesn't repeat"], ["weekly", "Weekly"], ["monthly", "Monthly"], ["every_n_days", "Every N days"]].forEach(function (o) {
@@ -10542,17 +11067,15 @@ function openPlanModal(existing, defaultDateKey, presetTask) {
   }
   renderLinkWrap();
 
-  var dateRow = el("div", "cal-field-row");
-  dateRow.append(field("Start date", dateInp), field("Through (optional)", spanEndInp));
-
   var scheduleSection = el("div", "cal-plan-section");
   scheduleSection.append(field("Repeat", repeatSel), weeklyField, everyNField, untilField);
 
   var linkSection = el("div", "cal-plan-section");
   linkSection.append(el("div", "cal-field-lbl", "Linked entry"), linkWrap);
 
-  form.append(field("Title", titleInp), field("Notes", detailInp), dateRow, taskRow, scheduleSection, linkSection);
+  form.append(field("Title", titleInp), field("Notes", detailInp), taskRow, noDueRow, dateRow, scheduleSection, linkSection);
   extra.append(form);
+  syncTaskUI();
 
   var row = $modal("modal-row");
   var cancel = el("button", null, "Cancel");
@@ -10562,32 +11085,42 @@ function openPlanModal(existing, defaultDateKey, presetTask) {
     var title = titleInp.value.trim();
     var detail = detailInp.value.trim();
     if (!title && !detail) { toast("Give the plan a title or some detail."); return; }
-    var date = dateInp.value || dayKey();
+    var isTask = taskCb.checked;
+    var noDue = isTask && noDueCb.checked;
+    // A noDue task still needs a real day-key under the hood — it's the
+    // key togglePlanDone() uses in doneDates — it's just not shown or
+    // treated as a due date. Keep whatever key it already had rather than
+    // resetting it to today on every unrelated save.
+    var date = noDue ? (existing ? existing.date : dayKey()) : (dateInp.value || dayKey());
     var durationDays = 0;
-    if (spanEndInp.value && spanEndInp.value > date) {
+    if (!noDue && spanEndInp.value && spanEndInp.value > date) {
       durationDays = Math.round((dayKeyToTs(spanEndInp.value) - dayKeyToTs(date)) / 86400000);
     }
     var rec = null;
-    if (repeatSel.value === "weekly") {
+    if (!noDue && repeatSel.value === "weekly") {
       var chosen = wdBoxes.filter(function (cb) { return cb.checked; }).map(function (cb) { return +cb.value; });
       rec = { freq: "weekly", weekdays: chosen.length ? chosen : [new Date(dayKeyToTs(date)).getDay()], until: untilInp.value || null };
-    } else if (repeatSel.value === "monthly") {
+    } else if (!noDue && repeatSel.value === "monthly") {
       rec = { freq: "monthly", until: untilInp.value || null };
-    } else if (repeatSel.value === "every_n_days") {
+    } else if (!noDue && repeatSel.value === "every_n_days") {
       rec = { freq: "every_n_days", n: Math.max(1, Math.floor(+nInp.value || 1)), until: untilInp.value || null };
     }
     var projectId = workspace.activeProjectId;
     if (existing) {
       existing.title = title; existing.detail = detail; existing.date = date; existing.durationDays = durationDays;
-      existing.recurrence = rec; existing.isTask = taskCb.checked; existing.linkedEntryId = linkedId; existing.projectId = projectId;
+      existing.recurrence = rec; existing.isTask = isTask; existing.noDue = noDue; existing.linkedEntryId = linkedId; existing.projectId = projectId;
       if (!rec) existing.exceptions = {};
     } else {
       state.plans.push({
         id: uid(), title: title, detail: detail, date: date, durationDays: durationDays, recurrence: rec, exceptions: {},
-        isTask: taskCb.checked, doneDates: [], linkedEntryId: linkedId, color: null, createdAt: Date.now(), projectId: projectId
+        isTask: isTask, noDue: noDue, doneDates: [], linkedEntryId: linkedId, linkedPageId: null, color: null, createdAt: Date.now(), projectId: projectId
       });
     }
     persist(); closeModal(); renderCalendarTab();
+    // Keep the page's own Tasks panel and its progress ring in sync when the
+    // plan being edited is linked to a page — openPlanModal is opened
+    // directly from there via the per-task Edit button.
+    if (existing && existing.linkedPageId) { renderPgTasks(curPage()); renderPagesTab(); }
     toast(isEdit ? "Plan updated." : "Plan added.");
   });
   row.append(cancel, save);
@@ -11937,7 +12470,7 @@ var HOME_TILE_DEFS = [
         num: ctx.wkHours.toFixed(1) + "h", unit: ctx.curGoalSet ? "of " + ctx.curGoal + "h goal" : "this week",
         nudge: ctx.wkNudge, go: function () { goProductivity(); } };
     } },
-  { key: "oracle", railKey: "oracle", label: railItem("oracle").label, icon: railItem("oracle").icon, beta: true,
+  { key: "oracle", railKey: "oracle", label: railItem("oracle").label, icon: railItem("oracle").icon, experimental: true,
     settingsDesc: "A shortcut tile to connection prompts. On: shown on Home. Off: the tile disappears from Home; Oracle itself is unaffected if it's still in your sidebar.",
     build: function () {
       return { tab: "oracle", desc: "Draw a prompt for what connects two things", num: oracleReady() ? "Ready" : state.entries.length, unit: oracleReady() ? "" : "need 2+" };
@@ -11949,7 +12482,7 @@ var HOME_TILE_DEFS = [
     } }
 ];
 var HOME_TILE_ITEMS = HOME_TILE_DEFS.map(function (d) {
-  return { key: d.key, label: d.label, desc: d.settingsDesc, beta: d.beta, recommended: d.recommended };
+  return { key: d.key, label: d.label, desc: d.settingsDesc, beta: d.beta, experimental: d.experimental, recommended: d.recommended };
 });
 var HOME_SECTION_ITEMS = [
   { key: "calendar", label: "Calendar", desc: "A Mon\u2013Sun strip showing which days this week you've worked, rested, or neither. On: shown on Home, below the tiles. Off: hidden from Home; nothing is lost \u2014 open the Calendar tab for the full month view and your plans.", beta: true },
@@ -12041,8 +12574,12 @@ function applyAllStyle() {
 // replacement for the default one). New tag kinds just need an entry here.
 var TAG_DEFAULT_NOTES = {
   recommended: "This is the setting we'd suggest leaving as-is for most people \u2014 nothing breaks if you turn it off.",
-  beta: "This feature is still being smoothed out \u2014 it works, but expect the occasional rough edge or change."
+  beta: "This feature is still being smoothed out \u2014 it works, but expect the occasional rough edge or change.",
+  experimental: "This is an early, exploratory feature \u2014 it may change significantly, behave inconsistently, or be reworked entirely."
 };
+// Maps a tag "kind" to the CSS class that renders it. New kinds just need an
+// entry here, in TAG_DEFAULT_NOTES above, and a matching *-tag CSS rule.
+var TAG_CLASSES = { beta: "beta-tag", recommended: "recommended-tag", experimental: "experimental-tag" };
 function tagTipHtml(kind, note) {
   var html = '<div class="tag-tip-default">' + escapeHtml(TAG_DEFAULT_NOTES[kind] || "") + "</div>";
   if (note) html += '<div class="tag-tip-note">' + escapeHtml(note) + "</div>";
@@ -12059,7 +12596,7 @@ function wireTagTip(elm, kind, note) {
   });
 }
 function tagBadge(kind, label, note) {
-  var b = el("span", kind === "beta" ? "beta-tag" : "recommended-tag", label);
+  var b = el("span", TAG_CLASSES[kind] || "recommended-tag", label);
   wireTagTip(b, kind, note);
   return b;
 }
@@ -12067,10 +12604,10 @@ function tagBadge(kind, label, note) {
 // toggleLabelEl) still gets the same hover behavior — an optional
 // data-note="..." attribute supplies its specific reason.
 function initStaticTagTooltips() {
-  document.querySelectorAll(".beta-tag, .recommended-tag").forEach(function (elm) {
+  document.querySelectorAll(".beta-tag, .recommended-tag, .experimental-tag").forEach(function (elm) {
     if (elm.dataset.tipWired) return;
     elm.dataset.tipWired = "1";
-    var kind = elm.classList.contains("beta-tag") ? "beta" : "recommended";
+    var kind = elm.classList.contains("beta-tag") ? "beta" : elm.classList.contains("experimental-tag") ? "experimental" : "recommended";
     wireTagTip(elm, kind, elm.dataset.note || "");
   });
 }
@@ -12078,12 +12615,14 @@ function toggleLabelEl(it) {
   if (!it.desc) {
     var plain = el("span", null, it.label);
     if (it.beta) plain.appendChild(tagBadge("beta", "Beta", it.betaNote));
+    if (it.experimental) plain.appendChild(tagBadge("experimental", "Experimental", it.experimentalNote));
     if (it.recommended) plain.appendChild(tagBadge("recommended", "Recommended", it.recommendedNote));
     return plain;
   }
   var wrap = el("span", "set-row-text");
   var top = el("span", null, it.label);
   if (it.beta) top.appendChild(tagBadge("beta", "Beta", it.betaNote));
+  if (it.experimental) top.appendChild(tagBadge("experimental", "Experimental", it.experimentalNote));
   if (it.recommended) top.appendChild(tagBadge("recommended", "Recommended", it.recommendedNote));
   wrap.append(top, el("span", "set-row-desc", it.desc));
   return wrap;
@@ -13551,6 +14090,162 @@ function downloadText(filename, text, mime) {
 function slugifyFilename(name) {
   return String(name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "project";
 }
+
+/* ── Export page (HTML / Markdown, with preview + print) ──
+   Triggered from the "Export page" button in the page editor bar. One small
+   piece of state (pgExportState) tracks the panel's current format/options
+   while it's open; everything else is derived from it + the page on demand
+   so the preview, download, and print all stay in sync with the same build
+   functions. */
+var pgExportState = { page: null, format: "html", title: true, meta: true, tags: true, theme: true };
+function exportPageHead(name) {
+  var v = getComputedStyle(document.documentElement).getPropertyValue(name);
+  return (v || "").trim();
+}
+// "Match app theme" pulls the person's live CSS custom properties, so the
+// exported file automatically follows whatever accent/corner/font they've
+// picked in Preferences — no separate palette to keep in sync by hand.
+function pgExportCss(themed) {
+  if (themed) {
+    return [
+      "body{margin:0;padding:40px 48px;background:" + (exportPageHead("--surf") || "#161512") + ";",
+      "color:" + (exportPageHead("--ink") || "#d8d0bd") + ";",
+      "font-family:" + (exportPageHead("--sans") || "sans-serif") + ";font-size:15px;line-height:1.65;}",
+      "h1,h2,h3{font-family:" + (exportPageHead("--serif") || "serif") + ";color:" + (exportPageHead("--ink-hi") || "#f0e9d8") + ";}",
+      ".exp-title{font-size:28px;margin:0 0 6px}",
+      ".exp-meta{font-size:12.5px;color:" + (exportPageHead("--ink-mute") || "#8a8375") + ";margin-bottom:10px}",
+      ".exp-tags{margin-bottom:22px}",
+      ".exp-tag{display:inline-block;font-size:11px;border:1px solid " + (exportPageHead("--border") || "#2b2823") + ";border-radius:5px;padding:2px 7px;margin:0 6px 6px 0;color:inherit}",
+      "a{color:" + (exportPageHead("--sage") || "#9db08e") + "}",
+      "blockquote{margin:0 0 1em;padding:2px 0 2px 14px;border-left:3px solid " + (exportPageHead("--border") || "#2b2823") + ";color:" + (exportPageHead("--ink-dim") || "#c4bca8") + "}",
+      "pre{background:" + (exportPageHead("--surf2") || "#1d1c17") + ";padding:12px 14px;border-radius:8px;overflow:auto}",
+      "code{font-family:ui-monospace,monospace}",
+      "li.task{list-style:none;margin-left:-20px}"
+    ].join("");
+  }
+  // Plain / print-friendly: light background, black ink, no app palette —
+  // this is what Print always uses, and what HTML export falls back to
+  // when "Match app theme" is unchecked.
+  return "body{margin:0;padding:40px 48px;background:#fff;color:#1a1a1a;font-family:Georgia,'Times New Roman',serif;font-size:14px;line-height:1.6;}" +
+    "h1,h2,h3{font-family:Georgia,serif;color:#111}" +
+    ".exp-title{font-size:26px;margin:0 0 6px}" +
+    ".exp-meta{font-size:12px;color:#666;margin-bottom:8px}" +
+    ".exp-tags{margin-bottom:20px}" +
+    ".exp-tag{display:inline-block;font-size:10.5px;border:1px solid #bbb;border-radius:5px;padding:2px 7px;margin:0 6px 6px 0;color:#444}" +
+    "a{color:#1a1a1a}" +
+    "blockquote{margin:0 0 1em;padding:2px 0 2px 14px;border-left:3px solid #ccc;color:#444}" +
+    "pre{background:#f2f2f2;padding:12px 14px;border-radius:6px;overflow:auto}" +
+    "code{font-family:ui-monospace,monospace}" +
+    "li.task{list-style:none;margin-left:-20px}" +
+    "@media print{body{padding:0.4in}}";
+}
+function pgExportMeta(p) {
+  var nb = nbById(p.notebookId);
+  var bits = [];
+  if (nb) bits.push(nb.name);
+  bits.push(new Date(p.updatedAt || p.createdAt || Date.now()).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }));
+  return bits.join(" · ");
+}
+function buildExportHtmlDoc(p, opts, themed) {
+  var body = "";
+  if (opts.title) body += '<div class="exp-title">' + escapeHtml(p.title || "Untitled") + "</div>";
+  if (opts.meta) body += '<div class="exp-meta">' + escapeHtml(pgExportMeta(p)) + "</div>";
+  if (opts.tags && (p.tags || []).length) {
+    body += '<div class="exp-tags">' + p.tags.map(function (t) { return '<span class="exp-tag">' + escapeHtml(t) + "</span>"; }).join("") + "</div>";
+  }
+  body += '<div class="exp-body">' + (p.body || "<p><em>Nothing written yet.</em></p>") + "</div>";
+  var title = escapeHtml(p.title || "Untitled");
+  return "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>" + title + "</title><style>" + pgExportCss(themed) + "</style></head><body>" + body + "</body></html>";
+}
+function buildExportMarkdown(p, opts) {
+  var out = [];
+  if (opts.title) out.push("# " + (p.title || "Untitled"), "");
+  if (opts.meta) out.push("*" + pgExportMeta(p) + "*", "");
+  if (opts.tags && (p.tags || []).length) out.push(p.tags.map(function (t) { return "`" + t + "`"; }).join(" "), "");
+  if (opts.title || opts.meta || (opts.tags && (p.tags || []).length)) out.push("---", "");
+  out.push(htmlToMarkdown(p.body || ""));
+  return out.join("\n");
+}
+function pgExportOpts() {
+  return { title: pgExportState.title, meta: pgExportState.meta, tags: pgExportState.tags };
+}
+function pgExportFilename(p, format) {
+  return slugifyFilename(p.title || "untitled") + (format === "md" ? ".md" : ".html");
+}
+function renderPgExportPreview() {
+  var p = pgExportState.page; if (!p) return;
+  var box = $("pgexport-preview");
+  box.innerHTML = "";
+  if (pgExportState.format === "md") {
+    var pre = el("pre", null, buildExportMarkdown(p, pgExportOpts()));
+    box.appendChild(pre);
+  } else {
+    var frame = document.createElement("iframe");
+    frame.setAttribute("title", "Export preview");
+    box.appendChild(frame);
+    frame.srcdoc = buildExportHtmlDoc(p, pgExportOpts(), pgExportState.theme);
+  }
+  $("pgexport-filename").textContent = "Saves as " + pgExportFilename(p, pgExportState.format);
+}
+function openPageExportModal(p) {
+  if (!p) return;
+  pgExportState.page = p;
+  $("pgexport-overlay").querySelectorAll(".pgexport-format-switch [data-fmt]").forEach(function (b) {
+    var active = b.dataset.fmt === pgExportState.format;
+    b.classList.toggle("active", active);
+    b.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  $("pgexp-opt-title").checked = pgExportState.title;
+  $("pgexp-opt-meta").checked = pgExportState.meta;
+  $("pgexp-opt-tags").checked = pgExportState.tags;
+  $("pgexp-opt-theme").checked = pgExportState.theme;
+  $("pgexp-theme-row").style.display = pgExportState.format === "md" ? "none" : "flex";
+  renderPgExportPreview();
+  $("pgexport-overlay").classList.add("show");
+}
+function closePageExportModal() { $("pgexport-overlay").classList.remove("show"); }
+$("export-pg-btn").addEventListener("click", function () { var p = curPage(); if (p) openPageExportModal(p); });
+$("pgexport-close").addEventListener("click", closePageExportModal);
+$("pgexport-cancel").addEventListener("click", closePageExportModal);
+$("pgexport-overlay").addEventListener("click", function (e) { if (e.target === this) closePageExportModal(); });
+$("pgexport-overlay").querySelectorAll(".pgexport-format-switch [data-fmt]").forEach(function (b) {
+  b.addEventListener("click", function () {
+    pgExportState.format = b.dataset.fmt;
+    $("pgexport-overlay").querySelectorAll(".pgexport-format-switch [data-fmt]").forEach(function (o) {
+      o.classList.toggle("active", o === b);
+      o.setAttribute("aria-selected", o === b ? "true" : "false");
+    });
+    $("pgexp-theme-row").style.display = pgExportState.format === "md" ? "none" : "flex";
+    renderPgExportPreview();
+  });
+});
+[["pgexp-opt-title", "title"], ["pgexp-opt-meta", "meta"], ["pgexp-opt-tags", "tags"], ["pgexp-opt-theme", "theme"]].forEach(function (pair) {
+  $(pair[0]).addEventListener("change", function () { pgExportState[pair[1]] = this.checked; renderPgExportPreview(); });
+});
+$("pgexport-download").addEventListener("click", function () {
+  var p = pgExportState.page; if (!p) return;
+  var format = pgExportState.format;
+  var filename = pgExportFilename(p, format);
+  if (format === "md") downloadText(filename, buildExportMarkdown(p, pgExportOpts()), "text/markdown");
+  else downloadText(filename, buildExportHtmlDoc(p, pgExportOpts(), pgExportState.theme), "text/html");
+  toast("Exported \u201c" + (p.title || "Untitled") + "\u201d");
+});
+$("pgexport-print").addEventListener("click", function () {
+  var p = pgExportState.page; if (!p) return;
+  // Print always renders with the plain, light print-friendly stylesheet
+  // (regardless of the Markdown/HTML + theme choices above, which are for
+  // the downloaded file) — dark-themed pages print badly and waste ink.
+  var doc = buildExportHtmlDoc(p, pgExportOpts(), false);
+  var frame = document.createElement("iframe");
+  frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
+  document.body.appendChild(frame);
+  frame.srcdoc = doc;
+  frame.onload = function () {
+    try { frame.contentWindow.focus(); frame.contentWindow.print(); }
+    catch (e) { toast("Couldn't open the print dialog"); }
+    setTimeout(function () { document.body.removeChild(frame); }, 1000);
+  };
+});
 function exportJSON() {
   flushSave();
   var pid = workspace.activeProjectId;
@@ -14452,6 +15147,7 @@ function boot() {
     (state.sel.tab === "entries" && state.sel.entry) ||
     (state.sel.tab === "timelines" && state.sel.tl);
   if (hasDetail && window.innerWidth >= 768) document.body.classList.add("mobile-editor");
+  applyPgTasksPanelState();
   renderAll();
   initStaticTagTooltips();
   if (!state.settings.onboarded) openOnboarding();
