@@ -2838,6 +2838,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
           </div>
           <div class="wk-row wk-rest-row" id="wk-rest-row">
             <span class="note" id="wk-rest-note"></span>
+            <button id="wk-resttoken-history-btn" class="wk-achieve-history-btn" type="button">History</button>
             <button class="foot-btn" id="wk-rest-other-btn" style="min-height:34px;padding:6px 10px;font-size:11px">Mark another day\u2026</button>
             <button class="foot-btn" id="wk-rest-btn" style="min-height:34px;padding:6px 12px">Take a rest day</button>
           </div>
@@ -3916,6 +3917,7 @@ function blankState() {
     restDays: {},
     restTokens: 0,
     restTokensV2: true,
+    restTokenLog: [],
     plans: [],
     lastGoalWeekAwarded: null,
     goalTokenCheckedThrough: null,
@@ -4060,6 +4062,31 @@ function normalizeState(s) {
     earned += (s.overachieve && s.overachieve.record) || 0;
     var spent = Object.keys(s.restDays || {}).filter(function (k) { return s.restDays[k]; }).length;
     s.restTokens = Math.min(REST_TOKEN_CAP, Math.max(0, earned - spent));
+  });
+  safe("restTokenLog", function () {
+    s.restTokenLog = (Array.isArray(s.restTokenLog) ? s.restTokenLog : []).filter(function (h) {
+      return h && typeof h === "object" && typeof h.ts === "number" && typeof h.delta === "number" && h.delta !== 0;
+    }).map(function (h) {
+      return {
+        ts: +h.ts, delta: Math.round(h.delta),
+        reason: typeof h.reason === "string" ? h.reason : "",
+        weekKey: typeof h.weekKey === "string" ? h.weekKey : null,
+        dayKey: typeof h.dayKey === "string" ? h.dayKey : null
+      };
+    });
+    if (s.restTokenLog.length > 500) s.restTokenLog.splice(0, s.restTokenLog.length - 500);
+  });
+  if (!Array.isArray(s.restTokenLog)) s.restTokenLog = [];
+  // An existing save can already have a nonzero balance from before this log
+  // existed (or from the recalculation just above, which replays history in
+  // bulk with no per-event dates to log). Seed one "starting balance" entry
+  // so the log doesn't read as suspiciously empty for someone who already
+  // has tokens banked — only fires once, since after that the log is never
+  // empty again.
+  safe("restTokenLogSeed", function () {
+    if (s.restTokenLog.length === 0 && s.restTokens > 0) {
+      s.restTokenLog.push({ ts: Date.now(), delta: s.restTokens, reason: "starting-balance", weekKey: null, dayKey: null });
+    }
   });
   safe("plans", function () {
     s.plans = (Array.isArray(s.plans) ? s.plans : []).map(function (p) {
@@ -4517,7 +4544,7 @@ var workspace = null;
 // project's data loads or normalizes, and syncGlobalFieldsBack() resyncs
 // workspace afterward in case normalizeState() rebuilt one as a new
 // object rather than editing in place.
-var GLOBAL_FIELDS = ["settings", "customProjectTypes", "sessions", "plans", "restDays", "restTokens", "restTokensV2",
+var GLOBAL_FIELDS = ["settings", "customProjectTypes", "sessions", "plans", "restDays", "restTokens", "restTokensV2", "restTokenLog",
   "runningSession", "weeklyTarget", "weeklyGoals", "medalProgress", "bestStreak", "overachieve", "medalPrestige",
   "medalBest", "medalHistory", "lastGoalWeekAwarded", "goalTokenCheckedThrough"];
 function attachGlobalFields() { GLOBAL_FIELDS.forEach(function (k) { state[k] = workspace[k]; }); }
@@ -4580,7 +4607,7 @@ function workspaceFromRaw(raw) {
 // reused from GLOBAL_FIELDS, since that constant now means something
 // different (just settings/customProjectTypes) — both migrations need the
 // *old* meaning to know what they're moving.
-var LEGACY_GLOBAL_PRODUCTIVITY_FIELDS = ["restDays", "restTokens", "restTokensV2", "runningSession",
+var LEGACY_GLOBAL_PRODUCTIVITY_FIELDS = ["restDays", "restTokens", "restTokensV2", "restTokenLog", "runningSession",
   "weeklyTarget", "weeklyGoals", "medalProgress", "bestStreak", "overachieve", "medalPrestige", "medalBest", "medalHistory",
   "lastGoalWeekAwarded", "goalTokenCheckedThrough", "budget", "budgetLimit", "budgets", "products"];
 // One-time upgrade for a workspace saved before sessions/plans/goals/
@@ -4676,7 +4703,7 @@ var V5_GLOBAL_FIELDS = ["settings", "customProjectTypes"];
 // useful in practice — nobody wants their weekly goal or streak reset just
 // by switching projects mid-week — so this un-does that half of v4→v5
 // while leaving Management's per-project split alone.
-var PRODUCTIVITY_GLOBAL_FIELDS = ["restDays", "restTokens", "restTokensV2", "runningSession",
+var PRODUCTIVITY_GLOBAL_FIELDS = ["restDays", "restTokens", "restTokensV2", "restTokenLog", "runningSession",
   "weeklyTarget", "weeklyGoals", "medalProgress", "bestStreak", "overachieve", "medalPrestige", "medalBest", "medalHistory",
   "lastGoalWeekAwarded", "goalTokenCheckedThrough"];
 // One-time re-merge (v5 → v6): Productivity's sessions/plans/goals/streaks/
@@ -8419,6 +8446,17 @@ function ensureOverachieveChallenge() {
    already moved past the week that cleared it. Weeks before this fix shipped
    aren't backfilled (there's no per-week ledger to check them safely against
    without risking a double-count), but nothing slips through from here on. */
+// One entry per earn/spend/refund, so "Rest token history" (showRestTokenLogModal,
+// near takeRestDay below) can show where every token came from and where it
+// went — not just the current running balance.
+function pushRestTokenLog(delta, reason, extra) {
+  if (!Array.isArray(state.restTokenLog)) state.restTokenLog = [];
+  state.restTokenLog.push({
+    ts: Date.now(), delta: delta, reason: reason,
+    weekKey: (extra && extra.weekKey) || null, dayKey: (extra && extra.dayKey) || null
+  });
+  if (state.restTokenLog.length > 500) state.restTokenLog.splice(0, state.restTokenLog.length - 500);
+}
 function checkOverachieveProgress() {
   ensureOverachieveChallenge();
   var changed = false;
@@ -8437,6 +8475,7 @@ function checkOverachieveProgress() {
       // (see checkGoalWeekTokenAward), clearing this earns a second, so a
       // strong week tops out around 2 tokens instead of an unbounded pile.
       state.restTokens = Math.min(REST_TOKEN_CAP, (state.restTokens || 0) + 1);
+      pushRestTokenLog(1, "overachieve", { weekKey: pastKey });
       changed = true;
     }
     state.overachieve.checkedThrough = pastKey;
@@ -8449,6 +8488,7 @@ function checkOverachieveProgress() {
     state.overachieve.lastClearedWeek = wk;
     state.overachieve.challenge = Math.round((state.overachieve.challenge + overachieveStep()) * 2) / 2;
     state.restTokens = Math.min(REST_TOKEN_CAP, (state.restTokens || 0) + 1);
+    pushRestTokenLog(1, "overachieve", { weekKey: wk });
     changed = true;
   }
   return changed;
@@ -8682,6 +8722,7 @@ function checkGoalWeekTokenAward() {
     var pastHrs = weekSecondsFor(wTs) / 3600;
     if (pastGoal > 0 && pastHrs >= pastGoal && state.lastGoalWeekAwarded !== pastKey) {
       state.restTokens = Math.min(REST_TOKEN_CAP, (state.restTokens || 0) + 1);
+      pushRestTokenLog(1, "goal", { weekKey: pastKey });
       state.lastGoalWeekAwarded = pastKey;
       changed = true;
     }
@@ -8694,6 +8735,7 @@ function checkGoalWeekTokenAward() {
   var hrs = weekSeconds() / 3600;
   if (goal > 0 && hrs >= goal && state.lastGoalWeekAwarded !== wk) {
     state.restTokens = Math.min(REST_TOKEN_CAP, (state.restTokens || 0) + 1);
+    pushRestTokenLog(1, "goal", { weekKey: wk });
     state.lastGoalWeekAwarded = wk;
     changed = true;
   }
@@ -9374,11 +9416,97 @@ function renderRestRow() {
   btn.disabled = rested ? false : tokens <= 0;
   $("wk-rest-other-btn").disabled = tokens <= 0 && !rested;
 }
+/* ── Rest token history — where each token came from and where it went,
+   not just the running balance renderRestRow shows. Mirrors the Medal
+   history modal (showMedalHistoryModal) almost exactly: same month-grouped
+   list, same filter-chip pattern, same modal shell. */
+function restTokenDayLabel(dayKeyStr) {
+  return dayKeyStr ? new Date(dayKeyToTs(dayKeyStr)).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
+}
+function restTokenLogLabel(entry) {
+  if (entry.reason === "goal") return "Earned \u2014 hit weekly goal (" + weekRangeLabel(weekKeyToTs(entry.weekKey)) + ")";
+  if (entry.reason === "overachieve") return "Earned \u2014 cleared overachieve challenge (" + weekRangeLabel(weekKeyToTs(entry.weekKey)) + ")";
+  if (entry.reason === "spend") return "Spent \u2014 rest day on " + restTokenDayLabel(entry.dayKey);
+  if (entry.reason === "refund-undo") return "Refunded \u2014 undid rest day on " + restTokenDayLabel(entry.dayKey);
+  if (entry.reason === "refund-logged") return "Refunded \u2014 logged work after marking " + restTokenDayLabel(entry.dayKey) + " as rested";
+  if (entry.reason === "starting-balance") return "Starting balance carried over";
+  return entry.delta > 0 ? "Earned" : "Spent";
+}
+function restTokenLogMonthLabel(ts) { return new Date(ts).toLocaleDateString(undefined, { month: "long", year: "numeric" }); }
+var restTokenLogFilter = "all";
+function renderRestTokenLogList(container) {
+  container.innerHTML = "";
+  var items = (state.restTokenLog || []).slice().sort(function (a, b) { return b.ts - a.ts; });
+  if (restTokenLogFilter === "earned") items = items.filter(function (it) { return it.delta > 0; });
+  else if (restTokenLogFilter === "spent") items = items.filter(function (it) { return it.delta < 0; });
+  if (!items.length) {
+    var empty = el("div", null, restTokenLogFilter === "all" ? "No rest token activity yet \u2014 hit a weekly goal to earn your first one." : "Nothing yet for this filter.");
+    empty.style.cssText = "font-size:12.5px;color:var(--ink-mute);padding:8px 2px";
+    container.appendChild(empty);
+    return;
+  }
+  var lastMonth = null;
+  items.forEach(function (it) {
+    var month = restTokenLogMonthLabel(it.ts);
+    if (month !== lastMonth) {
+      var head = el("div", null, month);
+      head.style.cssText = "font-size:10.5px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-mute);margin:" + (lastMonth === null ? "2px" : "12px") + " 0 4px;padding:0 2px";
+      container.appendChild(head);
+      lastMonth = month;
+    }
+    var row = el("div");
+    row.style.cssText = "display:flex;align-items:center;gap:9px;padding:5px 2px;font-size:12.5px;color:var(--ink)";
+    var badge = el("span", null, it.delta > 0 ? "+" + it.delta : String(it.delta));
+    badge.style.cssText = "flex-shrink:0;width:24px;text-align:center;font-weight:700;font-size:11px;border-radius:4px;padding:2px 0;" +
+      (it.delta > 0 ? "color:var(--sage);background:var(--sage-bg)" : "color:var(--amber);background:rgba(194,158,106,0.16)");
+    var label = el("span", null, restTokenLogLabel(it));
+    label.style.flex = "1";
+    var date = el("span", null, new Date(it.ts).toLocaleDateString(undefined, { month: "short", day: "numeric" }));
+    date.style.cssText = "color:var(--ink-mute);flex-shrink:0;font-size:11px";
+    row.append(badge, label, date);
+    container.appendChild(row);
+  });
+}
+function buildRestTokenLogFilters(container, onChange) {
+  container.innerHTML = "";
+  container.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px";
+  [["all", "All"], ["earned", "Earned"], ["spent", "Spent"]].forEach(function (pair) {
+    var chip = el("button", "wk-medal-reset", pair[1]);
+    chip.style.cssText = "margin-top:0;font-size:10.5px;padding:4px 9px" +
+      (restTokenLogFilter === pair[0] ? ";border-color:var(--sage-bd);color:var(--sage);background:var(--sage-bg)" : "");
+    chip.addEventListener("click", function () {
+      restTokenLogFilter = pair[0];
+      buildRestTokenLogFilters(container, onChange);
+      onChange();
+    });
+    container.appendChild(chip);
+  });
+}
+function showRestTokenLogModal() {
+  restTokenLogFilter = "all";
+  openModal("Rest token history", "");
+  var extra = $modal("modal-extra");
+  var hasAny = (state.restTokenLog || []).length > 0;
+  var list = el("div");
+  list.style.cssText = "max-height:44vh;overflow-y:auto";
+  if (hasAny) {
+    var filterWrap = el("div");
+    extra.appendChild(filterWrap);
+    buildRestTokenLogFilters(filterWrap, function () { renderRestTokenLogList(list); });
+  }
+  extra.appendChild(list);
+  renderRestTokenLogList(list);
+  var row = $modal("modal-row");
+  var close = el("button", "primary", "Close");
+  close.addEventListener("click", closeModal);
+  row.appendChild(close);
+}
 function takeRestDay() {
   var today = dayKey();
   if (isRestedDay(today) || (state.restTokens || 0) <= 0) return;
   state.restDays[today] = true;
   state.restTokens--;
+  pushRestTokenLog(-1, "spend", { dayKey: today });
   persist();
   renderWorkTab();
   toast("Enjoy the day off — your streak is frozen, not broken.");
@@ -9390,6 +9518,7 @@ function undoRestDay() {
   if (!isRestedDay(today)) return;
   delete state.restDays[today];
   state.restTokens = Math.min(REST_TOKEN_CAP, (state.restTokens || 0) + 1);
+  pushRestTokenLog(1, "refund-undo", { dayKey: today });
   persist();
   renderWorkTab();
   toast("Rest day undone — token refunded.");
@@ -9414,6 +9543,7 @@ function openMarkRestDayModal() {
     if ((state.restTokens || 0) <= 0) { closeModal(); toast("No rest tokens to spend yet."); return; }
     state.restDays[k] = true;
     state.restTokens--;
+    pushRestTokenLog(-1, "spend", { dayKey: k });
     persist(); renderWorkTab();
     closeModal();
     toast("Marked " + k + " as a rest day.");
@@ -9421,6 +9551,7 @@ function openMarkRestDayModal() {
   row.append(cancel, ok);
 }
 $("wk-rest-other-btn").addEventListener("click", openMarkRestDayModal);
+$("wk-resttoken-history-btn").addEventListener("click", showRestTokenLogModal);
 $("wk-toggle").addEventListener("click", startStopWork);
 $("wk-label").addEventListener("input", function () {
   if (state.runningSession) { state.runningSession.label = this.value.trim(); scheduleSave(); }
@@ -9457,6 +9588,7 @@ $("wk-log").addEventListener("click", function () {
         function () {
           delete state.restDays[dateKey];
           state.restTokens = Math.min(REST_TOKEN_CAP, (state.restTokens || 0) + 1);
+          pushRestTokenLog(1, "refund-logged", { dayKey: dateKey });
           commitLoggedTime(dateKey, secs);
         }
       );
@@ -12197,7 +12329,7 @@ var SNAPSHOT_PARTS = [
   { key: "pages", label: "Pages & notebooks", fields: ["notebooks", "pages", "topics"] },
   { key: "entries", label: "Entries", fields: ["entries", "entryTypes", "tagPresets"] },
   { key: "timelines", label: "Timelines", fields: ["timelines"] },
-  { key: "work", label: "Work sessions & goals", fields: ["sessions", "weeklyTarget", "weeklyGoals", "restDays", "restTokens", "restTokensV2", "medalProgress", "bestStreak", "overachieve", "medalPrestige", "lastGoalWeekAwarded", "goalTokenCheckedThrough", "medalBest", "medalHistory"] },
+  { key: "work", label: "Work sessions & goals", fields: ["sessions", "weeklyTarget", "weeklyGoals", "restDays", "restTokens", "restTokensV2", "restTokenLog", "medalProgress", "bestStreak", "overachieve", "medalPrestige", "lastGoalWeekAwarded", "goalTokenCheckedThrough", "medalBest", "medalHistory"] },
   { key: "calendar", label: "Calendar plans", fields: ["plans"] },
   { key: "management", label: "Management (budget & products)", fields: ["budget", "budgetLimit", "budgets", "products"] },
   { key: "settings", label: "Preferences", fields: ["settings", "hidden", "projectType"] }
@@ -14262,7 +14394,7 @@ function exportJSON() {
     sessions: ownSessions, weeklyTarget: state.weeklyTarget, weeklyGoals: state.weeklyGoals, graphPos: state.graphPos,
     tagPresets: state.tagPresets, settings: state.settings, hidden: state.hidden, projectType: state.projectType,
     medalProgress: state.medalProgress, bestStreak: state.bestStreak,
-    overachieve: state.overachieve, restDays: state.restDays, restTokens: state.restTokens, restTokensV2: state.restTokensV2,
+    overachieve: state.overachieve, restDays: state.restDays, restTokens: state.restTokens, restTokensV2: state.restTokensV2, restTokenLog: state.restTokenLog,
     plans: ownPlans,
     lastGoalWeekAwarded: state.lastGoalWeekAwarded, goalTokenCheckedThrough: state.goalTokenCheckedThrough,
     medalPrestige: state.medalPrestige, medalBest: state.medalBest, medalHistory: state.medalHistory,
@@ -14314,7 +14446,7 @@ function exportFullBackup() {
         weeklyTarget: state.weeklyTarget, weeklyGoals: state.weeklyGoals,
         medalProgress: state.medalProgress, bestStreak: state.bestStreak, overachieve: state.overachieve,
         medalPrestige: state.medalPrestige, medalBest: state.medalBest, medalHistory: state.medalHistory,
-        restDays: state.restDays, restTokens: state.restTokens, restTokensV2: state.restTokensV2,
+        restDays: state.restDays, restTokens: state.restTokens, restTokensV2: state.restTokensV2, restTokenLog: state.restTokenLog,
         lastGoalWeekAwarded: state.lastGoalWeekAwarded, goalTokenCheckedThrough: state.goalTokenCheckedThrough
       },
       projects: projects
@@ -14777,6 +14909,7 @@ function importNotebookData(data) {
   if (data.restDays && typeof data.restDays === "object") s.restDays = data.restDays;
   if (typeof data.restTokens === "number") s.restTokens = data.restTokens;
   if (typeof data.restTokensV2 === "boolean") s.restTokensV2 = data.restTokensV2;
+  if (Array.isArray(data.restTokenLog)) s.restTokenLog = data.restTokenLog;
   if (Array.isArray(data.budget)) s.budget = data.budget;
   if (typeof data.budgetLimit === "number") s.budgetLimit = data.budgetLimit;
   if (Array.isArray(data.budgets)) s.budgets = data.budgets;
