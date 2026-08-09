@@ -544,6 +544,24 @@ body.saved-flash .save-rule::after { transform: scaleX(1); }
 }
 .prose pre code { background: none; border: none; padding: 0; font-size: 12.5px; line-height: 1.6; }
 .prose hr { border: none; border-top: 1px solid var(--border); margin: 1.3em 0; }
+.prose table {
+  border-collapse: collapse; width: 100%; margin: 0.8em 0; font-size: 13.5px;
+  border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+}
+.prose th, .prose td {
+  border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top;
+}
+.prose th { background: var(--surf2); color: var(--ink-hi); font-weight: 600; }
+.prose tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+.prose td:focus, .prose th:focus { outline: 1px solid var(--sage-bd); outline-offset: -1px; }
+/* Editor-only hint that a cell can be right-clicked (or reached via the
+   Table toolbar button) for row/column management — not shown in the
+   read-only export preview, where there's nothing to manage. */
+#pg-rich .prose td, #pg-rich .prose th { position: relative; cursor: cell; }
+#pg-rich .prose td:hover::after, #pg-rich .prose th:hover::after {
+  content: "\22EE"; position: absolute; top: 1px; right: 3px;
+  font-size: 10px; line-height: 1; color: var(--ink-mute); opacity: 0.6; pointer-events: none;
+}
 .prose a { color: var(--sage); text-decoration: none; border-bottom: 1px solid var(--sage-bd); }
 .prose a:hover { border-bottom-color: var(--sage); }
 .prose strong, .prose b { color: var(--ink-hi); }
@@ -2584,6 +2602,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
               <button data-cmd="ol" title="Numbered list" aria-label="Numbered list">1. List</button>
               <button data-cmd="quote" title="Quote" aria-label="Quote">❝</button>
               <button data-cmd="code" title="Code block" aria-label="Code block">‹/›</button>
+              <button data-cmd="table" title="Table — insert new, or manage rows/columns if the caret is already in one" aria-label="Insert or manage table">Table</button>
               <span class="sep"></span>
               <button data-cmd="link" title="Link — web address or topic" aria-label="Link — web address or topic">Link</button>
               <button data-cmd="clear" title="Clear formatting" aria-label="Clear formatting">Clear</button>
@@ -3470,6 +3489,19 @@ function inlineMd(s) {
   s = s.replace(/\u0000(\d+)\u0000/g, function (_, i) { return codes[+i]; });
   return s;
 }
+function splitMdTableRow(line) {
+  var t = line.trim();
+  if (t.charAt(0) === "|") t = t.slice(1);
+  if (t.charAt(t.length - 1) === "|") t = t.slice(0, -1);
+  return t.split("|").map(function (c) { return c.trim(); });
+}
+// A GFM-style separator row — "| --- | :---: | ---: |" (or without the
+// outer pipes) — is what tells renderMd the previous line was a table
+// header rather than an ordinary paragraph with some pipe characters in it.
+function isMdTableSep(line) {
+  var cells = splitMdTableRow(line);
+  return cells.length > 0 && cells.every(function (c) { return /^:?-{1,}:?$/.test(c); });
+}
 function renderMd(src) {
   if (!src || !src.trim()) return '<p style="color:var(--ink-mute);font-style:italic">Nothing written yet.</p>';
   var lines = escapeHtml(src.replace(/\r\n?/g, "\n")).split("\n");
@@ -3501,6 +3533,20 @@ function renderMd(src) {
       var q = [m[1]];
       while (i + 1 < lines.length && /^&gt;\s?/.test(lines[i + 1])) { i++; q.push(lines[i].replace(/^&gt;\s?/, "")); }
       out.push("<blockquote><p>" + inlineMd(q.join("<br>")) + "</p></blockquote>");
+    } else if (/\|/.test(ln) && i + 1 < lines.length && isMdTableSep(lines[i + 1])) {
+      flushPara(); flushList();
+      var headCells = splitMdTableRow(ln);
+      i++; // consume the separator row
+      var bodyRows = [];
+      while (i + 1 < lines.length && /\|/.test(lines[i + 1]) && lines[i + 1].trim() !== "") {
+        i++;
+        bodyRows.push(splitMdTableRow(lines[i]));
+      }
+      var thead = "<thead><tr>" + headCells.map(function (c) { return "<th>" + inlineMd(c) + "</th>"; }).join("") + "</tr></thead>";
+      var tbody = "<tbody>" + bodyRows.map(function (row) {
+        return "<tr>" + row.map(function (c) { return "<td>" + inlineMd(c) + "</td>"; }).join("") + "</tr>";
+      }).join("") + "</tbody>";
+      out.push("<table>" + thead + tbody + "</table>");
     } else if ((m = ln.match(/^\s*[-*+]\s+\[( |x|X)\]\s+(.*)$/))) {
       flushPara();
       if (!list || list.type !== "ul") { flushList(); list = { type: "ul", items: [] }; }
@@ -3527,7 +3573,7 @@ function renderMd(src) {
 /* MD-END */
 
 /* ── Rich-text (page editor) helpers ── */
-var ALLOWED_TAGS = { P: 1, BR: 1, DIV: 1, H1: 1, H2: 1, H3: 1, STRONG: 1, B: 1, EM: 1, I: 1, U: 1, S: 1, DEL: 1, UL: 1, OL: 1, LI: 1, BLOCKQUOTE: 1, PRE: 1, CODE: 1, A: 1, SPAN: 1 };
+var ALLOWED_TAGS = { P: 1, BR: 1, DIV: 1, H1: 1, H2: 1, H3: 1, STRONG: 1, B: 1, EM: 1, I: 1, U: 1, S: 1, DEL: 1, UL: 1, OL: 1, LI: 1, BLOCKQUOTE: 1, PRE: 1, CODE: 1, A: 1, SPAN: 1, TABLE: 1, THEAD: 1, TBODY: 1, TR: 1, TH: 1, TD: 1 };
 function sanitizeHtml(html) {
   var tmp = document.createElement("div");
   tmp.innerHTML = String(html == null ? "" : html);
@@ -3574,7 +3620,7 @@ function htmlToText(html) {
   var d = document.createElement("div");
   d.innerHTML = String(html == null ? "" : html)
     .replace(/<br\s*\/?>/gi, " ")
-    .replace(/<\/(p|h[1-6]|li|div|blockquote|pre|ul|ol)>/gi, " ");
+    .replace(/<\/(p|h[1-6]|li|div|blockquote|pre|ul|ol|tr|td|th)>/gi, " ");
   return (d.textContent || "").replace(/\s+/g, " ").trim();
 }
 /* Convert a page body to HTML once (old markdown bodies → HTML). */
@@ -3653,6 +3699,20 @@ function htmlToMarkdown(html) {
           lines.push(prefix + inline(li).trim());
         });
         lines.push("");
+      } else if (tag === "TABLE") {
+        var headRow = ch.querySelector("thead tr");
+        var bodyRowEls = Array.prototype.slice.call(ch.querySelectorAll("tbody tr"));
+        if (!headRow && ch.rows.length) { headRow = ch.rows[0]; bodyRowEls = Array.prototype.slice.call(ch.rows).slice(1); }
+        if (headRow) {
+          var mdCell = function (c) { return (inline(c).trim() || " ").replace(/\r?\n/g, " ").replace(/\|/g, "\\|"); };
+          var headCells = Array.prototype.map.call(headRow.children, mdCell);
+          lines.push("| " + headCells.join(" | ") + " |");
+          lines.push("| " + headCells.map(function () { return "---"; }).join(" | ") + " |");
+          bodyRowEls.forEach(function (r) {
+            lines.push("| " + Array.prototype.map.call(r.children, mdCell).join(" | ") + " |");
+          });
+          lines.push("");
+        }
       } else if (tag === "DIV") {
         block(ch);
       }
@@ -5911,12 +5971,216 @@ function closestLi(node) {
   }
   return null;
 }
+// True for an <li> with nothing in it worth keeping — ignores a task
+// checkbox <input> (an empty checked/unchecked task item still counts as
+// "empty" text-wise) but leaves an <li> holding a nested sub-list alone,
+// since exiting through one of those needs more care than this handles.
+function isLiEmpty(li) {
+  if (li.querySelector("ul, ol")) return false;
+  var clone = li.cloneNode(true);
+  var cb = clone.querySelector('input[type="checkbox"]');
+  if (cb) cb.remove();
+  return clone.textContent.replace(/\u200b/g, "").trim() === "";
+}
+// Moves an empty <li> out of its list into a new paragraph, splitting the
+// list around it if it's in the middle, or removing the list entirely if
+// it was the only item. This exists because browsers' native "Enter on an
+// empty list item exits the list" behavior is unreliable in contenteditable
+// — especially when the list is the last element in the editor, which is
+// exactly what markdown-imported pages usually look like — so a list could
+// look permanently stuck with no way to type past it. Handling this
+// ourselves makes exiting a list behave the same regardless of where it
+// sits or how it got there.
+function exitEmptyListItem(li) {
+  var listEl = li.parentNode;
+  var p = document.createElement("p");
+  p.appendChild(document.createElement("br"));
+  if (li.previousElementSibling && li.nextElementSibling) {
+    var secondList = document.createElement(listEl.tagName);
+    var after = li.nextElementSibling;
+    while (after) { var next = after.nextElementSibling; secondList.appendChild(after); after = next; }
+    listEl.parentNode.insertBefore(p, listEl.nextSibling);
+    listEl.parentNode.insertBefore(secondList, p.nextSibling);
+    li.parentNode.removeChild(li);
+  } else if (li.previousElementSibling) {
+    li.parentNode.removeChild(li);
+    listEl.parentNode.insertBefore(p, listEl.nextSibling);
+  } else if (li.nextElementSibling) {
+    li.parentNode.removeChild(li);
+    listEl.parentNode.insertBefore(p, listEl);
+  } else {
+    listEl.parentNode.insertBefore(p, listEl);
+    listEl.parentNode.removeChild(listEl);
+  }
+  var range = document.createRange();
+  range.setStart(p, 0);
+  range.collapse(true);
+  var sel = (Popout.activeWin() || window).getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  commitRich();
+}
 function closestATag(node) {
   while (node && node !== pgRich) {
     if (node.nodeType === 1 && node.tagName === "A") return node;
     node = node.parentNode;
   }
   return null;
+}
+function closestCell(node) {
+  while (node && node !== pgRich) {
+    if (node.nodeType === 1 && (node.tagName === "TD" || node.tagName === "TH")) return node;
+    node = node.parentNode;
+  }
+  return null;
+}
+// Tab / Shift+Tab move the caret to the next / previous cell, in document
+// order, wrapping across rows but not past the start/end of the table —
+// there's no execCommand equivalent for this, so it's handled by hand the
+// same way list indent/outdent is above.
+function moveToAdjacentCell(cell, backwards) {
+  var table = cell.closest ? cell.closest("table") : null;
+  if (!table) return;
+  var cells = Array.prototype.slice.call(table.querySelectorAll("td, th"));
+  var idx = cells.indexOf(cell);
+  var target = cells[idx + (backwards ? -1 : 1)];
+  if (!target) {
+    if (backwards) return; // nothing before the first cell
+    // Tab from the very last cell grows the table with a new row and moves
+    // into it, the same way spreadsheets and most table-in-a-doc editors
+    // behave — the fastest way to keep adding as you go without reaching
+    // for the Table toolbar button each time (see openTableManageModal for
+    // inserting elsewhere, or removing rows/columns).
+    var newRow = insertTableRowAt(table.rows[table.rows.length - 1], true);
+    target = newRow.cells[0];
+    commitRich();
+  }
+  var range = document.createRange();
+  range.selectNodeContents(target);
+  range.collapse(true);
+  var sel = (Popout.activeWin() || window).getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+/* ── Table row/column management — "+ Table" on the toolbar opens this
+   instead of inserting a fresh table whenever the caret is already inside
+   one, so a starter 2x2 is just a starting point, not a hard limit. Uses
+   the browser's own table.rows / row.cells / cell.cellIndex (they already
+   span thead+tbody correctly) rather than hand-rolled index tracking. */
+function insertTableRowAt(refRow, after) {
+  var newRow = document.createElement("tr");
+  var colCount = refRow.cells.length;
+  for (var i = 0; i < colCount; i++) newRow.appendChild(document.createElement("td"));
+  refRow.parentNode.insertBefore(newRow, after ? refRow.nextSibling : refRow);
+  return newRow;
+}
+function insertTableColumnAt(table, colIndex, after) {
+  Array.prototype.forEach.call(table.rows, function (row) {
+    var refCell = row.cells[colIndex];
+    if (!refCell) return;
+    var newCell = document.createElement(refCell.tagName); // TH stays TH in the header row, TD elsewhere
+    row.insertBefore(newCell, after ? refCell.nextSibling : refCell);
+  });
+}
+function openTableManageModal(startCell) {
+  var table = startCell.closest("table");
+  if (!table) return;
+  var current = startCell;
+  function refreshCurrent() {
+    if (!table.isConnected || !current || !current.isConnected || !table.contains(current)) {
+      current = (table.rows[0] && table.rows[0].cells[0]) || null;
+    }
+  }
+  openModal("Manage table", "Add or remove rows and columns, or delete the whole table.");
+  var extra = $modal("modal-extra");
+  var grid = el("div");
+  grid.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px";
+  function actionBtn(label, danger, fn) {
+    var b = el("button", "foot-btn", label);
+    b.style.cssText = "min-height:36px" + (danger ? ";color:var(--red);border-color:#4a342e" : "");
+    b.addEventListener("click", function () {
+      if (!table.isConnected) { toast("That table is gone."); closeModal(); return; }
+      refreshCurrent();
+      if (!current) { toast("The table is empty."); return; }
+      fn();
+      commitRich();
+      refreshCurrent();
+    });
+    grid.appendChild(b);
+    return b;
+  }
+  actionBtn("+ Row above", false, function () { insertTableRowAt(current.closest("tr"), false); });
+  actionBtn("+ Row below", false, function () { insertTableRowAt(current.closest("tr"), true); });
+  actionBtn("+ Column left", false, function () { insertTableColumnAt(table, current.cellIndex, false); });
+  actionBtn("+ Column right", false, function () { insertTableColumnAt(table, current.cellIndex, true); });
+  actionBtn("Delete row", true, function () {
+    if (table.rows.length <= 1) { toast("A table needs at least one row \u2014 delete the table instead."); return; }
+    current.closest("tr").remove();
+  });
+  actionBtn("Delete column", true, function () {
+    if (!table.rows.length || table.rows[0].cells.length <= 1) { toast("A table needs at least one column \u2014 delete the table instead."); return; }
+    var idx = current.cellIndex;
+    Array.prototype.forEach.call(table.rows, function (row) { if (row.cells[idx]) row.cells[idx].remove(); });
+  });
+  extra.appendChild(grid);
+  var delTable = el("button", "danger", "Delete whole table");
+  delTable.style.cssText = "margin-top:10px;width:100%;min-height:36px";
+  delTable.addEventListener("click", function () {
+    closeModal();
+    confirmModal("Delete this table?", "This removes the whole table and everything in it.", "Delete table", function () {
+      table.remove();
+      commitRich();
+    });
+  });
+  extra.appendChild(delTable);
+  var row = $modal("modal-row");
+  var done = el("button", "primary", "Done");
+  done.addEventListener("click", closeModal);
+  row.appendChild(done);
+}
+// The floating alternative to openTableManageModal above — same six
+// actions, opened at the click point via the shared #ctx-menu singleton
+// instead of a modal. Only used in the main window (see the contextmenu
+// listener above for why); elCtx/closeCtx are defined with the rest of the
+// menus further down the file but already exist by the time this can run.
+function openTableCellMenu(cell, x, y) {
+  closeCtx();
+  var table = cell.closest("table");
+  function item(label, danger, fn) {
+    var b = el("button", danger ? "danger" : null, label);
+    b.addEventListener("click", function () { closeCtx(); fn(); });
+    return b;
+  }
+  elCtx.innerHTML = "";
+  elCtx.append(
+    item("Insert row above", false, function () { insertTableRowAt(cell.closest("tr"), false); commitRich(); }),
+    item("Insert row below", false, function () { insertTableRowAt(cell.closest("tr"), true); commitRich(); }),
+    item("Insert column left", false, function () { insertTableColumnAt(table, cell.cellIndex, false); commitRich(); }),
+    item("Insert column right", false, function () { insertTableColumnAt(table, cell.cellIndex, true); commitRich(); }),
+    item("Delete row", true, function () {
+      if (table.rows.length <= 1) { toast("A table needs at least one row \u2014 delete the table instead."); return; }
+      cell.closest("tr").remove();
+      commitRich();
+    }),
+    item("Delete column", true, function () {
+      if (!table.rows.length || table.rows[0].cells.length <= 1) { toast("A table needs at least one column \u2014 delete the table instead."); return; }
+      var idx = cell.cellIndex;
+      Array.prototype.forEach.call(table.rows, function (row) { if (row.cells[idx]) row.cells[idx].remove(); });
+      commitRich();
+    }),
+    item("Delete table", true, function () {
+      confirmModal("Delete this table?", "This removes the whole table and everything in it.", "Delete table", function () {
+        table.remove();
+        commitRich();
+      });
+    })
+  );
+  elCtx.style.display = "block";
+  var w = elCtx.offsetWidth || 180, h = elCtx.offsetHeight || 230;
+  var px = Math.min(x, window.innerWidth - w - 8);
+  var py = Math.min(y, window.innerHeight - h - 8);
+  elCtx.style.left = Math.max(8, px) + "px";
+  elCtx.style.top = Math.max(8, py) + "px";
 }
 /* returns true if it converted the line (and already called preventDefault) */
 function tryAutoListShortcut(e) {
@@ -5992,11 +6256,35 @@ function isAtVeryStartOfBlock(range, block) {
   }
   return node === block;
 }
+// Right-click a cell → the same floating quick-menu style most table
+// editors (Google Docs included) use, positioned at the click itself via
+// the shared #ctx-menu singleton (see closeCtx/elCtx below). This only
+// works correctly in the normal window — a popped-out page (see Popout
+// above) is a genuinely separate browser window, and elCtx lives only in
+// the main document, so positioning it by mouse coordinates there would
+// put it in the wrong place entirely. openTableManageModal (also still
+// reachable via the Table toolbar button) is the fallback for that case,
+// since the modal system is confirmed to render correctly in either
+// window — same underlying actions, just a different way in.
+pgRich.addEventListener("contextmenu", function (e) {
+  var cell = closestCell(e.target);
+  if (!cell) return;
+  e.preventDefault();
+  if (Popout.activeWin()) { openTableManageModal(cell); return; }
+  openTableCellMenu(cell, e.clientX, e.clientY);
+});
 pgRich.addEventListener("keydown", function (e) {
   if (e.key === "Tab") {
     var sel = (Popout.activeWin() || window).getSelection();
     if (!sel.rangeCount) return;
-    var li = closestLi(sel.getRangeAt(0).startContainer);
+    var startNode = sel.getRangeAt(0).startContainer;
+    var cell = closestCell(startNode);
+    if (cell) {
+      e.preventDefault();
+      moveToAdjacentCell(cell, e.shiftKey);
+      return;
+    }
+    var li = closestLi(startNode);
     if (!li) return; // only hijack Tab when it's meaningfully a list-indent action
     e.preventDefault();
     try { (Popout.activeDoc() || document).execCommand(e.shiftKey ? "outdent" : "indent"); } catch (_) {}
@@ -6016,7 +6304,20 @@ pgRich.addEventListener("keydown", function (e) {
     commitRich();
     return;
   }
-  if (e.key === "Enter") { tryAutoLinkWord(); return; }
+  if (e.key === "Enter") {
+    var selEnter = (Popout.activeWin() || window).getSelection();
+    if (selEnter.rangeCount) {
+      var rangeEnter = selEnter.getRangeAt(0);
+      var liEnter = closestLi(rangeEnter.startContainer);
+      if (liEnter && rangeEnter.collapsed && isLiEmpty(liEnter)) {
+        e.preventDefault();
+        exitEmptyListItem(liEnter);
+        return;
+      }
+    }
+    tryAutoLinkWord();
+    return;
+  }
   if (e.key !== " ") return;
   if (tryAutoListShortcut(e)) return;
   tryAutoLinkWord();
@@ -6034,6 +6335,15 @@ function richCmd(cmd) {
     else if (cmd === "ul") (Popout.activeDoc() || document).execCommand("insertUnorderedList");
     else if (cmd === "ol") (Popout.activeDoc() || document).execCommand("insertOrderedList");
     else if (cmd === "clear") { (Popout.activeDoc() || document).execCommand("removeFormat"); (Popout.activeDoc() || document).execCommand("formatBlock", false, "p"); }
+    else if (cmd === "table") {
+      // No execCommand for tables, so this builds the HTML directly. The
+      // trailing empty paragraph guarantees there's always somewhere to
+      // click/type right after the table, the same way exitEmptyListItem
+      // guarantees an escape route out of a list.
+      var tableHtml = "<table><thead><tr><th>Header 1</th><th>Header 2</th></tr></thead>" +
+        "<tbody><tr><td>Cell</td><td>Cell</td></tr><tr><td>Cell</td><td>Cell</td></tr></tbody></table><p><br></p>";
+      (Popout.activeDoc() || document).execCommand("insertHTML", false, tableHtml);
+    }
   } catch (_) {}
   commitRich();
 }
@@ -6083,8 +6393,17 @@ function openLinkChooser() {
 $("pg-toolbar").addEventListener("click", function (e) {
   var btn = e.target.closest("button[data-cmd]"); if (!btn) return;
   e.preventDefault();
-  if (btn.dataset.cmd === "link") openLinkChooser();
-  else richCmd(btn.dataset.cmd);
+  if (btn.dataset.cmd === "link") { openLinkChooser(); return; }
+  if (btn.dataset.cmd === "table") {
+    // mousedown above preserves the caret position in pg-rich even though
+    // focus is momentarily on this button, so this still reflects wherever
+    // the person's caret actually was — inside an existing table opens the
+    // add/remove-rows-and-columns modal instead of inserting a fresh one.
+    var sel = (Popout.activeWin() || window).getSelection();
+    var cell = sel.rangeCount ? closestCell(sel.getRangeAt(0).startContainer) : null;
+    if (cell) { openTableManageModal(cell); return; }
+  }
+  richCmd(btn.dataset.cmd);
 });
 /* ── Focus mode: dim every top-level block except the one holding the caret ── */
 var focusModeOn = false;
@@ -14349,7 +14668,10 @@ function pgExportCss(themed) {
       "blockquote{margin:0 0 1em;padding:2px 0 2px 14px;border-left:3px solid " + (exportPageHead("--border") || "#2b2823") + ";color:" + (exportPageHead("--ink-dim") || "#c4bca8") + "}",
       "pre{background:" + (exportPageHead("--surf2") || "#1d1c17") + ";padding:12px 14px;border-radius:8px;overflow:auto}",
       "code{font-family:ui-monospace,monospace}",
-      "li.task{list-style:none;margin-left:-20px}"
+      "li.task{list-style:none;margin-left:-20px}",
+      "table{border-collapse:collapse;width:100%;margin:1em 0;border:1px solid " + (exportPageHead("--border") || "#2b2823") + "}",
+      "th,td{border:1px solid " + (exportPageHead("--border") || "#2b2823") + ";padding:6px 10px;text-align:left;vertical-align:top}",
+      "th{background:" + (exportPageHead("--surf2") || "#1d1c17") + ";color:" + (exportPageHead("--ink-hi") || "#f0e9d8") + "}"
     ].join("");
   }
   // Plain / print-friendly: light background, black ink, no app palette —
@@ -14366,6 +14688,9 @@ function pgExportCss(themed) {
     "pre{background:#f2f2f2;padding:12px 14px;border-radius:6px;overflow:auto}" +
     "code{font-family:ui-monospace,monospace}" +
     "li.task{list-style:none;margin-left:-20px}" +
+    "table{border-collapse:collapse;width:100%;margin:1em 0;border:1px solid #ccc}" +
+    "th,td{border:1px solid #ccc;padding:6px 10px;text-align:left;vertical-align:top}" +
+    "th{background:#f2f2f2}" +
     "@media print{body{padding:0.4in}}";
 }
 function pgExportMeta(p) {
