@@ -46,6 +46,9 @@
           "text": "[new] Tables in pages",
           "sub": [
             "New Table button in the editor toolbar inserts a starter table; Tab / Shift+Tab move between cells",
+            "Tab from the last cell adds a new row and jumps into it, spreadsheet-style, for quickly growing a table as you go",
+            "Right-click a cell for a floating quick-menu at the click point \u2014 Insert/Delete row, Insert/Delete column, Delete table \u2014 matching how Google Docs and most other table editors handle it",
+            "Clicking the Table button while the caret is inside an existing table opens the same actions in a modal instead \u2014 the one that's always used when a page is popped out into its own window, where a floating menu positioned by click coordinates would show up in the wrong place",
             "Markdown tables (the standard \"| col | col |\" / \"| --- | --- |\" format) are now understood on import, and page-to-Markdown export writes them back out the same way",
             "First step toward pages picking up more of what World Entries can do"
           ]
