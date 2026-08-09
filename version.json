@@ -26,12 +26,30 @@
           "text": "[new] Rest token history",
           "sub": [
             "A History link next to your rest token count shows every token you've earned or spent, newest first, grouped by month",
-            "Each entry says why \u2014 hit weekly goal, cleared overachieve challenge, spent on a specific day, or refunded from undoing a rest day or logging work after marking one",
+            "A week that both hits the weekly goal and clears the overachieve challenge shows as one combined \"+2\" line instead of two near-identical ones",
+            "Entries are dated to when they actually happened \u2014 catching up on several missed weeks at once no longer bunches them all under today",
+            "A week (for goal/overachieve) or a day (for a spend) can only ever produce one real entry \u2014 a repeat is treated as a duplicate check, not a second event, and skipped rather than logged again; existing saves get any already-duplicated entries collapsed down to one automatically",
             "Filter to just Earned or just Spent",
+            "Undoing a rest day, or logging work after marking one rested, cancels the original \"spent\" entry outright instead of adding a separate \"refunded\" line \u2014 keeps the log from cluttering up with pairs that net out to nothing",
             "Existing saves with a token balance already banked get a single \"starting balance\" entry so the log doesn't start out looking empty"
           ]
         },
         "[fix] Renaming a notebook: pressing spacebar partway through typing a multi-word name could exit the rename early, making it hard to type past the first word",
+        {
+          "text": "[fix] Lists in the page editor could get permanently stuck, with no way to press Enter to escape back to plain text",
+          "sub": [
+            "Most noticeable right after importing/converting an old markdown page, where a list is often the very last thing in the document \u2014 exactly the case browsers handle least reliably on their own",
+            "Pressing Enter on an empty list item (or an empty checklist item) now always exits the list cleanly, splitting it in two if it wasn't at the very end"
+          ]
+        },
+        {
+          "text": "[new] Tables in pages",
+          "sub": [
+            "New Table button in the editor toolbar inserts a starter table; Tab / Shift+Tab move between cells",
+            "Markdown tables (the standard \"| col | col |\" / \"| --- | --- |\" format) are now understood on import, and page-to-Markdown export writes them back out the same way",
+            "First step toward pages picking up more of what World Entries can do"
+          ]
+        },
         "[fix] The patch notes panel was missing from the shared dialog styling that Update/Onboarding use, so it rendered without sizing, background, or layout \u2014 now matches the update-available screen it was always meant to look like",
         {
           "text": "[redesign] Oracle is now tagged Experimental instead of Beta",
