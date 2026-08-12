@@ -485,14 +485,13 @@ body.saved-flash .save-rule::after { transform: scaleX(1); }
 #pg-rich:focus { outline: none; }
 #view-page.is-empty #pg-edit-wrap { display: none; }
 #view-page:not(.is-empty) .view-empty { display: none; }
-/* Selecting a timeline's own notebook (with no specific page open) shows
-   the epoch/era editor in place of the usual "nothing open" message — see
-   curNbTimeline/tlEditorContext. This mode wins over the two rules above
+/* Selecting a timeline's own notebook (with no specific page open) shows a
+   simple pointer to the real editor in the Timelines room — see
+   curNbTimeline and #nb-tl-editor's markup — in place of the usual
+   "nothing open" message. This mode wins over the two rules above
    regardless of .is-empty, since #nb-tl-editor is the third state. */
 #view-page.showing-nb-tl #pg-edit-wrap, #view-page.showing-nb-tl .view-empty { display: none !important; }
 #view-page:not(.showing-nb-tl) #nb-tl-editor { display: none !important; }
-#nb-tl-editor { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-#nb-tl-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0 var(--pad) 60px; max-width: 880px; }
 
 /* ── Page tasks panel — sits in the blank space to the right of the
    760px-capped prose column on wide screens; collapses to a slim tab on
@@ -897,6 +896,11 @@ body.saved-flash .save-rule::after { transform: scaleX(1); }
   padding: 2px 0 2px 10px;
 }
 .era-page-preview:hover { color: var(--ink-hi); border-left-color: var(--sage); }
+.era-open-page-link {
+  display: inline-block; margin: 8px 0 2px;
+  font-size: 11.5px; color: var(--sage);
+}
+.era-open-page-link:hover { text-decoration: underline; }
 .era-field-lbl {
   font-size: 10px; font-weight: 600;
   letter-spacing: 0.1em; text-transform: uppercase;
@@ -2635,8 +2639,10 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
       <nav id="nb-pinned-list" aria-label="Pinned notebooks"></nav>
       <div class="sect-head" id="nb-sect-head"><span>Notebooks</span><button class="sect-add" id="add-nb" aria-label="New notebook" title="New notebook">+</button></div>
       <nav id="nb-list" aria-label="Notebooks"></nav>
-      <div class="sect-head"><span id="pages-head">Pages</span><select id="pg-sort-select" class="pg-sort-select" aria-label="Sort pages"></select><button class="sect-add" id="add-pg" aria-label="New page" title="New page (Ctrl+N)">+</button></div>
-      <nav id="pg-list" class="scroll-list" aria-label="Pages"></nav>
+      <div id="pg-list-section">
+        <div class="sect-head"><span id="pages-head">Pages</span><select id="pg-sort-select" class="pg-sort-select" aria-label="Sort pages"></select><button class="sect-add" id="add-pg" aria-label="New page" title="New page (Ctrl+N)">+</button></div>
+        <nav id="pg-list" class="scroll-list" aria-label="Pages"></nav>
+      </div>
     </div>
 
     <div id="panel-entries">
@@ -2743,20 +2749,10 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
         <p>Nothing open. Pick a page from the list, or start a fresh one.</p>
         <button data-new-page>New page</button>
       </div>
-      <div id="nb-tl-editor" class="is-empty">
-        <div class="ed-bar">
-          <div class="spacer"></div>
-          <button class="bar-btn wide" id="nb-add-epoch">+ Epoch</button>
-          <button class="bar-btn danger" id="nb-del-tl-btn" aria-label="Delete timeline" title="Delete timeline">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-          </button>
-        </div>
-        <div class="ed-head">
-          <input id="nb-tl-name" class="title-input" placeholder="Unnamed timeline" aria-label="Timeline name" autocomplete="off">
-          <div class="save-rule" aria-hidden="true"></div>
-        </div>
-        <div class="ed-meta"><span id="nb-tl-counts"></span></div>
-        <div id="nb-tl-scroll"><div id="nb-tl-epochs"></div></div>
+      <div id="nb-tl-editor" class="is-empty view-empty">
+        <div class="glyph" aria-hidden="true">❧</div>
+        <p>This notebook belongs to a timeline. Open it in Timelines to edit its epochs and eras.</p>
+        <button id="nb-tl-open-btn">Open in Timelines</button>
       </div>
     </section>
 
@@ -3587,7 +3583,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
    to read from the `dev` branch's version.json instead of `main`'s, so a
    dev build never gets nagged about (or accidentally offered) a main-line
    release, and vice versa. */
-var APP_VERSION = "0.9.5-dev";
+var APP_VERSION = "0.9.5";
 var UPDATE_CHANNEL = APP_VERSION.toLowerCase().indexOf("dev") > -1 ? "dev" : "main";
 var UPDATE_CHECK_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/version.json";
 var UPDATE_HTML_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/Notebook.html";
@@ -4206,14 +4202,14 @@ var MEDAL_DEFS = {
 // when creating any other, same as the built-ins here.
 var PROJECT_TYPE_PRESETS = [
   { key: "blank", label: "Blank", builtin: true,
-    desc: "Entries, Timelines, and Oracle hidden to start — everything else is walked through in setup.",
-    hidden: { railTabs: ["entries", "timelines", "oracle"], homeTiles: ["entries", "timelines", "oracle"], notebookFeatures: ["timelines"] } },
+    desc: "Entries and Oracle hidden to start — everything else is walked through in setup.",
+    hidden: { railTabs: ["entries", "oracle"], homeTiles: ["entries", "oracle"], notebookFeatures: ["timelines"] } },
   { key: "novel", label: "Novel / Story", builtin: true,
     desc: "Manuscript pages, a world bible for characters and places, and a plot timeline. Hides Oracle and Management to start.",
-    hidden: { railTabs: ["oracle", "management"], homeTiles: ["oracle", "management"], notebookFeatures: [] } },
+    hidden: { railTabs: ["oracle", "management"], homeTiles: ["oracle", "management"], notebookFeatures: ["timelines"] } },
   { key: "worldbuilding", label: "Worldbuilding / Campaign", builtin: true,
     desc: "Everything on \u2014 pages, entries, timelines, and Oracle for surfacing connections. Hides Management to start.",
-    hidden: { railTabs: ["management"], homeTiles: ["management"], notebookFeatures: [] } },
+    hidden: { railTabs: ["management"], homeTiles: ["management"], notebookFeatures: ["timelines"] } },
   { key: "screenplay", label: "Screenplay", builtin: true,
     desc: "Pages and a character/location bible, without the timeline and connection tools worldbuilding needs. Hides Timelines, Oracle, and Management to start.",
     hidden: { railTabs: ["timelines", "oracle", "management"], homeTiles: ["timelines", "oracle", "management"], notebookFeatures: ["timelines"] } },
@@ -4431,7 +4427,7 @@ function blankState() {
     budgets: [],
     products: [],
     customProjectTypes: [],
-    hidden: { railTabs: ["entries", "timelines", "oracle"], homeTiles: ["entries", "timelines", "oracle"], homeSections: [], workSections: [], notebookFeatures: ["timelines"] },
+    hidden: { railTabs: ["entries", "oracle"], homeTiles: ["entries", "oracle"], homeSections: [], workSections: [], notebookFeatures: ["timelines"] },
     projectType: "blank",
     settings: {
       sessionCleanupFilters: { after: "", before: "", minMinutes: "", maxMinutes: "", labels: [] },
@@ -4516,6 +4512,8 @@ function normalizeState(s) {
       (tl.epochs || []).forEach(function (ep) {
         (ep.eras || []).forEach(function (era) {
           if (!Array.isArray(era.events)) era.events = [];
+          if (typeof era.summary !== "string") era.summary = "";
+          if (typeof era.notes !== "string") era.notes = "";
           era.story = !!era.story;
         });
       });
@@ -5493,23 +5491,14 @@ function curPage() { return state.sel.pg ? pgById(state.sel.pg) : null; }
 function curEntry() { return state.sel.entry ? entById(state.sel.entry) : null; }
 function curTl() { return state.sel.tl ? tlById(state.sel.tl) : null; }
 // The timeline linked to whichever notebook is currently selected in
-// Notebooks (Pages) — null for an ordinary notebook. This is what lets the
-// same epoch/era editor (renderTlEditor) work whether it's reached through
-// the Timelines room or through a timeline's own notebook.
+// Notebooks — null for an ordinary notebook. Notebooks doesn't embed the
+// epoch/era editor itself (see #nb-tl-editor's simple "Open in Timelines"
+// pointer) — this is just enough to know when to show that pointer instead
+// of the normal page view, and to hide the page list, which doesn't have
+// a useful role for a timeline's own notebook.
 function curNbTimeline() {
   var nb = nbById(state.sel.nb);
   return nb && nb.timelineId ? tlById(nb.timelineId) : null;
-}
-// Which timeline renderTlEditor should be showing right now, and which set
-// of DOM elements it should render into — the Timelines room's own editor,
-// or the lightweight copy embedded in Notebooks (see #nb-tl-editor). Both
-// share every bit of epoch/era-building logic (buildEraRow etc.); only the
-// timeline lookup and the target elements differ by context.
-function tlEditorContext() {
-  if (state.sel.tab === "pages") {
-    return { tl: curNbTimeline(), root: $("nb-tl-editor"), nameInput: $("nb-tl-name"), counts: $("nb-tl-counts"), epochsWrap: $("nb-tl-epochs") };
-  }
-  return { tl: curTl(), root: $("view-timeline"), nameInput: $("tl-name"), counts: $("tl-counts"), epochsWrap: $("epochs") };
 }
 
 /* ── DOM helpers ── */
@@ -5537,8 +5526,7 @@ var RAIL_ITEMS = [
     experimentalNote: "Fewer people are using Entries day to day, so it's marked experimental while we figure out its future — nothing is going away yet.",
     desc: "Your world bible — characters, places, factions, and more, with attributes and links between them.",
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' },
-  { key: "timelines", label: "Timelines", tip: "Timelines", scope: "project", optional: true,
-    optionalNote: "Timeline editing now lives inside Notebooks (a timeline's own notebook shows the same editor) — this standalone room is just an extra way to reach it, not something you need on.",
+  { key: "timelines", label: "Timelines", tip: "Timelines", scope: "project", recommended: true,
     desc: "Epochs and eras with dated events, and pages for writing them up.",
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="22"/><circle cx="12" cy="6" r="2.2" fill="currentColor" stroke="none"/><circle cx="12" cy="13" r="2.2" fill="currentColor" stroke="none"/><circle cx="12" cy="20" r="2.2" fill="currentColor" stroke="none"/></svg>' },
   { key: "productivity", label: "Productivity", tip: "Productivity — plans, work & goals", scope: "workspace", beta: true,
@@ -6111,10 +6099,34 @@ function reorderNotebooks(srcId, targetId, before) {
   scheduleSave();
   renderPagesTab();
 }
+// Notebooks that should actually appear in the Notebooks list — every
+// notebook, except a timeline's own notebook when Preferences → Display →
+// Notebooks has "Timeline notebooks" turned off. The timeline itself, and
+// its notebook's data, aren't touched by this — they just aren't shown
+// here; the standalone Timelines room stays the way to reach them.
+function visibleNotebooks() {
+  var tlNotebooksOff = (state.hidden.notebookFeatures || []).indexOf("timelines") > -1;
+  return state.notebooks.filter(function (n) { return !tlNotebooksOff || !n.timelineId; });
+}
 function renderNbs() {
+  var visible = visibleNotebooks();
+  // Self-healing: if the notebook you were on just disappeared (the toggle
+  // above got flipped off, or a save loaded with it already off), land on
+  // the first one that's still visible rather than showing a blank/hidden
+  // selection. Falls back to creating a fresh "General" notebook in the
+  // (rare) case every single notebook happens to be a hidden timeline one.
+  if (!visible.length) {
+    var fresh = { id: uid(), name: "General", color: NB_COLORS[0], createdAt: Date.now() };
+    state.notebooks.push(fresh);
+    visible = [fresh];
+  }
+  if (!visible.some(function (n) { return n.id === state.sel.nb; })) {
+    state.sel.nb = visible[0].id;
+    scheduleSave();
+  }
   elNbList.innerHTML = "";
   var pinnedHead = $("nb-pinned-head"), pinnedList = $("nb-pinned-list");
-  var pinned = state.notebooks.filter(function (n) { return n.pinned; });
+  var pinned = visible.filter(function (n) { return n.pinned; });
   if (pinnedHead && pinnedList) {
     pinnedList.innerHTML = "";
     if (pinned.length) {
@@ -6124,7 +6136,7 @@ function renderNbs() {
       pinnedHead.style.display = "none";
     }
   }
-  state.notebooks.forEach(function (nb) { elNbList.appendChild(makeNbRow(nb)); });
+  visible.forEach(function (nb) { elNbList.appendChild(makeNbRow(nb)); });
 }
 
 // Position of a timeline-linked page within its timeline's epoch/era order —
@@ -6200,7 +6212,17 @@ $("pg-sort-select").addEventListener("change", function () {
 function renderPages() {
   var q = elSearchPg.value.trim();
   var nb = nbById(state.sel.nb);
-  $("pages-head").textContent = q ? "Results" : (nb && nb.timelineId ? "Timelines" : "Pages" + (nb ? " · " + nb.name : ""));
+  var isTlNotebook = !!(nb && nb.timelineId);
+  // A timeline's own notebook doesn't have a useful page list to browse —
+  // Notebooks just points at the real editor in Timelines for it (see
+  // #nb-tl-editor) — so hide the whole section rather than show a list of
+  // auto-generated era/epoch pages nobody's meant to browse this way.
+  // Search still searches everywhere regardless of notebook, so it stays
+  // visible while a query is active.
+  var section = $("pg-list-section");
+  if (section) section.style.display = (isTlNotebook && !q) ? "none" : "";
+  $("pages-head").textContent = q ? "Results" : (isTlNotebook ? "Timelines" : "Pages" + (nb ? " · " + nb.name : ""));
+  if (isTlNotebook && !q) return;
   renderPgSortSelect();
   elPgList.innerHTML = "";
   var pages = visiblePages();
@@ -6277,7 +6299,7 @@ function renderPageEditor() {
   var p = curPage();
   var nbTl = !p ? curNbTimeline() : null;
   $("view-page").classList.toggle("showing-nb-tl", !p && !!nbTl);
-  if (!p && nbTl) { renderTlEditor(); pgRichLoaded = null; renderPgTasks(null); renderPgTlHeader(null); return; }
+  if (!p && nbTl) { pgRichLoaded = null; renderPgTasks(null); renderPgTlHeader(null); return; }
   $("view-page").classList.toggle("is-empty", !p);
   if (!p) { pgRichLoaded = null; renderPgTasks(null); renderPgTlHeader(null); return; }
   if ($("pg-title-input").value !== p.title) $("pg-title-input").value = p.title;
@@ -6560,18 +6582,15 @@ function createTimelineNotebook() {
   state.timelines.push(tl);
   return { tl: tl, nb: nb };
 }
-// The Timeline option in the Notebooks + menu — creates the timeline same
-// as newTl() does, but lands you on it right there in Notebooks (the
-// embedded epoch/era editor — see curNbTimeline/tlEditorContext) instead
-// of switching to the separate Timelines room.
+// The Timeline option in the Notebooks + menu — creates the timeline the
+// same way newTl() does, then opens it in the Timelines room (Notebooks
+// itself only points at a timeline's notebook — see #nb-tl-editor — it
+// doesn't embed the epoch/era editor).
 function newTlFromNotebooks() {
   var pair = createTimelineNotebook();
-  state.sel.nb = pair.nb.id;
-  state.sel.pg = null;
-  scheduleSave();
-  renderPagesTab();
-  var input = $("nb-tl-name");
-  if (input) { input.focus(); input.select(); }
+  openTl(pair.tl.id);
+  $("tl-name").focus();
+  $("tl-name").select();
 }
 // The Notebooks + button's menu — Pages (an ordinary notebook) or Timeline
 // (only offered when Preferences → Display → Notebooks has that enabled).
@@ -8463,18 +8482,15 @@ function renderTlList() {
 }
 
 function renderTlEditor() {
-  var ctx = tlEditorContext();
-  var tl = ctx.tl;
-  if (!ctx.root || !ctx.nameInput || !ctx.counts || !ctx.epochsWrap) return;
-  if (state.sel.tab !== "pages") $("view-timeline").classList.toggle("is-empty", !tl);
-  ctx.root.classList.toggle("is-empty", !tl);
-  if (!tl) { ctx.epochsWrap.innerHTML = ""; return; }
-  if (ctx.nameInput.value !== tl.name) ctx.nameInput.value = tl.name;
+  var tl = curTl();
+  $("view-timeline").classList.toggle("is-empty", !tl);
+  if (!tl) { $("epochs").innerHTML = ""; return; }
+  if ($("tl-name").value !== tl.name) $("tl-name").value = tl.name;
   var tv = timeVocab();
   var eraCount = (tl.epochs || []).reduce(function (n, ep) { return n + (ep.eras || []).length; }, 0);
-  ctx.counts.textContent = (tl.epochs || []).length + " " + (tl.epochs.length === 1 ? tv.epoch.toLowerCase() : tv.epochPl.toLowerCase()) + " · " + eraCount + " " + (eraCount === 1 ? tv.era.toLowerCase() : tv.eraPl.toLowerCase());
+  $("tl-counts").textContent = (tl.epochs || []).length + " " + (tl.epochs.length === 1 ? tv.epoch.toLowerCase() : tv.epochPl.toLowerCase()) + " · " + eraCount + " " + (eraCount === 1 ? tv.era.toLowerCase() : tv.eraPl.toLowerCase());
 
-  var wrap = ctx.epochsWrap;
+  var wrap = $("epochs");
   wrap.innerHTML = "";
   if (!(tl.epochs || []).length) {
     var e = el("div", "empty");
@@ -8512,7 +8528,7 @@ function renderTlEditor() {
     var addEra = el("button", "mini-add", "+ " + tv.era);
     addEra.addEventListener("click", function () {
       ep.eras = ep.eras || [];
-      var era = { id: uid(), name: "", duration: "", status: null, tags: [], links: [], events: [], open: true, pageId: null };
+      var era = { id: uid(), name: "", duration: "", summary: "", notes: "", status: null, tags: [], links: [], events: [], open: true, pageId: null };
       ep.eras.push(era);
       // Every era gets a page in the timeline's notebook, kept in sync by
       // name/title (see the era-name and pg-title-input handlers) and
@@ -8605,11 +8621,23 @@ function buildEraRow(tl, ep, era, eraIdx) {
   row.appendChild(top);
 
   var body = el("div", "era-body");
-  body.appendChild(el("div", "era-field-lbl", "Writing"));
+  body.appendChild(el("div", "era-field-lbl", "Summary"));
+  var sum = el("textarea", "era-ta");
+  sum.value = era.summary || ""; sum.placeholder = "What defines this era?"; sum.setAttribute("aria-label", "Era summary");
+  sum.addEventListener("input", function () { era.summary = sum.value; touchTl(tl); });
+  body.appendChild(sum);
+  body.appendChild(el("div", "era-field-lbl", "Notes"));
+  var notes = el("textarea", "era-ta");
+  notes.value = era.notes || ""; notes.placeholder = "Working notes, questions, loose threads…"; notes.setAttribute("aria-label", "Era notes");
+  notes.addEventListener("input", function () { era.notes = notes.value; touchTl(tl); });
+  body.appendChild(notes);
   var pg = era.pageId ? pgById(era.pageId) : null;
-  var preview = el("button", "era-page-preview", pg ? (htmlToProseText(pg.body).slice(0, 140) || "Nothing written yet — open the page to start.") : "No page linked.");
-  if (pg) preview.addEventListener("click", function () { openPage(pg.id); });
-  body.appendChild(preview);
+  if (pg) {
+    var openPgBtn = el("button", "era-open-page-link", "Open this era's page \u2192");
+    openPgBtn.title = "For longer writing, with full formatting";
+    openPgBtn.addEventListener("click", function () { openPage(pg.id); });
+    body.appendChild(openPgBtn);
+  }
   body.appendChild(el("div", "era-field-lbl", "Events"));
   var evWrap = el("div");
   (era.events || []).forEach(function (ev, evIdx) {
@@ -8781,33 +8809,12 @@ $("del-tl-btn").addEventListener("click", function () {
     persist(); renderTimelinesTab(); renderPagesTab(); toast("Timeline deleted");
   });
 });
-$("nb-add-epoch").addEventListener("click", function () {
+// Notebooks doesn't embed the epoch/era editor — selecting a timeline's
+// own notebook just points at the real thing in the Timelines room (see
+// #nb-tl-editor and renderPageEditor).
+$("nb-tl-open-btn").addEventListener("click", function () {
   var tl = curNbTimeline(); if (!tl) return;
-  tl.epochs = tl.epochs || [];
-  var ep = { id: uid(), name: "", meta: "", eras: [], pageId: null };
-  tl.epochs.push(ep);
-  var nb = nbById(tl.notebookId);
-  if (nb) {
-    var pg = { id: uid(), notebookId: nb.id, title: ep.name, body: epochProplineHtml(ep) + "<p><br></p>", format: "html", tags: [], pinned: false, kind: "epoch", timelineId: tl.id, epochId: ep.id, createdAt: Date.now(), updatedAt: Date.now() };
-    state.pages.push(pg);
-    ep.pageId = pg.id;
-  }
-  touchTl(tl); renderTlEditor();
-  var names = $("nb-tl-epochs").querySelectorAll(".epoch-name");
-  if (names.length) names[names.length - 1].focus();
-});
-$("nb-tl-name").addEventListener("input", function () {
-  var tl = curNbTimeline(); if (!tl) return;
-  tl.name = this.value; touchTl(tl);
-  var nb = nbById(tl.notebookId);
-  if (nb) { nb.name = this.value; renderNbs(); renderPages(); }
-});
-$("nb-del-tl-btn").addEventListener("click", function () {
-  var tl = curNbTimeline(); if (!tl) return;
-  confirmDeleteTimeline(tl, function () {
-    if (state.sel.tl === tl.id) state.sel.tl = null;
-    persist(); renderTimelinesTab(); renderPagesTab(); toast("Timeline deleted");
-  });
+  openTl(tl.id);
 });
 // Shared by both delete-timeline buttons (Timelines room and the copy
 // embedded in Notebooks) — everything except the final "where do I land
@@ -13269,7 +13276,7 @@ var HOME_TILE_DEFS = [
     build: function () {
       return { tab: "entries", desc: "Your world bible — people, places, powers", num: state.entries.length, unit: state.entries.length === 1 ? "entry" : "entries" };
     } },
-  { key: "timelines", railKey: "timelines", label: railItem("timelines").label, icon: railItem("timelines").icon, optional: true,
+  { key: "timelines", railKey: "timelines", label: railItem("timelines").label, icon: railItem("timelines").icon,
     settingsDesc: "A shortcut tile to your timelines, showing your era count.",
     build: function () {
       return { tab: "timelines", desc: "Epochs and eras, and their pages", num: countEras(), unit: countEras() === 1 ? "era" : "eras" };
@@ -13523,10 +13530,17 @@ var STYLE_BOOL_ITEMS = [
     onChange: function (v) { applyOnboardStylePrefs(v); } }
 ];
 var NOTEBOOK_FEATURE_ITEMS = [
-  { key: "timelines", label: "Timeline notebooks", desc: "Whether \"Timeline\" is offered as a notebook type from the + button next to Notebooks, alongside Pages." }
+  { key: "timelines", label: "Timeline notebooks", desc: "Whether \"Timeline\" is offered as a notebook type from the + button next to Notebooks, alongside Pages.", optional: true,
+    optionalNote: "Off by default — the standalone Timelines room is the primary way to work with timelines. This just adds a second path to the same editor, for anyone who wants it." }
 ];
 function renderNotebookFeatureSettings() {
-  buildToggleGroup($("set-notebook-feature-toggles"), NOTEBOOK_FEATURE_ITEMS, "notebookFeatures");
+  buildToggleGroup($("set-notebook-feature-toggles"), NOTEBOOK_FEATURE_ITEMS, "notebookFeatures", function () {
+    // Timeline notebooks just got hidden or unhidden from the Notebooks
+    // list (see visibleNotebooks) — reflect that immediately if that room
+    // happens to be open right now, rather than waiting for the next time
+    // it's visited.
+    if (state.sel.tab === "pages") renderPagesTab();
+  });
   var tv = state.settings.timeVocab || (state.settings.timeVocab = { bigMode: "epoch", bigCustom: "", bigCustomPl: "", smallMode: "era", smallCustom: "", smallCustomPl: "" });
   function wireSide(modeSelId, customWrapId, customInId, customPlInId, field, defaultMode) {
     var sel = $(modeSelId);
