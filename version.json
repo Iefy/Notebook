@@ -1,6 +1,77 @@
 {
-  "version": "0.8.0-dev",
+  "version": "0.9.5",
   "changelog": [
+    {
+      "version": "0.9.5",
+      "date": "2026-08-11",
+      "changes": [
+        {
+          "text": "[rework] Timelines is now built into Notebooks",
+          "sub": [
+            "The + button next to Notebooks now asks Pages or Timeline \u2014 Timeline creates a timeline with its own notebook",
+            "Selecting a timeline's notebook shows its full epoch/era editor right there \u2014 add/reorder epochs, add/delete/move eras, all the same editing the standalone Timelines room has",
+            "Every epoch and era gets its own page in that notebook automatically, kept in sync by name in both directions",
+            "New notebooks and timelines are named \"Notebook 1\", \"Timeline 1\", etc. by default instead of starting blank",
+            "Whether \"Timeline\" is offered as a notebook type is a Preference (Display \u2192 Notebooks), off by default \u2014 the standalone Timelines room still exists for anyone who wants it separately"
+          ]
+        },
+        {
+          "text": "[new] Duration, status, tags, and linked entries live directly in the page now",
+          "sub": [
+            "Each is a real chip inside the page's own text \u2014 duration and tags are click-and-type, status is a dropdown, linked entries are clickable and colored by entry type",
+            "A protected properties block at the top keeps these separate from your prose \u2014 typing in one can't bleed into the other, in either direction",
+            "Editing from the Timelines tab and editing on the page write to the exact same place \u2014 there's no longer a separate copy of any of these to drift out of sync",
+            "The old separate Summary/Notes fields are gone \u2014 the page's own body is the actual writing space now"
+          ]
+        },
+        {
+          "text": "[new] Sort pages by Last edited, A\u2013Z, Chronological, or Timeline order",
+          "sub": [
+            "Timeline order walks a notebook's pages in the same epoch/era sequence they appear in Timelines \u2014 only offered for a timeline's own notebook, and is its default sort there",
+            "Every other notebook still defaults to Last edited, same as before"
+          ]
+        },
+        {
+          "text": "[new] Epoch/era terminology is configurable",
+          "sub": [
+            "Preferences \u2192 Display \u2192 Notebooks lets you pick what the bigger and smaller divisions are called \u2014 independently of each other, so any combination works, not just matched pairs",
+            "Affects the Timelines editor and its embedded copy in Notebooks everywhere \u2014 button labels, placeholders, empty states, delete confirmations"
+          ]
+        },
+        {
+          "text": "[removed] Chart and Map views",
+          "sub": [
+            "Timelines is edit-only now, in both the standalone room and the copy embedded in Notebooks",
+            "Removed rather than kept around unused \u2014 simpler to maintain, and one less thing pulling focus from the actual writing"
+          ]
+        },
+        {
+          "text": "[rework] Pages renamed to Notebooks, and its icon swapped with Entries",
+          "sub": [
+            "Purely a relabel/re-icon \u2014 nothing about how notebooks or pages work changed"
+          ]
+        },
+        {
+          "text": "[redesign] Timelines, Entries, and Oracle are now hidden by default",
+          "sub": [
+            "Applies to new projects and the Blank project type \u2014 existing projects are untouched",
+            "Every built-in project type was re-checked against this: Novel and Worldbuilding still show Entries/Timelines since they need them, Poetry/Product/Screenplay already hid what they don't use",
+            "Project types now also control whether \"Timeline\" is offered as a notebook type, not just what's visible in the sidebar",
+            "Switching or picking a project type now shows exactly what it turns on, computed live from the preset rather than hand-written \u2014 can't drift out of sync with what the preset actually does",
+            "Timelines carries a new \"Optional\" tag in Preferences, separate from Experimental/Recommended \u2014 it's not unfinished, it's just no longer the primary way to use timelines now that Notebooks covers it"
+          ]
+        },
+        "[redesign] Preferences toggles are rounded switches now instead of checkboxes",
+        "[fix] The Productivity tile in Preferences \u2192 Display was full-width for no reason, leaving an empty gap \u2014 sized to match Sidebar/Home/Notebooks now",
+        {
+          "text": "[new] Experimental: an onboarding-style layout for the full Preferences menu",
+          "sub": [
+            "Off by default \u2014 turn it on in Preferences to try it",
+            "Walks through the same settings as a series of focused steps instead of a grid of categories \u2014 nothing about what each setting does has changed, just how you move through them"
+          ]
+        }
+      ]
+    },
     {
       "version": "0.8.0-dev",
       "date": "2026-08-08",
@@ -8,10 +79,10 @@
         {
           "text": "[new] Pages can now carry their own tasks",
           "sub": [
-            "A collapsible Tasks panel sits to the right of the editor \u2014 check things off, set an optional due date, and open a full Edit view (title, notes, due-date range, repeat) shared with Productivity's own task editor",
-            "These are the same tasks Productivity's Calendar \"Tasks\" card already tracks, just filtered to one page \u2014 check one off from either place and it updates everywhere, including a \"No due date\" group for tasks that are just a plain to-do",
+            "A collapsible Tasks panel sits to the right of the editor — check things off, set an optional due date, and open a full Edit view (title, notes, due-date range, repeat) shared with Productivity's own task editor",
+            "These are the same tasks Productivity's Calendar \"Tasks\" card already tracks, just filtered to one page — check one off from either place and it updates everywhere, including a \"No due date\" group for tasks that are just a plain to-do",
             "The panel starts expanded on wide screens and collapsed on narrow ones by default; once you toggle it yourself, your choice sticks",
-            "Small progress rings on notebooks and pages show how many of their tasks are done, with a hover tooltip \u2014 stay hidden entirely until there's actually a task"
+            "Small progress rings on notebooks and pages show how many of their tasks are done, with a hover tooltip — stay hidden entirely until there's actually a task"
           ]
         },
         {
@@ -27,10 +98,10 @@
           "sub": [
             "A History link next to your rest token count shows every token you've earned or spent, newest first, grouped by month",
             "A week that both hits the weekly goal and clears the overachieve challenge shows as one combined \"+2\" line instead of two near-identical ones",
-            "Entries are dated to when they actually happened \u2014 catching up on several missed weeks at once no longer bunches them all under today",
-            "A week (for goal/overachieve) or a day (for a spend) can only ever produce one real entry \u2014 a repeat is treated as a duplicate check, not a second event, and skipped rather than logged again; existing saves get any already-duplicated entries collapsed down to one automatically",
+            "Entries are dated to when they actually happened — catching up on several missed weeks at once no longer bunches them all under today",
+            "A week (for goal/overachieve) or a day (for a spend) can only ever produce one real entry — a repeat is treated as a duplicate check, not a second event, and skipped rather than logged again; existing saves get any already-duplicated entries collapsed down to one automatically",
             "Filter to just Earned or just Spent",
-            "Undoing a rest day, or logging work after marking one rested, cancels the original \"spent\" entry outright instead of adding a separate \"refunded\" line \u2014 keeps the log from cluttering up with pairs that net out to nothing",
+            "Undoing a rest day, or logging work after marking one rested, cancels the original \"spent\" entry outright instead of adding a separate \"refunded\" line — keeps the log from cluttering up with pairs that net out to nothing",
             "Existing saves with a token balance already banked get a single \"starting balance\" entry so the log doesn't start out looking empty"
           ]
         },
@@ -38,7 +109,7 @@
         {
           "text": "[fix] Lists in the page editor could get permanently stuck, with no way to press Enter to escape back to plain text",
           "sub": [
-            "Most noticeable right after importing/converting an old markdown page, where a list is often the very last thing in the document \u2014 exactly the case browsers handle least reliably on their own",
+            "Most noticeable right after importing/converting an old markdown page, where a list is often the very last thing in the document — exactly the case browsers handle least reliably on their own",
             "Pressing Enter on an empty list item (or an empty checklist item) now always exits the list cleanly, splitting it in two if it wasn't at the very end"
           ]
         },
@@ -47,17 +118,17 @@
           "sub": [
             "New Table button in the editor toolbar inserts a starter table; Tab / Shift+Tab move between cells",
             "Tab from the last cell adds a new row and jumps into it, spreadsheet-style, for quickly growing a table as you go",
-            "Right-click a cell for a floating quick-menu at the click point \u2014 Insert/Delete row, Insert/Delete column, Delete table \u2014 matching how Google Docs and most other table editors handle it",
-            "Clicking the Table button while the caret is inside an existing table opens the same actions in a modal instead \u2014 the one that's always used when a page is popped out into its own window, where a floating menu positioned by click coordinates would show up in the wrong place",
+            "Right-click a cell for a floating quick-menu at the click point — Insert/Delete row, Insert/Delete column, Delete table — matching how Google Docs and most other table editors handle it",
+            "Clicking the Table button while the caret is inside an existing table opens the same actions in a modal instead — the one that's always used when a page is popped out into its own window, where a floating menu positioned by click coordinates would show up in the wrong place",
             "Markdown tables (the standard \"| col | col |\" / \"| --- | --- |\" format) are now understood on import, and page-to-Markdown export writes them back out the same way",
             "First step toward pages picking up more of what World Entries can do"
           ]
         },
-        "[fix] The patch notes panel was missing from the shared dialog styling that Update/Onboarding use, so it rendered without sizing, background, or layout \u2014 now matches the update-available screen it was always meant to look like",
+        "[fix] The patch notes panel was missing from the shared dialog styling that Update/Onboarding use, so it rendered without sizing, background, or layout — now matches the update-available screen it was always meant to look like",
         {
           "text": "[redesign] Oracle is now tagged Experimental instead of Beta",
           "sub": [
-            "The Beta/Recommended tag system now supports an Experimental tag generally, for anything earlier-stage than Beta \u2014 not just Oracle"
+            "The Beta/Recommended tag system now supports an Experimental tag generally, for anything earlier-stage than Beta — not just Oracle"
           ]
         }
       ]
