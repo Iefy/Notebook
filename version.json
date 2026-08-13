@@ -1,23 +1,23 @@
 {
-  "version": "0.9.6-dev",
+  "version": "0.9.7-dev",
   "changelog": [
     {
-      "version": "0.9.6-dev",
+      "version": "0.9.7-dev",
       "date": "2026-08-12",
       "changes": [
         {
           "text": "[removed] World Entries",
           "sub": [
             "Removed from the sidebar, Home, every project type, and setup — nothing else in the app depended on it that couldn't be moved to pages instead",
-            "Calendar plans that were linked to an entry now link to a page instead — the \u201cLink an entry\u2026\u201d picker is a page picker now"
+            "Calendar plans that were linked to an entry now link to a page instead — the “Link an entry…” picker is a page picker now"
           ]
         },
         {
           "text": "[rework] Oracle now draws from pages instead of entries",
           "sub": [
-            "Same mechanic \u2014 draws two things and asks what connects them \u2014 just pages now, using page tags for the shared/contrast prompts",
+            "Same mechanic — draws two things and asks what connects them — just pages now, using page tags for the shared/contrast prompts",
             "With no shared or contrasting tags, it compares which notebooks the two pages are in instead of entry types",
-            "\u201cLink them\u201d records the connection on the page itself now"
+            "“Link them” records the connection on the page itself now"
           ]
         },
         {
@@ -28,22 +28,40 @@
           ]
         },
         {
-          "text": "[rework] Topics are automatic now \u2014 headings are topics",
+          "text": "[rework] Topics are automatic now — headings are topics",
           "sub": [
-            "Every H1/H2/H3 with text becomes a topic on its own, no more selecting text and choosing \u201cNew topic\u201d",
+            "Every H1/H2/H3 with text becomes a topic on its own, no more selecting text and choosing “New topic”",
             "Rename a heading and its topic (and every place it's linked from) renames with it",
-            "Delete a heading, clear its text, or turn it back into a plain paragraph, and its topic goes away automatically \u2014 headings can't pile up stray topics from normal editing",
+            "Delete a heading, clear its text, or turn it back into a plain paragraph, and its topic goes away automatically — headings can't pile up stray topics from normal editing",
             "Existing headings from before this change become topics automatically the next time they load",
-            "\u201cLink an existing topic\u201d is still there for referencing a topic from elsewhere in your writing \u2014 only the old \u201cmark this text as a new topic\u201d step is gone"
+            "“Link an existing topic” is still there for referencing a topic from elsewhere in your writing — only the old “mark this text as a new topic” step is gone"
           ]
         },
         {
-          "text": "[new] Notebook legend \u2014 a table of contents for each notebook",
+          "text": "[new] Notebook legend — a table of contents for each notebook",
           "sub": [
-            "Replaces the old \u201cJump to a topic\u201d search \u2014 shows every page in the current notebook, numbered, with its topics listed underneath",
-            "This is what you see now when a notebook has no page open \u2014 pick a page, or a topic to jump straight to that heading",
+            "Replaces the old “Jump to a topic” search — shows every page in the current notebook, numbered, with its topics listed underneath",
+            "This is what you see now when a notebook has no page open — pick a page, or a topic to jump straight to that heading",
             "A Legend button in the sidebar (next to the page list) brings it back at any time, even with a page open",
-            "The existing \u201cBack to\u2026\u201d bar in the editor now also returns to the legend, when that's where you came from \u2014 it still works the normal way when you've followed a topic link from another page"
+            "The existing “Back to…” bar in the editor now also returns to the legend, when that's where you came from — it still works the normal way when you've followed a topic link from another page"
+          ]
+        },
+        {
+          "text": "[new] Insert images into pages",
+          "sub": [
+            "New Image button in the toolbar, plus drag-and-drop and paste (including a copied screenshot) directly into the page",
+            "Every image is downscaled through a canvas before it's embedded — animated GIFs are left as-is instead, just capped harder on file size, since resizing would flatten the animation to one frame — keeps a page's export from ballooning just because a full-resolution photo got dropped in",
+            "A toast warns if an inserted image still ends up large, so it's never a silent surprise later",
+            "Images are embedded directly in the page rather than linked to an external file, so they're automatically included in Export/Import like everything else — and since it's only ever embedded data, never an external URL, nothing in a page can phone home to another server"
+          ]
+        },
+        {
+          "text": "[new] Report a bug",
+          "sub": [
+            "New entry in Preferences opens a small in-app form first — write what happened, what you expected instead, and steps to reproduce, right here",
+            "Pick which diagnostics to include (app version, project type, browser, screen size, storage status), each with a live preview of its value — choices are remembered for next time",
+            "“Continue to GitHub” opens a pre-filled new-issue page with everything you wrote — nothing is sent anywhere until you review it there and submit it yourself",
+            "No credentials of any kind are involved — this only ever opens GitHub's own page and never calls GitHub's API directly, so there's no token anywhere in the app for anyone to find"
           ]
         }
       ]
@@ -55,66 +73,66 @@
         {
           "text": "[rework] Timelines is now built into Notebooks",
           "sub": [
-            "The + button next to Notebooks now asks Pages or Timeline \u2014 Timeline creates a timeline with its own notebook",
-            "Selecting a timeline's notebook shows its full epoch/era editor right there \u2014 add/reorder epochs, add/delete/move eras, all the same editing the standalone Timelines room has",
+            "The + button next to Notebooks now asks Pages or Timeline — Timeline creates a timeline with its own notebook",
+            "Selecting a timeline's notebook shows its full epoch/era editor right there — add/reorder epochs, add/delete/move eras, all the same editing the standalone Timelines room has",
             "Every epoch and era gets its own page in that notebook automatically, kept in sync by name in both directions",
             "New notebooks and timelines are named \"Notebook 1\", \"Timeline 1\", etc. by default instead of starting blank",
-            "Whether \"Timeline\" is offered as a notebook type is a Preference (Display \u2192 Notebooks), off by default \u2014 the standalone Timelines room still exists for anyone who wants it separately"
+            "Whether \"Timeline\" is offered as a notebook type is a Preference (Display → Notebooks), off by default — the standalone Timelines room still exists for anyone who wants it separately"
           ]
         },
         {
           "text": "[new] Duration, status, tags, and linked entries live directly in the page now",
           "sub": [
-            "Each is a real chip inside the page's own text \u2014 duration and tags are click-and-type, status is a dropdown, linked entries are clickable and colored by entry type",
-            "A protected properties block at the top keeps these separate from your prose \u2014 typing in one can't bleed into the other, in either direction",
-            "Editing from the Timelines tab and editing on the page write to the exact same place \u2014 there's no longer a separate copy of any of these to drift out of sync",
-            "The old separate Summary/Notes fields are gone \u2014 the page's own body is the actual writing space now"
+            "Each is a real chip inside the page's own text — duration and tags are click-and-type, status is a dropdown, linked entries are clickable and colored by entry type",
+            "A protected properties block at the top keeps these separate from your prose — typing in one can't bleed into the other, in either direction",
+            "Editing from the Timelines tab and editing on the page write to the exact same place — there's no longer a separate copy of any of these to drift out of sync",
+            "The old separate Summary/Notes fields are gone — the page's own body is the actual writing space now"
           ]
         },
         {
-          "text": "[new] Sort pages by Last edited, A\u2013Z, Chronological, or Timeline order",
+          "text": "[new] Sort pages by Last edited, A–Z, Chronological, or Timeline order",
           "sub": [
-            "Timeline order walks a notebook's pages in the same epoch/era sequence they appear in Timelines \u2014 only offered for a timeline's own notebook, and is its default sort there",
+            "Timeline order walks a notebook's pages in the same epoch/era sequence they appear in Timelines — only offered for a timeline's own notebook, and is its default sort there",
             "Every other notebook still defaults to Last edited, same as before"
           ]
         },
         {
           "text": "[new] Epoch/era terminology is configurable",
           "sub": [
-            "Preferences \u2192 Display \u2192 Notebooks lets you pick what the bigger and smaller divisions are called \u2014 independently of each other, so any combination works, not just matched pairs",
-            "Affects the Timelines editor and its embedded copy in Notebooks everywhere \u2014 button labels, placeholders, empty states, delete confirmations"
+            "Preferences → Display → Notebooks lets you pick what the bigger and smaller divisions are called — independently of each other, so any combination works, not just matched pairs",
+            "Affects the Timelines editor and its embedded copy in Notebooks everywhere — button labels, placeholders, empty states, delete confirmations"
           ]
         },
         {
           "text": "[removed] Chart and Map views",
           "sub": [
             "Timelines is edit-only now, in both the standalone room and the copy embedded in Notebooks",
-            "Removed rather than kept around unused \u2014 simpler to maintain, and one less thing pulling focus from the actual writing"
+            "Removed rather than kept around unused — simpler to maintain, and one less thing pulling focus from the actual writing"
           ]
         },
         {
           "text": "[rework] Pages renamed to Notebooks, and its icon swapped with Entries",
           "sub": [
-            "Purely a relabel/re-icon \u2014 nothing about how notebooks or pages work changed"
+            "Purely a relabel/re-icon — nothing about how notebooks or pages work changed"
           ]
         },
         {
           "text": "[redesign] Timelines, Entries, and Oracle are now hidden by default",
           "sub": [
-            "Applies to new projects and the Blank project type \u2014 existing projects are untouched",
+            "Applies to new projects and the Blank project type — existing projects are untouched",
             "Every built-in project type was re-checked against this: Novel and Worldbuilding still show Entries/Timelines since they need them, Poetry/Product/Screenplay already hid what they don't use",
             "Project types now also control whether \"Timeline\" is offered as a notebook type, not just what's visible in the sidebar",
-            "Switching or picking a project type now shows exactly what it turns on, computed live from the preset rather than hand-written \u2014 can't drift out of sync with what the preset actually does",
-            "Timelines carries a new \"Optional\" tag in Preferences, separate from Experimental/Recommended \u2014 it's not unfinished, it's just no longer the primary way to use timelines now that Notebooks covers it"
+            "Switching or picking a project type now shows exactly what it turns on, computed live from the preset rather than hand-written — can't drift out of sync with what the preset actually does",
+            "Timelines carries a new \"Optional\" tag in Preferences, separate from Experimental/Recommended — it's not unfinished, it's just no longer the primary way to use timelines now that Notebooks covers it"
           ]
         },
         "[redesign] Preferences toggles are rounded switches now instead of checkboxes",
-        "[fix] The Productivity tile in Preferences \u2192 Display was full-width for no reason, leaving an empty gap \u2014 sized to match Sidebar/Home/Notebooks now",
+        "[fix] The Productivity tile in Preferences → Display was full-width for no reason, leaving an empty gap — sized to match Sidebar/Home/Notebooks now",
         {
           "text": "[new] Experimental: an onboarding-style layout for the full Preferences menu",
           "sub": [
-            "Off by default \u2014 turn it on in Preferences to try it",
-            "Walks through the same settings as a series of focused steps instead of a grid of categories \u2014 nothing about what each setting does has changed, just how you move through them"
+            "Off by default — turn it on in Preferences to try it",
+            "Walks through the same settings as a series of focused steps instead of a grid of categories — nothing about what each setting does has changed, just how you move through them"
           ]
         }
       ]
