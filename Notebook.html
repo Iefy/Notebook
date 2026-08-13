@@ -615,6 +615,11 @@ body.saved-flash .save-rule::after { transform: scaleX(1); }
 }
 .prose pre code { background: none; border: none; padding: 0; font-size: 12.5px; line-height: 1.6; }
 .prose hr { border: none; border-top: 1px solid var(--border); margin: 1.3em 0; }
+.prose img {
+  display: block; max-width: 100%; height: auto;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  margin: 0.6em 0; border: 1px solid var(--border);
+}
 .prose table {
   border-collapse: collapse; width: 100%; margin: 0.8em 0; font-size: 13.5px;
   border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
@@ -2770,6 +2775,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
               <button data-cmd="table" title="Table — insert new, or manage rows/columns if the caret is already in one" aria-label="Insert or manage table">Table</button>
               <span class="sep"></span>
               <button data-cmd="link" title="Link — web address or topic" aria-label="Link — web address or topic">Link</button>
+              <button data-cmd="image" title="Insert image — also works with drag-and-drop or paste" aria-label="Insert image">Image</button>
               <button data-cmd="clear" title="Clear formatting" aria-label="Clear formatting">Clear</button>
               <span class="sep" id="tl-cmd-sep" style="display:none"></span>
               <button id="tl-cmd-link" data-cmd="tl-link" title="Insert a linked entry" aria-label="Insert linked entry" style="display:none">+ Entry</button>
@@ -2777,6 +2783,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
               <button id="focus-toggle-btn" title="Focus mode — dim everything but the current paragraph" aria-label="Toggle focus mode" aria-pressed="false">Focus</button>
               <span class="tb-wordcount"><span id="word-count">0 words</span></span>
             </div>
+            <input type="file" id="pg-image-input" accept="image/png,image/jpeg,image/gif,image/webp" multiple style="display:none">
             <div id="pg-rich" class="prose" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Page body" spellcheck="true" data-placeholder="Write here. Use the toolbar for headings, lists, quotes…"></div>
           </div>
           <div id="pg-tasks-panel" class="pg-tasks-panel">
@@ -3242,6 +3249,11 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
           <span class="set-cat-main"><span>Check for updates</span><span class="set-cat-desc" id="check-updates-desc">You're on v<span id="check-updates-version"></span></span></span>
           <span class="set-cat-chev">›</span>
         </button>
+        <button class="set-cat-btn" id="report-bug-btn">
+          <span class="set-cat-icon set-icon-red"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="8" width="10" height="11" rx="4"/><path d="M7 12H3M21 12h-4M9 8V6a3 3 0 0 1 6 0v2M4 6l2.5 2.5M20 6l-2.5 2.5M4 18l2.5-2.5M20 18l-2.5-2.5"/></svg></span>
+          <span class="set-cat-main"><span>Report a bug</span><span class="set-cat-desc">Write it here, pick what diagnostics to include, then review and submit on GitHub</span></span>
+          <span class="set-cat-chev">↗</span>
+        </button>
         <div class="set-group-title" style="margin-top:18px">Appearance — applies to every project</div>
         <button class="set-cat-btn" data-goto="style">
           <span class="set-cat-icon set-icon-purple"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="14" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/></svg></span>
@@ -3636,7 +3648,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
    to read from the `dev` branch's version.json instead of `main`'s, so a
    dev build never gets nagged about (or accidentally offered) a main-line
    release, and vice versa. */
-var APP_VERSION = "0.9.6-dev";
+var APP_VERSION = "0.9.5";
 var UPDATE_CHANNEL = APP_VERSION.toLowerCase().indexOf("dev") > -1 ? "dev" : "main";
 var UPDATE_CHECK_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/version.json";
 var UPDATE_HTML_URL = "https://raw.githubusercontent.com/Iefy/Notebook/" + UPDATE_CHANNEL + "/Notebook.html";
@@ -3748,7 +3760,7 @@ function renderMd(src) {
 /* MD-END */
 
 /* ── Rich-text (page editor) helpers ── */
-var ALLOWED_TAGS = { P: 1, BR: 1, DIV: 1, H1: 1, H2: 1, H3: 1, STRONG: 1, B: 1, EM: 1, I: 1, U: 1, S: 1, DEL: 1, UL: 1, OL: 1, LI: 1, BLOCKQUOTE: 1, PRE: 1, CODE: 1, A: 1, SPAN: 1, TABLE: 1, THEAD: 1, TBODY: 1, TR: 1, TH: 1, TD: 1 };
+var ALLOWED_TAGS = { P: 1, BR: 1, DIV: 1, H1: 1, H2: 1, H3: 1, STRONG: 1, B: 1, EM: 1, I: 1, U: 1, S: 1, DEL: 1, UL: 1, OL: 1, LI: 1, BLOCKQUOTE: 1, PRE: 1, CODE: 1, A: 1, SPAN: 1, TABLE: 1, THEAD: 1, TBODY: 1, TR: 1, TH: 1, TD: 1, IMG: 1 };
 function sanitizeHtml(html) {
   var tmp = document.createElement("div");
   tmp.innerHTML = String(html == null ? "" : html);
@@ -3797,6 +3809,13 @@ function sanitizeHtml(html) {
         } else if (tag === "P" && name === "class" && a.value === "tl-prop-row") {
           keep = true;
         } else if (tag === "P" && name === "data-tl-row" && /^(duration|status|tags|links|meta)$/.test(a.value)) {
+          keep = true;
+        } else if (tag === "IMG" && name === "src") {
+          // Images are embedded, not linked — data: URIs only, so a page
+          // (and everything in it) always stays fully self-contained in
+          // Export, with nothing that phones home to an external URL.
+          keep = /^data:image\/(png|jpe?g|gif|webp);base64,[a-zA-Z0-9+/=]+$/.test(a.value);
+        } else if (tag === "IMG" && name === "alt") {
           keep = true;
         }
         if (!keep) ch.removeAttribute(a.name);
@@ -6876,6 +6895,106 @@ function commitRich() {
   updatePgBodyPlaceholder();
   scheduleSave(); updatePgMeta(p);
 }
+/* ── Images: embedded as data: URIs, so a page (and everything Export
+   produces from it) stays fully self-contained — no separate files to
+   lose track of, no external URLs that could break or leak a reader's
+   IP to some other server. The tradeoff is size: everything downscales
+   through a canvas first (animated GIFs are the one exception — redrawing
+   those through a canvas would flatten them to a single frame, so they're
+   embedded as-is, just capped harder on raw file size instead), and large
+   results get a heads-up rather than being silently inserted. ── */
+var IMAGE_MAX_DIM = 1600;
+var IMAGE_QUALITY = 0.85;
+var IMAGE_WARN_BYTES = 2.5 * 1024 * 1024;
+var IMAGE_GIF_MAX_BYTES = 4 * 1024 * 1024;
+function resizeImageFile(file, maxDim, quality, cb) {
+  if (file.type === "image/gif") {
+    if (file.size > IMAGE_GIF_MAX_BYTES) { cb(null, 0); toast("That GIF is too large to embed (over 4MB) — try a smaller one, or a still image instead."); return; }
+    var gifReader = new FileReader();
+    gifReader.onload = function () { cb(gifReader.result, file.size); };
+    gifReader.onerror = function () { cb(null, 0); };
+    gifReader.readAsDataURL(file);
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function () {
+    var img = new Image();
+    img.onload = function () {
+      var w = img.naturalWidth || 1, h = img.naturalHeight || 1;
+      var scale = Math.min(1, maxDim / Math.max(w, h));
+      var tw = Math.max(1, Math.round(w * scale)), th = Math.max(1, Math.round(h * scale));
+      var canvas = document.createElement("canvas");
+      canvas.width = tw; canvas.height = th;
+      var ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, tw, th);
+      var mime = (file.type === "image/png" || file.type === "image/webp") ? file.type : "image/jpeg";
+      var dataUrl;
+      try { dataUrl = canvas.toDataURL(mime, quality); } catch (err) { cb(null, 0); return; }
+      cb(dataUrl, Math.round(dataUrl.length * 0.75));
+    };
+    img.onerror = function () { cb(null, 0); };
+    img.src = reader.result;
+  };
+  reader.onerror = function () { cb(null, 0); };
+  reader.readAsDataURL(file);
+}
+function insertImageDataUrl(dataUrl, savedRange, altText) {
+  var doc = Popout.activeDoc() || document;
+  var win = Popout.activeWin() || window;
+  pgRich.focus();
+  try {
+    if (savedRange) {
+      var live = win.getSelection();
+      live.removeAllRanges(); live.addRange(savedRange);
+    }
+    doc.execCommand("insertHTML", false, '<img src="' + dataUrl + '" alt="' + escapeHtml(altText || "") + '">&nbsp;');
+  } catch (_) {}
+  commitRich();
+}
+function processAndInsertImageFile(file, savedRange) {
+  if (!file || file.type.indexOf("image/") !== 0) { toast("That's not an image file."); return; }
+  resizeImageFile(file, IMAGE_MAX_DIM, IMAGE_QUALITY, function (dataUrl, approxBytes) {
+    if (!dataUrl) return;
+    if (approxBytes > IMAGE_WARN_BYTES) {
+      toast("Inserted, but it's a large image (~" + (Math.round(approxBytes / 1024 / 1024 * 10) / 10) + "MB) — this page's export will grow to match.");
+    }
+    var altText = file.name ? file.name.replace(/\.[a-z0-9]+$/i, "") : "";
+    insertImageDataUrl(dataUrl, savedRange, altText);
+  });
+}
+function openImagePicker() {
+  var sel = window.getSelection ? (Popout.activeWin() || window).getSelection() : null;
+  var savedRange = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+  var input = $("pg-image-input");
+  input.onchange = function () {
+    var files = Array.prototype.slice.call(input.files || []);
+    input.value = "";
+    files.forEach(function (f, i) { processAndInsertImageFile(f, i === 0 ? savedRange : null); });
+  };
+  input.click();
+}
+pgRich.addEventListener("dragover", function (e) {
+  if (e.dataTransfer && Array.prototype.slice.call(e.dataTransfer.types || []).indexOf("Files") > -1) e.preventDefault();
+});
+pgRich.addEventListener("drop", function (e) {
+  var files = e.dataTransfer && e.dataTransfer.files ? Array.prototype.slice.call(e.dataTransfer.files) : [];
+  var imageFiles = files.filter(function (f) { return f.type.indexOf("image/") === 0; });
+  if (!imageFiles.length) return;
+  e.preventDefault();
+  // Places the caret at the actual drop point when the browser supports
+  // it, so the image lands where it was dropped rather than wherever the
+  // caret happened to be beforehand.
+  var doc = Popout.activeDoc() || document;
+  var range = null;
+  try {
+    if (doc.caretRangeFromPoint) range = doc.caretRangeFromPoint(e.clientX, e.clientY);
+    else if (doc.caretPositionFromPoint) {
+      var pos = doc.caretPositionFromPoint(e.clientX, e.clientY);
+      if (pos) { range = doc.createRange(); range.setStart(pos.offsetNode, pos.offset); range.collapse(true); }
+    }
+  } catch (_) { range = null; }
+  imageFiles.forEach(function (f, i) { processAndInsertImageFile(f, i === 0 ? range : null); });
+});
 // True when `range`'s start position is the very first possible caret spot
 // inside `block` — used below to tell "backspace at the true start of the
 // paragraph right after .tl-props" (which would otherwise delete the whole
@@ -6939,6 +7058,15 @@ pgRich.addEventListener("blur", function () { commitRich(); renderPages(); });
    fonts and other styling not supported by the editor are stripped by sanitizeHtml. */
 pgRich.addEventListener("paste", function (e) {
   if (!e.clipboardData) return;
+  var files = Array.prototype.slice.call(e.clipboardData.files || []);
+  var imageFiles = files.filter(function (f) { return f.type.indexOf("image/") === 0; });
+  if (imageFiles.length) {
+    e.preventDefault();
+    var sel = window.getSelection ? (Popout.activeWin() || window).getSelection() : null;
+    var savedRange = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+    imageFiles.forEach(function (f, i) { processAndInsertImageFile(f, i === 0 ? savedRange : null); });
+    return;
+  }
   e.preventDefault();
   var wantsRich = !(state.settings && state.settings.pastePlainText);
   var html = wantsRich ? e.clipboardData.getData("text/html") : "";
@@ -7392,6 +7520,7 @@ $("pg-toolbar").addEventListener("click", function (e) {
   var btn = e.target.closest("button[data-cmd]"); if (!btn) return;
   e.preventDefault();
   if (btn.dataset.cmd === "link") { openLinkChooser(); return; }
+  if (btn.dataset.cmd === "image") { openImagePicker(); return; }
   if (btn.dataset.cmd === "tl-link") { insertLinkedEntryChip(); return; }
   if (btn.dataset.cmd === "table") {
     // mousedown above preserves the caret position in pg-rich even though
@@ -14978,6 +15107,116 @@ $("update-open").addEventListener("click", function () {
 $("check-updates-version").textContent = APP_VERSION;
 $("settings-version-badge").textContent = "v" + APP_VERSION;
 $("check-updates-btn").addEventListener("click", function () { checkForUpdate(true); });
+// "Report a bug" — a small in-app form first, then GitHub's own pre-filled
+// new-issue page in a new tab. Deliberately does NOT call the GitHub API to
+// file the issue directly: doing that would need an auth token embedded
+// somewhere in this file, and since this is a static page anyone can view
+// source on, any token here would be exposed to every single user, not
+// just used by them — a real, well-known way credentials leak, not a
+// hypothetical one. This way nothing is sent anywhere without the person
+// reviewing the pre-filled text on GitHub's own page and clicking Submit
+// themselves; no secret exists anywhere in this codebase for anyone to
+// find. Which diagnostic lines get offered lives here, in one place — add
+// a field to BUG_DIAG_FIELDS and it automatically gets a checkbox, a live
+// preview of its value, and a spot in the generated report.
+var REPO_OWNER = "Iefy", REPO_NAME = "Notebook";
+var BUG_DIAG_FIELDS = [
+  { key: "version", label: "App version", value: function () { return APP_VERSION; } },
+  { key: "projectType", label: "Project type", value: function () { return projectTypePreset(state.projectType || "blank").label || "Blank"; } },
+  { key: "browser", label: "Browser", value: function () { return navigator.userAgent; } },
+  { key: "screen", label: "Screen size", value: function () { return window.screen ? window.screen.width + "\u00d7" + window.screen.height : "unknown"; } },
+  { key: "storage", label: "Storage status", value: function () { return document.body.classList.contains("no-storage") ? "session only (no persistent storage)" : "persistent"; } }
+];
+// Which fields were checked last time — remembered across sessions, same
+// as any other preference, but stored loosely (just an array of keys, no
+// normalizeState entry) since the worst case of a stale/missing value here
+// is just "falls back to everything checked," never a crash.
+function bugReportFieldKeys() {
+  var saved = state.settings.bugReportFields;
+  return Array.isArray(saved) ? saved.filter(function (k) { return BUG_DIAG_FIELDS.some(function (f) { return f.key === k; }); }) : BUG_DIAG_FIELDS.map(function (f) { return f.key; });
+}
+function buildBugReportBody(happened, expected, steps, includedKeys) {
+  var lines = [
+    "**What happened:**",
+    happened.trim() || "_(not filled in)_",
+    "",
+    "**What you expected instead:**",
+    expected.trim() || "_(not filled in)_",
+    ""
+  ];
+  if (steps.trim()) lines.push("**Steps to reproduce:**", steps.trim(), "");
+  var diagLines = BUG_DIAG_FIELDS.filter(function (f) { return includedKeys.indexOf(f.key) > -1; })
+    .map(function (f) { return "- " + f.label + ": " + f.value(); });
+  if (diagLines.length) {
+    lines.push("---", "*Diagnostic info:*");
+    lines = lines.concat(diagLines);
+  }
+  return lines.join("\n");
+}
+function openBugReportModal() {
+  openModal("Report a bug", "Fill this in here, then review and submit it on GitHub — nothing is sent until you do.");
+  var extra = $modal("modal-extra");
+  var form = el("div", "cal-plan-form");
+
+  var titleField = el("div", "cal-field");
+  titleField.appendChild(el("label", "cal-field-lbl", "Title"));
+  var titleInp = el("input"); titleInp.type = "text"; titleInp.value = "[bug] "; titleInp.setAttribute("aria-label", "Issue title");
+  titleField.appendChild(titleInp);
+  form.appendChild(titleField);
+
+  function textField(labelText, placeholder) {
+    var f = el("div", "cal-field");
+    f.appendChild(el("label", "cal-field-lbl", labelText));
+    var ta = el("textarea"); ta.placeholder = placeholder || ""; ta.setAttribute("aria-label", labelText);
+    f.appendChild(ta);
+    form.appendChild(f);
+    return ta;
+  }
+  var happenedTa = textField("What happened");
+  var expectedTa = textField("What you expected instead");
+  var stepsTa = textField("Steps to reproduce (optional)");
+  extra.appendChild(form);
+
+  var diagTitle = el("div", "set-group-title", "Include with the report");
+  diagTitle.style.marginTop = "18px";
+  extra.appendChild(diagTitle);
+  var included = bugReportFieldKeys().slice();
+  BUG_DIAG_FIELDS.forEach(function (f) {
+    var row = el("label", "cal-form-check");
+    var cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = included.indexOf(f.key) > -1;
+    var raw = String(f.value());
+    var preview = raw.length > 54 ? raw.slice(0, 54) + "\u2026" : raw;
+    var textWrap = el("span", null, f.label + " ");
+    textWrap.appendChild(el("span", "cal-field-hint", "(" + preview + ")"));
+    cb.addEventListener("change", function () {
+      var idx = included.indexOf(f.key);
+      if (cb.checked && idx < 0) included.push(f.key);
+      else if (!cb.checked && idx > -1) included.splice(idx, 1);
+      state.settings.bugReportFields = included.slice();
+      scheduleSave();
+    });
+    row.append(cb, textWrap);
+    extra.appendChild(row);
+  });
+
+  var row = $modal("modal-row");
+  var cancel = el("button", null, "Cancel");
+  cancel.addEventListener("click", closeModal);
+  var go = el("button", "primary", "Continue to GitHub \u2192");
+  go.addEventListener("click", function () {
+    var url = "https://github.com/" + REPO_OWNER + "/" + REPO_NAME + "/issues/new"
+      + "?title=" + encodeURIComponent(titleInp.value.trim() || "[bug] ")
+      + "&labels=" + encodeURIComponent("bug")
+      + "&body=" + encodeURIComponent(buildBugReportBody(happenedTa.value, expectedTa.value, stepsTa.value, included));
+    window.open(url, "_blank", "noopener");
+    closeModal();
+  });
+  row.append(cancel, go);
+  titleInp.focus();
+  titleInp.setSelectionRange(titleInp.value.length, titleInp.value.length);
+}
+$("report-bug-btn").addEventListener("click", openBugReportModal);
 /* ── Patch notes — clicking the version badge in Preferences shows the
    changelog entry for the version currently installed (the most recent
    entry that isn't newer than APP_VERSION), fetched fresh from the same
