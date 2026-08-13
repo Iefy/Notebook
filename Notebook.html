@@ -448,6 +448,51 @@ body.saved-flash .save-rule::after { transform: scaleX(1); }
   transition: background 0.12s;
 }
 .view-empty button:hover { background: var(--sage-bg); }
+/* Notebook legend (#pg-legend, inside #pg-legend-wrap) — overrides
+   .view-empty's small centered-message layout with a left-aligned,
+   scrollable table of contents, since a notebook with real content needs
+   room, unlike the plain "nothing here" glyph+message .view-empty is
+   designed for (which #pg-legend still falls back to when a notebook has
+   no pages — see renderPageLegend). Numbered entries, serif type, no
+   hover boxes — reads as an index of the notebook rather than another
+   app list; topics sit indented underneath their page as sub-entries,
+   the way a TOC nests sections under a chapter.
+   #pg-legend itself switches from a centered flex column (so the fallback
+   glyph/message/button center properly, matching how .view-empty's direct
+   children used to) to plain block stacking once there's an actual
+   contents list to lay out (.has-pages, set in renderPageLegend). */
+#pg-legend-wrap { display: flex; align-items: center; justify-content: center; text-align: center; overflow-y: auto; padding: 28px calc(var(--pad) + 8px); }
+#pg-legend-wrap.has-pages { justify-content: flex-start; text-align: left; align-items: stretch; padding: 32px calc(var(--pad) + 8px); }
+#pg-legend { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+#pg-legend-wrap.has-pages #pg-legend { display: block; max-width: 440px; margin: 0 auto; }
+.pg-legend-title {
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-mute); margin: 0 4px 20px; text-align: center;
+}
+.pg-legend-page {
+  display: flex; align-items: baseline; gap: 12px;
+  width: 100%; padding: 7px 4px;
+}
+.pg-legend-num {
+  font-family: var(--serif); font-size: 12px; color: var(--ink-mute);
+  flex-shrink: 0; min-width: 18px; text-align: right;
+}
+.pg-legend-page-body { flex: 1; min-width: 0; }
+.pg-legend-page-title {
+  display: block; width: 100%; text-align: left;
+  font-family: var(--serif); font-size: 14.5px; color: var(--ink-hi);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding-bottom: 2px; border-bottom: 1px solid transparent;
+}
+.pg-legend-page-title:hover { color: var(--sage); border-bottom-color: var(--sage-bd); }
+.pg-legend-topics { margin-top: 3px; display: flex; flex-direction: column; }
+.pg-legend-topic {
+  display: block; width: 100%; text-align: left;
+  font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--ink-dim);
+  padding: 2px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pg-legend-topic::before { content: "\2013\a0 "; color: var(--ink-mute); font-style: normal; }
+.pg-legend-topic:hover { color: var(--sage); }
 
 /* ── Page editor ── */
 #pg-edit-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; }
@@ -605,6 +650,16 @@ body.saved-flash .save-rule::after { transform: scaleX(1); }
   margin-left: 1px; color: var(--amber); opacity: 0.85;
 }
 .prose .topic-origin.topic-flash { background: var(--sage-bg); }
+/* Headings are topics automatically now (see syncTopicsFromHeadings) — a
+   small marker shows which ones, but unlike the old span-based origins
+   above, headings stay plain editable text otherwise (no dotted underline,
+   no pointer cursor) since they need normal click-to-place-cursor editing
+   to keep working. */
+.prose h1[data-topic-id]::after, .prose h2[data-topic-id]::after, .prose h3[data-topic-id]::after {
+  content: "◆"; font-size: 0.4em; vertical-align: super;
+  margin-left: 6px; color: var(--amber); opacity: 0.7;
+}
+.prose h1[data-topic-id].topic-flash, .prose h2[data-topic-id].topic-flash, .prose h3[data-topic-id].topic-flash { background: var(--sage-bg); }
 .prose a.topic-link {
   color: inherit;
   text-decoration: none;
@@ -2630,7 +2685,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
   <aside id="panel">
 
     <div id="panel-pages">
-      <div class="panel-head"><h2>Notebooks</h2><span id="storage-note" title="Browser storage is unavailable; changes last only this session. Export to keep your work.">session only</span><button class="popout-btn" id="popout-btn-pages" data-popout="pages" aria-label="Pop out pages" data-tip="Pop out" title="Pop out — float above other windows" style="margin-left:auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></button><button class="sect-add" id="browse-topics" aria-label="Jump to a topic" title="Jump to a topic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg></button></div>
+      <div class="panel-head"><h2>Notebooks</h2><span id="storage-note" title="Browser storage is unavailable; changes last only this session. Export to keep your work.">session only</span><button class="popout-btn" id="popout-btn-pages" data-popout="pages" aria-label="Pop out pages" data-tip="Pop out" title="Pop out — float above other windows" style="margin-left:auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></button></div>
       <div class="search-wrap">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
         <input id="search-pg" type="search" placeholder="Search pages…" aria-label="Search pages" autocomplete="off">
@@ -2640,7 +2695,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
       <div class="sect-head" id="nb-sect-head"><span>Notebooks</span><button class="sect-add" id="add-nb" aria-label="New notebook" title="New notebook">+</button></div>
       <nav id="nb-list" aria-label="Notebooks"></nav>
       <div id="pg-list-section">
-        <div class="sect-head"><span id="pages-head">Pages</span><select id="pg-sort-select" class="pg-sort-select" aria-label="Sort pages"></select><button class="sect-add" id="add-pg" aria-label="New page" title="New page (Ctrl+N)">+</button></div>
+        <div class="sect-head"><span id="pages-head">Pages</span><select id="pg-sort-select" class="pg-sort-select" aria-label="Sort pages"></select><button class="sect-add" id="show-legend" aria-label="Show notebook legend" title="Legend — jump to any page or topic in this notebook"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg></button><button class="sect-add" id="add-pg" aria-label="New page" title="New page (Ctrl+N)">+</button></div>
         <nav id="pg-list" class="scroll-list" aria-label="Pages"></nav>
       </div>
     </div>
@@ -2744,10 +2799,8 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
           </button>
         </div>
       </div>
-      <div class="view-empty">
-        <div class="glyph" aria-hidden="true">❧</div>
-        <p>Nothing open. Pick a page from the list, or start a fresh one.</p>
-        <button data-new-page>New page</button>
+      <div class="view-empty" id="pg-legend-wrap">
+        <div id="pg-legend"></div>
       </div>
       <div id="nb-tl-editor" class="is-empty view-empty">
         <div class="glyph" aria-hidden="true">❧</div>
@@ -3717,7 +3770,7 @@ function sanitizeHtml(html) {
         var keep = false;
         if (tag === "A" && name === "href") {
           keep = !/^\s*javascript:/i.test(a.value);
-        } else if ((tag === "A" || tag === "SPAN") && name === "data-topic-id") {
+        } else if ((tag === "A" || tag === "SPAN" || tag === "H1" || tag === "H2" || tag === "H3") && name === "data-topic-id") {
           keep = /^[a-z0-9]+$/i.test(a.value);
         } else if ((tag === "A" || tag === "SPAN") && name === "class" && /^topic-(link|origin)$/.test(a.value)) {
           keep = true;
@@ -3725,7 +3778,7 @@ function sanitizeHtml(html) {
           keep = true;
         } else if (tag === "SPAN" && name === "data-tl-value" && /^[a-z]*$/.test(a.value)) {
           keep = true;
-        } else if (tag === "A" && name === "data-entry-id" && /^[a-z0-9]+$/i.test(a.value)) {
+        } else if (tag === "A" && name === "data-page-id" && /^[a-z0-9]+$/i.test(a.value)) {
           keep = true;
         } else if ((tag === "A" || tag === "SPAN" || tag === "DIV") && name === "contenteditable" && (a.value === "false" || a.value === "true")) {
           keep = true;
@@ -3965,7 +4018,7 @@ function parseChipsFromHtml(html) {
   var tags = tmp.querySelector('[data-tl-field="tags"]');
   if (tags) out.tags = parseTags(tags.textContent || "");
   tmp.querySelectorAll('[data-tl-field="link"]').forEach(function (a) {
-    var id = a.getAttribute("data-entry-id");
+    var id = a.getAttribute("data-page-id");
     if (id) out.links.push(id);
   });
   return out;
@@ -4033,11 +4086,15 @@ function writeChipOnHtml(html, field, buildChipHtml) {
 function statusChipHtml(status) {
   return '<span class="tl-chip status-pill' + (status ? " s-" + status : "") + '" data-tl-field="status" data-tl-value="' + (status || "") + '" contenteditable="false">' + (status ? STATUS_LABEL[status] : "—") + "</span>";
 }
-function linkChipHtml(target) {
-  var dot = '<span class="tl-chip-dot" style="background:' + typeByKey(target.type).color + '"></span>';
-  return '<a class="tl-chip tl-chip-link" href="#" contenteditable="false" data-tl-field="link" data-entry-id="' + target.id + '">' + dot + '<span class="tl-chip-nm">' + escapeHtml(target.name || "Unnamed") + "</span></a>";
+// Era links point at pages, not the removed Entries feature — a page's
+// notebook color stands in for the old entry-type color, so it still reads
+// as "which collection is this from" at a glance.
+function linkChipHtml(pg) {
+  var nb = nbById(pg.notebookId);
+  var dot = '<span class="tl-chip-dot" style="background:' + ((nb && nb.color) || "var(--ink-mute)") + '"></span>';
+  return '<a class="tl-chip tl-chip-link" href="#" contenteditable="false" data-tl-field="link" data-page-id="' + pg.id + '">' + dot + '<span class="tl-chip-nm">' + escapeHtml(pg.title || "Untitled") + "</span></a>";
 }
-var LINK_ADD_CHIP_HTML = '<span class="tl-chip tl-chip-add" data-tl-field="link-add" contenteditable="false">+ entry</span>';
+var LINK_ADD_CHIP_HTML = '<span class="tl-chip tl-chip-add" data-tl-field="link-add" contenteditable="false">+ page</span>';
 // Builds the "properties" block an era/epoch page opens with — one row per
 // property (duration, status, tags, linked entries for an era; just a span
 // row for an epoch), each with its own persistent label so what it's for
@@ -4057,7 +4114,7 @@ function eraProplineHtml(era) {
   var stat = statusChipHtml(era.status || null);
   var tags = '<span class="tl-chip tl-chip-tags" data-tl-field="tags" contenteditable="true">' + escapeHtml((era.tags || []).join(", ")) + "</span>";
   var links = (era.links || []).map(function (id) {
-    var t = entById(id);
+    var t = pgById(id);
     return t ? linkChipHtml(t) : "";
   }).filter(Boolean).join(" ");
   return '<div class="tl-props" contenteditable="false">' +
@@ -4120,9 +4177,9 @@ function updateEraChip(era, field, buildChipHtml) {
   writeChipOnPage(era.pageId, field, buildChipHtml);
   syncTlFieldsFromPage(pgById(era.pageId));
 }
-function appendLinkChipOnPage(pageId, entryId) {
+function appendLinkChipOnPage(pageId, linkedPageId) {
   var pg = pgById(pageId); if (!pg) return;
-  var target = entById(entryId); if (!target) return;
+  var target = pgById(linkedPageId); if (!target) return;
   var html = linkChipHtml(target);
   var tmp = document.createElement("div");
   tmp.innerHTML = pg.body || "";
@@ -4139,11 +4196,11 @@ function appendLinkChipOnPage(pageId, entryId) {
   pg.updatedAt = Date.now();
   if (state.sel.pg === pageId && pgRichLoaded === pageId) pgRich.innerHTML = pg.body;
 }
-function removeLinkChipOnPage(pageId, entryId) {
+function removeLinkChipOnPage(pageId, linkedPageId) {
   var pg = pgById(pageId); if (!pg) return;
   var tmp = document.createElement("div");
   tmp.innerHTML = pg.body || "";
-  var target = tmp.querySelector('[data-tl-field="link"][data-entry-id="' + entryId + '"]');
+  var target = tmp.querySelector('[data-tl-field="link"][data-page-id="' + linkedPageId + '"]');
   if (target) target.remove();
   pg.body = sanitizeHtml(tmp.innerHTML);
   pg.updatedAt = Date.now();
@@ -4202,23 +4259,23 @@ var MEDAL_DEFS = {
 // when creating any other, same as the built-ins here.
 var PROJECT_TYPE_PRESETS = [
   { key: "blank", label: "Blank", builtin: true,
-    desc: "Entries and Oracle hidden to start — everything else is walked through in setup.",
-    hidden: { railTabs: ["entries", "oracle"], homeTiles: ["entries", "oracle"], notebookFeatures: ["timelines"] } },
+    desc: "Oracle hidden to start — everything else is walked through in setup.",
+    hidden: { railTabs: ["oracle"], homeTiles: ["oracle"], notebookFeatures: ["timelines"] } },
   { key: "novel", label: "Novel / Story", builtin: true,
-    desc: "Manuscript pages, a world bible for characters and places, and a plot timeline. Hides Oracle and Management to start.",
+    desc: "Manuscript pages and a plot timeline. Hides Oracle and Management to start.",
     hidden: { railTabs: ["oracle", "management"], homeTiles: ["oracle", "management"], notebookFeatures: ["timelines"] } },
   { key: "worldbuilding", label: "Worldbuilding / Campaign", builtin: true,
-    desc: "Everything on \u2014 pages, entries, timelines, and Oracle for surfacing connections. Hides Management to start.",
+    desc: "Everything on \u2014 pages, timelines, and Oracle for surfacing connections. Hides Management to start.",
     hidden: { railTabs: ["management"], homeTiles: ["management"], notebookFeatures: ["timelines"] } },
   { key: "screenplay", label: "Screenplay", builtin: true,
-    desc: "Pages and a character/location bible, without the timeline and connection tools worldbuilding needs. Hides Timelines, Oracle, and Management to start.",
+    desc: "Pages, without the timeline and connection tools worldbuilding needs. Hides Timelines, Oracle, and Management to start.",
     hidden: { railTabs: ["timelines", "oracle", "management"], homeTiles: ["timelines", "oracle", "management"], notebookFeatures: ["timelines"] } },
   { key: "poetry", label: "Poetry / Collection", builtin: true,
-    desc: "Just pages and your writing goals \u2014 no world bible needed. Hides Entries, Timelines, Oracle, and Management to start.",
-    hidden: { railTabs: ["entries", "timelines", "oracle", "management"], homeTiles: ["entries", "timelines", "oracle", "management"], notebookFeatures: ["timelines"] } },
+    desc: "Just pages and your writing goals. Hides Timelines, Oracle, and Management to start.",
+    hidden: { railTabs: ["timelines", "oracle", "management"], homeTiles: ["timelines", "oracle", "management"], notebookFeatures: ["timelines"] } },
   { key: "product", label: "Product / Professional work", builtin: true,
-    desc: "Budget and product tracking front and center, without the fiction-writing tools. Hides Entries, Timelines, and Oracle to start.",
-    hidden: { railTabs: ["entries", "timelines", "oracle"], homeTiles: ["entries", "timelines", "oracle"], notebookFeatures: ["timelines"] } }
+    desc: "Budget and product tracking front and center, without the fiction-writing tools. Hides Timelines and Oracle to start.",
+    hidden: { railTabs: ["timelines", "oracle"], homeTiles: ["timelines", "oracle"], notebookFeatures: ["timelines"] } }
 ];
 // Built-ins plus whatever custom presets this workspace has saved.
 function allProjectTypePresets() {
@@ -4517,6 +4574,56 @@ function normalizeState(s) {
           era.story = !!era.story;
         });
       });
+    });
+  });
+  // Backfills topics for headings that existed before headings-are-topics
+  // was a thing (including on fresh imports) — every H1/H2/H3 with text
+  // gets a topic if it doesn't have one yet; a heading whose text no
+  // longer matches its topic's name gets the topic (and any topic-link
+  // references elsewhere) renamed to match. This is the load-time,
+  // state-object-local sibling of syncTopicsFromHeadings/renameTopic —
+  // those two reach for the live editor and the global `state`, neither of
+  // which is safe to touch from inside normalizeState (this `s` isn't
+  // necessarily the global state yet). Old-format topics predating this
+  // whole feature (arbitrary selected text, not a heading) are left alone
+  // here — topicOriginExists no longer recognizes their shape, so they
+  // surface through the existing orphaned-topics cleanup in Preferences →
+  // Data instead of being silently deleted on load.
+  safe("topicsFromHeadings", function () {
+    s.topics = Array.isArray(s.topics) ? s.topics : [];
+    function renameRefs(topicId, newName) {
+      s.pages.forEach(function (pg) {
+        if (!pg.body || pg.body.indexOf(topicId) === -1) return;
+        var t2 = document.createElement("div");
+        t2.innerHTML = pg.body;
+        var found = false;
+        t2.querySelectorAll('a.topic-link[data-topic-id="' + topicId + '"]').forEach(function (a) { a.textContent = newName; found = true; });
+        if (found) pg.body = t2.innerHTML;
+      });
+    }
+    s.pages.forEach(function (p) {
+      if (!p.body) return;
+      var tmp = document.createElement("div");
+      tmp.innerHTML = p.body;
+      var headings = tmp.querySelectorAll("h1, h2, h3");
+      if (!headings.length) return;
+      var changed = false;
+      headings.forEach(function (h) {
+        var text = h.textContent.trim();
+        if (!text) { if (h.hasAttribute("data-topic-id")) { h.removeAttribute("data-topic-id"); changed = true; } return; }
+        var id = h.getAttribute("data-topic-id");
+        var t = id ? s.topics.find(function (x) { return x.id === id; }) : null;
+        if (!t) {
+          id = uid();
+          h.setAttribute("data-topic-id", id);
+          s.topics.push({ id: id, name: text, pageId: p.id, createdAt: Date.now() });
+          changed = true;
+        } else if (t.name !== text) {
+          t.name = text;
+          renameRefs(id, text);
+        }
+      });
+      if (changed) p.body = tmp.innerHTML;
     });
   });
   // Backfills the notebook/page pairing for timelines, epochs, and eras
@@ -5011,7 +5118,7 @@ function normalizeState(s) {
   safe("sel", function () {
     if (sel.tab === "overview") sel.tab = "hub";
     if (sel.tab === "graph" || sel.tab === "work" || sel.tab === "calendar") sel.tab = sel.tab === "graph" ? "timelines" : "productivity";
-    if (["hub", "pages", "entries", "timelines", "productivity", "oracle", "management"].indexOf(sel.tab) < 0) sel.tab = "hub";
+    if (["hub", "pages", "timelines", "productivity", "oracle", "management"].indexOf(sel.tab) < 0) sel.tab = "hub";
     delete sel.tlGraph;
     delete sel.tlView;
     delete sel.prodView;
@@ -5522,10 +5629,6 @@ var RAIL_ITEMS = [
   { key: "pages", label: "Notebooks", tip: "Notebooks", scope: "project", recommended: true,
     desc: "Rich-text notes grouped into notebooks — your main writing space.",
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
-  { key: "entries", label: "Entries", tip: "World entries", scope: "project", experimental: true,
-    experimentalNote: "Fewer people are using Entries day to day, so it's marked experimental while we figure out its future — nothing is going away yet.",
-    desc: "Your world bible — characters, places, factions, and more, with attributes and links between them.",
-    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' },
   { key: "timelines", label: "Timelines", tip: "Timelines", scope: "project", recommended: true,
     desc: "Epochs and eras with dated events, and pages for writing them up.",
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="22"/><circle cx="12" cy="6" r="2.2" fill="currentColor" stroke="none"/><circle cx="12" cy="13" r="2.2" fill="currentColor" stroke="none"/><circle cx="12" cy="20" r="2.2" fill="currentColor" stroke="none"/></svg>' },
@@ -6301,7 +6404,7 @@ function renderPageEditor() {
   $("view-page").classList.toggle("showing-nb-tl", !p && !!nbTl);
   if (!p && nbTl) { pgRichLoaded = null; renderPgTasks(null); renderPgTlHeader(null); return; }
   $("view-page").classList.toggle("is-empty", !p);
-  if (!p) { pgRichLoaded = null; renderPgTasks(null); renderPgTlHeader(null); return; }
+  if (!p) { pgRichLoaded = null; renderPgTasks(null); renderPgTlHeader(null); renderPageLegend(); return; }
   if ($("pg-title-input").value !== p.title) $("pg-title-input").value = p.title;
   if (pgRichLoaded !== p.id) { $("pg-rich").innerHTML = sanitizeHtml(p.body || ""); pgRichLoaded = p.id; setFocusMode(false); }
   updatePgBodyPlaceholder();
@@ -6315,7 +6418,7 @@ function renderPageEditor() {
     var scrollId = pendingTopicScroll;
     pendingTopicScroll = null;
     requestAnimationFrame(function () {
-      var target = pgRich.querySelector('.topic-origin[data-topic-id="' + scrollId + '"]');
+      var target = pgRich.querySelector('[data-topic-id="' + scrollId + '"]');
       if (target) {
         target.scrollIntoView({ behavior: "smooth", block: "center" });
         target.classList.add("topic-flash");
@@ -6700,8 +6803,69 @@ function restorePropsIfMissing(p) {
   p.body = tmp.innerHTML;
   return true;
 }
+// Notebook legend — shown in the main editor pane whenever nothing's open
+// (see renderPageEditor), and reachable any time via the Legend button in
+// the sidebar (#show-legend), not just when you land here naturally. Lists
+// every page in the current notebook with its topics nested underneath —
+// topics are automatic now (see syncTopicsFromHeadings), so this is the
+// replacement for the old global "Jump to a topic" search: one notebook's
+// whole map, one click to any page or heading in it.
+function renderPageLegend() {
+  var wrap = $("pg-legend");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  var nb = nbById(state.sel.nb);
+  if (!nb) return;
+  var pages = pagesOf(nb.id);
+  var legendWrap = $("pg-legend-wrap");
+  if (!pages.length) {
+    if (legendWrap) legendWrap.classList.remove("has-pages");
+    wrap.appendChild(el("div", "glyph", "❧"));
+    wrap.appendChild(el("p", null, "Nothing here yet. Start a fresh page."));
+    var btn = el("button", null, "New page");
+    btn.addEventListener("click", newPage);
+    wrap.appendChild(btn);
+    return;
+  }
+  if (legendWrap) legendWrap.classList.add("has-pages");
+  wrap.appendChild(el("div", "pg-legend-title", nb.name || "Notebook"));
+  var sorted = pages.slice().sort(function (a, b) { return (a.title || "").localeCompare(b.title || ""); });
+  sorted.forEach(function (p, idx) {
+    // A plain container, not itself a button — the title and each topic
+    // below are independently clickable (see pickTopic/goToTopic), and
+    // nesting clickable buttons inside a clickable row isn't valid HTML,
+    // unlike the Pages list's tags (decorative, not click targets) —
+    // topics here need to actually navigate.
+    var row = el("div", "pg-legend-page");
+    row.appendChild(el("span", "pg-legend-num", (idx + 1) + "."));
+    var body = el("div", "pg-legend-page-body");
+    var untitledLabel = p.kind === "era" ? "Unnamed era" : p.kind === "epoch" ? "Unnamed epoch" : "Untitled";
+    var title = el("button", "pg-legend-page-title", p.title || untitledLabel);
+    title.addEventListener("click", function () {
+      // Opening a page from the legend counts as "came from the legend"
+      // for the back-bar's purposes — same topicNavStack goToTopic itself
+      // uses, just with no specific origin page (see renderTopicBackBar).
+      topicNavStack.push({ pageId: null, scrollTop: 0 });
+      openPage(p.id, true);
+    });
+    body.appendChild(title);
+    var topics = (state.topics || []).filter(function (t) { return t.pageId === p.id; });
+    if (topics.length) {
+      var topicLine = el("div", "pg-legend-topics");
+      topics.forEach(function (t) {
+        var topicRow = el("button", "pg-legend-topic", t.name || "Untitled topic");
+        topicRow.addEventListener("click", function () { goToTopic(t.id); });
+        topicLine.appendChild(topicRow);
+      });
+      body.appendChild(topicLine);
+    }
+    row.appendChild(body);
+    wrap.appendChild(row);
+  });
+}
 function commitRich() {
   var p = curPage(); if (!p) return;
+  syncTopicsFromHeadings(p, pgRich);
   p.body = sanitizeHtml(pgRich.innerHTML);
   p.format = "html";
   p.updatedAt = Date.now();
@@ -7210,8 +7374,7 @@ function openLinkChooser() {
   var extra = $modal("modal-extra");
   [
     { label: "Web address", desc: "Link out to a URL", go: function () { closeModal(); promptUrlLink(savedRange); } },
-    { label: "New topic", desc: "Mark this text as a topic other pages can link to", go: function () { closeModal(); markTopicFromRange(savedRange); } },
-    { label: "Existing topic", desc: "Link this text to a topic you've already made", go: function () { closeModal(); linkToTopicFromRange(savedRange); } }
+    { label: "Topic", desc: "Link this text to one of your headings elsewhere", go: function () { closeModal(); linkToTopicFromRange(savedRange); } }
   ].forEach(function (o) {
     var row = el("button", "pick-row");
     var main = el("div"); main.style.cssText = "display:flex;flex-direction:column;gap:1px;text-align:left";
@@ -7241,15 +7404,15 @@ $("pg-toolbar").addEventListener("click", function (e) {
   }
   richCmd(btn.dataset.cmd);
 });
-// Adds a linked-entry chip to the page's dedicated "Linked" row (the
-// toolbar's "+ Entry" button and the inline "+ entry" chip both call this)
+// Adds a linked-page chip to the page's dedicated "Linked" row (the
+// toolbar's "+ Entry" button and the inline "+ page" chip both call this)
 // — always the same row, rather than wherever the caret happens to be, so
-// linked entries stay in one predictable place instead of scattered through
+// linked pages stay in one predictable place instead of scattered through
 // the prose. Removing one is just deleting it like any other text.
 function insertLinkedEntryChip() {
   var p = curPage(); if (!p || p.kind !== "era") return;
-  pickEntry(null, [], function (id) {
-    if (!entById(id)) return;
+  pickPageForLink(p.id, [], function (id) {
+    if (!pgById(id)) return;
     appendLinkChipOnPage(p.id, id);
     var tl = tlById(p.timelineId);
     var loc = tl && findEraInTl(tl, p.eraId);
@@ -7293,7 +7456,7 @@ function topicOriginExists(t) {
   if (!p || !p.body || p.body.indexOf(t.id) === -1) return false;
   var tmp = document.createElement("div");
   tmp.innerHTML = p.body;
-  return !!tmp.querySelector('span.topic-origin[data-topic-id="' + t.id + '"]');
+  return !!tmp.querySelector('h1[data-topic-id="' + t.id + '"], h2[data-topic-id="' + t.id + '"], h3[data-topic-id="' + t.id + '"]');
 }
 function topicReferences(topicId) {
   var out = [];
@@ -7355,62 +7518,65 @@ function unwrapNode(n) {
   while (n.firstChild) p.insertBefore(n.firstChild, n);
   p.removeChild(n);
 }
-/* Finds the nearest heading (h1/h2/h3) that appears before the given range, to suggest a topic name. */
-function lastHeaderBefore(range) {
-  var node = range.startContainer;
-  var top = node.nodeType === 1 ? node : node.parentNode;
-  while (top && top.parentNode && top.parentNode !== pgRich) top = top.parentNode;
-  var walker = (top && top.parentNode === pgRich) ? top : null;
-  while (walker) {
-    if (walker.nodeType === 1 && /^H[1-3]$/.test(walker.tagName) && walker.textContent.trim()) return walker.textContent.trim();
-    walker = walker.previousElementSibling;
-  }
-  return "";
-}
-function nameTopicModal(defaultName, cb) {
-  openModal("Name this topic", "Give it a short, findable name — you can change it later.");
-  var inp = el("input"); inp.type = "text"; inp.value = defaultName || ""; inp.placeholder = "Topic name"; inp.setAttribute("aria-label", "Topic name");
-  $modal("modal-extra").appendChild(inp);
-  var row = $modal("modal-row");
-  var cancel = el("button", null, "Cancel");
-  cancel.addEventListener("click", function () { closeModal(); cb(null); });
-  var ok = el("button", "primary", "Create");
-  function go() { var v = inp.value.trim(); closeModal(); cb(v || defaultName || "Untitled topic"); }
-  ok.addEventListener("click", go);
-  inp.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); go(); } if (e.key === "Escape") { closeModal(); cb(null); } });
-  row.append(cancel, ok);
-  inp.focus(); inp.select();
-}
-function markTopicFromRange(range) {
-  var p = curPage(); if (!p) return;
-  if (!range || range.collapsed || !pgRich.contains(range.commonAncestorContainer)) { toast("Select text inside the page body."); return; }
-  var defaultName = lastHeaderBefore(range) || (range.toString().trim().slice(0, 40)) || "Untitled topic";
-  var id = uid();
-  var span = document.createElement("span");
-  span.className = "topic-origin";
-  span.setAttribute("data-topic-id", id);
-  try {
-    var frag = range.extractContents();
-    if (!frag.textContent || !frag.textContent.trim()) { range.insertNode(frag); toast("Select some text, not just a gap."); return; }
-    span.appendChild(frag);
-    range.insertNode(span);
-  } catch (e) { toast("Couldn't mark that selection as a topic."); return; }
-  var sel = window.getSelection ? (Popout.activeWin() || window).getSelection() : null;
-  if (sel) sel.removeAllRanges();
-  commitRich();
-  nameTopicModal(defaultName, function (name) {
-    if (!name) { unwrapNode(span); commitRich(); return; }
-    state.topics = state.topics || [];
-    state.topics.push({ id: id, name: name, pageId: p.id, createdAt: Date.now() });
-    commitRich();
-    scheduleSave();
-    toast("Topic created: " + name);
+// Removes a topic and any topic-link references to it on OTHER pages,
+// without touching its own origin heading — the caller already knows
+// that's gone or no longer a heading (see syncTopicsFromHeadings). Skips
+// the page currently open in the editor to avoid disturbing its live DOM
+// mid-keystroke; a stray reference there cleans itself up the next time
+// that page reloads or is next edited.
+function purgeTopic(t) {
+  var activeP = curPage();
+  var activeIsLoaded = activeP && pgRichLoaded === activeP.id;
+  state.pages.forEach(function (p) {
+    if (activeIsLoaded && p.id === activeP.id) return;
+    if (!p.body || p.body.indexOf(t.id) === -1) return;
+    var tmp = document.createElement("div");
+    tmp.innerHTML = p.body;
+    var found = tmp.querySelectorAll('[data-topic-id="' + t.id + '"]');
+    if (found.length) {
+      Array.prototype.slice.call(found).forEach(function (n) {
+        if (n.classList.contains("topic-link")) unwrapNode(n);
+        else n.removeAttribute("data-topic-id");
+      });
+      p.body = tmp.innerHTML;
+      p.updatedAt = Date.now();
+    }
   });
+  state.topics = (state.topics || []).filter(function (x) { return x.id !== t.id; });
 }
-function markTopic() {
-  var sel = window.getSelection ? (Popout.activeWin() || window).getSelection() : null;
-  if (!sel || !sel.rangeCount || sel.isCollapsed) { toast("Select a word, sentence, or paragraph first."); return; }
-  markTopicFromRange(sel.getRangeAt(0));
+// Headings are topics, automatically — no manual "mark as topic" step.
+// Every H1/H2/H3 with actual text gets a topic (data-topic-id lives right
+// on the heading element); editing a heading's text renames its topic
+// everywhere it's referenced; clearing a heading's text, deleting it, or
+// converting it to a non-heading block (formatBlock naturally produces a
+// fresh element with no attributes, so un-heading something already drops
+// data-topic-id on its own) removes the topic, so headings can't pile up
+// stray topics just from normal editing.
+// `root` is whatever DOM the content is in right now — the live editor
+// (pgRich) during normal typing (see commitRich), or a detached, temporary
+// div during the one-time migration that backfills topics for headings
+// that existed before this feature did. Either way this only touches DOM
+// nodes and state.topics; the caller re-serializes root.innerHTML back
+// into p.body afterward.
+function syncTopicsFromHeadings(p, root) {
+  if (!p) return;
+  var seen = {};
+  root.querySelectorAll("h1, h2, h3").forEach(function (h) {
+    var text = h.textContent.trim();
+    if (!text) { if (h.hasAttribute("data-topic-id")) h.removeAttribute("data-topic-id"); return; }
+    var id = h.getAttribute("data-topic-id");
+    var t = id ? topicById(id) : null;
+    if (!t) {
+      id = uid();
+      h.setAttribute("data-topic-id", id);
+      state.topics = state.topics || [];
+      state.topics.push({ id: id, name: text, pageId: p.id, createdAt: Date.now() });
+    } else if (t.name !== text) {
+      renameTopic(t, text);
+    }
+    seen[id] = true;
+  });
+  (state.topics || []).filter(function (t) { return t.pageId === p.id && !seen[t.id]; }).forEach(purgeTopic);
 }
 function pickTopic(cb) {
   openModal("Link to a topic", "");
@@ -7425,7 +7591,7 @@ function pickTopic(cb) {
       return !q || t.name.toLowerCase().indexOf(q) > -1;
     }).slice(0, 60);
     if (!opts.length) {
-      listBox.appendChild(el("div", "empty", state.topics && state.topics.length ? "No matching topics." : "No topics yet — select text, click Link, and choose “New topic” to make one."));
+      listBox.appendChild(el("div", "empty", state.topics && state.topics.length ? "No matching topics." : "No topics yet — type a heading (H1, H2, or H3) on any page and it’ll show up here."));
       return;
     }
     opts.forEach(function (t) {
@@ -7446,7 +7612,7 @@ function pickTopic(cb) {
 }
 function linkToTopicFromRange(savedRange) {
   var p = curPage(); if (!p) return;
-  if (!state.topics || !state.topics.length) { toast("No topics yet — select text, click Link, and choose “New topic” to create one first."); return; }
+  if (!state.topics || !state.topics.length) { toast("No topics yet — type a heading (H1, H2, or H3) on any page first."); return; }
   pickTopic(function (topicId) {
     var t = topicById(topicId); if (!t) return;
     pgRich.focus();
@@ -7548,8 +7714,6 @@ function hideOriginPopoverNow() { if (originPopoverEl) originPopoverEl.classList
 document.addEventListener("click", function (e) {
   var a = e.target.closest && e.target.closest(".topic-link");
   if (a && pgRich && pgRich.contains(a)) { showTopicBadgeFor(a); hideOriginPopoverNow(); return; }
-  var o = e.target.closest && e.target.closest(".topic-origin");
-  if (o && pgRich && pgRich.contains(o)) { showOriginPopoverFor(o); hideTopicBadgeNow(); return; }
   if (topicBadgeEl && topicBadgeEl.classList.contains("show") && !topicBadgeEl.contains(e.target)) hideTopicBadgeNow();
   if (originPopoverEl && originPopoverEl.classList.contains("show") && !originPopoverEl.contains(e.target)) hideOriginPopoverNow();
 });
@@ -7572,8 +7736,8 @@ document.addEventListener("click", function (e) {
   var linkChip = e.target.closest && e.target.closest('[data-tl-field="link"]');
   if (linkChip && pgRich && pgRich.contains(linkChip)) {
     e.preventDefault();
-    var id = linkChip.getAttribute("data-entry-id");
-    if (id && entById(id)) openEntry(id);
+    var id = linkChip.getAttribute("data-page-id");
+    if (id && pgById(id)) openPage(id);
     return;
   }
   var addChip = e.target.closest && e.target.closest('[data-tl-field="link-add"]');
@@ -7602,7 +7766,7 @@ function renderTopicBackBar() {
   if (topicNavStack.length && curPage()) {
     var prev = topicNavStack[topicNavStack.length - 1];
     var prevPage = prev.pageId ? pgById(prev.pageId) : null;
-    bar.querySelector(".topic-back-label").textContent = "Back to " + (prevPage ? (prevPage.title || "Untitled") : "previous page");
+    bar.querySelector(".topic-back-label").textContent = "Back to " + (prevPage ? (prevPage.title || "Untitled") : "the legend");
     bar.style.display = "flex";
   } else {
     bar.style.display = "none";
@@ -7617,7 +7781,12 @@ if (topicBackBtn) topicBackBtn.addEventListener("click", function () {
     openPage(prev.pageId, true);
     requestAnimationFrame(function () { if (pgRich) pgRich.scrollTop = restoreScroll; });
   } else {
-    topicNavStack = [];
+    // No specific page to return to — this leg of the trail started at
+    // the legend (see renderPageLegend / goToTopic when nothing was open),
+    // so that's exactly where "back" should land.
+    state.sel.pg = null;
+    scheduleSave();
+    renderPagesTab();
   }
   renderTopicBackBar();
 });
@@ -7692,7 +7861,11 @@ $("add-nb").addEventListener("click", function (e) {
   if ((state.hidden.notebookFeatures || []).indexOf("timelines") > -1) { newNotebook(); return; }
   openNewNotebookMenu($("add-nb"));
 });
-$("browse-topics").addEventListener("click", function () { pickTopic(goToTopic); });
+$("show-legend").addEventListener("click", function () {
+  state.sel.pg = null;
+  scheduleSave();
+  renderPageEditor();
+});
 
 var searchPgTimer = null;
 elSearchPg.addEventListener("input", function () {
@@ -7979,7 +8152,7 @@ function buildTopicManagerUI(container) {
   container.innerHTML = "";
   var topics = (state.topics || []).slice().sort(function (a, b) { return b.createdAt - a.createdAt; });
   if (!topics.length) {
-    container.appendChild(el("div", "tm-none", "No topics yet. Select text on a page, click Link, and choose “New topic” to create one."));
+    container.appendChild(el("div", "tm-none", "No topics yet. Every heading (H1, H2, H3) on a page becomes one automatically."));
     return;
   }
   var wrap = el("div", "tm-rows");
@@ -8139,7 +8312,7 @@ function tagEditor(container, tags, onChange, opts) {
     cur.appendChild(cc); container.appendChild(cur);
     var suggest = [], sseen = {};
     state.tagPresets.forEach(function (p) { var k = p.name.toLowerCase(); if (!sseen[k]) { sseen[k] = 1; suggest.push(p.name); } });
-    allUsedTags().forEach(function (t) { var k = t.toLowerCase(); if (!sseen[k]) { sseen[k] = 1; suggest.push(t); } });
+    allUsedPageTags().forEach(function (t) { var k = t.toLowerCase(); if (!sseen[k]) { sseen[k] = 1; suggest.push(t); } });
     var avail = suggest.filter(function (name) { return lc(tags).indexOf(name.toLowerCase()) < 0; });
     if (avail.length) {
       var pg = el("div", "tagpick-grp");
@@ -8425,26 +8598,32 @@ elSearchEnt.addEventListener("input", function () {
 });
 
 /* entry picker (links) */
-function pickEntry(excludeId, alreadyIds, cb) {
-  openModal("Link an entry", "");
+// Picks a page to link an era to — replaces the old entry-picker now that
+// era links point at pages (see linkChipHtml) rather than the removed
+// Entries feature. Excludes whichever page this era's own writing lives
+// on (linking an era to its own page would be circular) plus anything
+// already linked.
+function pickPageForLink(excludeId, alreadyIds, cb) {
+  openModal("Link a page", "");
   var extra = $modal("modal-extra");
-  var inp = el("input"); inp.type = "text"; inp.placeholder = "Filter by name…"; inp.setAttribute("aria-label", "Filter entries");
+  var inp = el("input"); inp.type = "text"; inp.placeholder = "Filter by title…"; inp.setAttribute("aria-label", "Filter pages");
   var listBox = el("div");
   listBox.style.marginTop = "8px";
   extra.append(inp, listBox);
   function fill() {
     var q = inp.value.trim().toLowerCase();
     listBox.innerHTML = "";
-    var opts = state.entries.filter(function (e) {
-      return e.id !== excludeId && alreadyIds.indexOf(e.id) < 0 &&
-             (!q || (e.name || "").toLowerCase().indexOf(q) > -1);
+    var opts = state.pages.filter(function (p) {
+      return p.id !== excludeId && alreadyIds.indexOf(p.id) < 0 &&
+             (!q || (p.title || "").toLowerCase().indexOf(q) > -1);
     }).slice(0, 40);
-    if (!opts.length) { listBox.appendChild(el("div", "empty", "No matching entries.")); return; }
-    opts.forEach(function (e) {
+    if (!opts.length) { listBox.appendChild(el("div", "empty", "No matching pages.")); return; }
+    opts.forEach(function (p) {
       var row = el("button", "pick-row");
-      var dot = el("span", "type-dot"); dot.style.background = typeByKey(e.type).color;
-      row.append(dot, el("span", null, e.name || "Unnamed"), el("span", "nb-count", typeByKey(e.type).label));
-      row.addEventListener("click", function () { closeModal(); cb(e.id); });
+      var nb = nbById(p.notebookId);
+      var dot = el("span", "type-dot"); dot.style.background = (nb && nb.color) || "var(--ink-mute)";
+      row.append(dot, el("span", null, p.title || "Untitled"), el("span", "nb-count", nb ? nb.name : ""));
+      row.addEventListener("click", function () { closeModal(); cb(p.id); });
       listBox.appendChild(row);
     });
   }
@@ -8663,12 +8842,13 @@ function buildEraRow(tl, ep, era, eraIdx) {
     note.addEventListener("input", function () { ev.note = note.value; touchTl(tl); });
     var evChips = el("div", "chip-row");
     (ev.links || []).forEach(function (id, li) {
-      var target = entById(id);
+      var target = pgById(id);
       var chip = el("span", "link-chip" + (target ? "" : " ghost"));
       var dot = el("span", "type-dot");
-      dot.style.background = target ? typeByKey(target.type).color : "var(--ink-mute)";
-      var cn = el("span", "nm", target ? (target.name || "Unnamed") : "(missing entry)");
-      if (target) cn.addEventListener("click", function () { openEntry(target.id); });
+      var enb = target ? nbById(target.notebookId) : null;
+      dot.style.background = target ? ((enb && enb.color) || "var(--ink-mute)") : "var(--ink-mute)";
+      var cn = el("span", "nm", target ? (target.title || "Untitled") : "(missing page)");
+      if (target) cn.addEventListener("click", function () { openPage(target.id); });
       var rm = el("button", "rm", "✕");
       rm.setAttribute("aria-label", "Unlink");
       rm.addEventListener("click", function () { ev.links.splice(li, 1); touchTl(tl); renderTlEditor(); });
@@ -8677,7 +8857,7 @@ function buildEraRow(tl, ep, era, eraIdx) {
     });
     var evLink = el("button", "chip-add", "+ link");
     evLink.addEventListener("click", function () {
-      pickEntry(null, ev.links || [], function (id) {
+      pickPageForLink(era.pageId, ev.links || [], function (id) {
         ev.links = ev.links || [];
         ev.links.push(id);
         touchTl(tl); renderTlEditor();
@@ -8705,15 +8885,16 @@ function buildEraRow(tl, ep, era, eraIdx) {
     updateEraChip(era, "tags", function () { return '<span class="tl-chip tl-chip-tags" data-tl-field="tags" contenteditable="true">' + escapeHtml(val) + "</span>"; });
   });
   body.appendChild(tags);
-  body.appendChild(el("div", "era-field-lbl", "Linked entries"));
+  body.appendChild(el("div", "era-field-lbl", "Linked pages"));
   var chips = el("div", "chip-row");
   (era.links || []).forEach(function (id, i) {
-    var target = entById(id);
+    var target = pgById(id);
     var chip = el("span", "link-chip" + (target ? "" : " ghost"));
     var dot = el("span", "type-dot");
-    dot.style.background = target ? typeByKey(target.type).color : "var(--ink-mute)";
-    var nm = el("span", "nm", target ? (target.name || "Unnamed") : "(missing entry)");
-    if (target) nm.addEventListener("click", function () { openEntry(target.id); });
+    var tnb = target ? nbById(target.notebookId) : null;
+    dot.style.background = target ? ((tnb && tnb.color) || "var(--ink-mute)") : "var(--ink-mute)";
+    var nm = el("span", "nm", target ? (target.title || "Untitled") : "(missing page)");
+    if (target) nm.addEventListener("click", function () { openPage(target.id); });
     var rm = el("button", "rm", "✕");
     rm.setAttribute("aria-label", "Unlink");
     rm.addEventListener("click", function () {
@@ -8726,9 +8907,9 @@ function buildEraRow(tl, ep, era, eraIdx) {
   });
   body.appendChild(chips);
   var actions = el("div", "era-actions");
-  var link = el("button", "mini-add", "+ Link entry");
+  var link = el("button", "mini-add", "+ Link page");
   link.addEventListener("click", function () {
-    pickEntry(null, era.links || [], function (id) {
+    pickPageForLink(era.pageId, era.links || [], function (id) {
       if (era.pageId) appendLinkChipOnPage(era.pageId, id);
       syncTlFieldsFromPage(pgById(era.pageId));
       renderTlEditor();
@@ -11581,7 +11762,7 @@ function renderCalDetail() {
       metaParts.push(document.createTextNode("Spans " + spanLabel));
     }
     if (p.recurrence) metaParts.push(document.createTextNode(recurrenceLabel(p.recurrence)));
-    if (p.linkedEntryId) { var linked = entById(p.linkedEntryId); if (linked) metaParts.push(document.createTextNode("linked: " + linked.name)); }
+    if (p.linkedPageId) { var linked = pgById(p.linkedPageId); if (linked) metaParts.push(document.createTextNode("linked: " + (linked.title || "Untitled"))); }
     if (p.linkedProductId) { metaParts.push(document.createTextNode("from Management \u2014 edit the product to change this")); }
     if (metaParts.length) {
       var metaEl = el("div", "cal-plan-meta");
@@ -11699,7 +11880,7 @@ function renderCalTasks() {
     var metaBits = [dateLbl];
     if (p.recurrence) metaBits.push(recurrenceLabel(p.recurrence));
     if (linkedPage) metaBits.push("on page: " + (linkedPage.title || "Untitled"));
-    if (p.linkedEntryId) { var linked = entById(p.linkedEntryId); if (linked) metaBits.push("linked: " + linked.name); }
+    if (p.linkedPageId) { var linked = pgById(p.linkedPageId); if (linked) metaBits.push("linked: " + (linked.title || "Untitled")); }
     if (p.linkedProductId) { metaBits.push("from Management"); }
     metaEl.textContent = metaBits.join(" \u00b7 ");
     main.appendChild(metaEl);
@@ -11843,25 +12024,26 @@ function openPlanModal(existing, defaultDateKey, presetTask) {
   repeatSel.addEventListener("change", syncRepeatUI);
   syncRepeatUI();
 
-  var linkedId = existing ? existing.linkedEntryId : null;
+  var linkedId = existing ? existing.linkedPageId : null;
   var linkSearchOpen = false;
   var linkWrap = el("div", "cal-link-row");
   function renderLinkWrap() {
     linkWrap.innerHTML = "";
     if (linkSearchOpen) {
       var searchWrap = el("div", "cal-link-search");
-      var inp = el("input"); inp.type = "text"; inp.placeholder = "Filter by name\u2026"; inp.setAttribute("aria-label", "Filter entries");
+      var inp = el("input"); inp.type = "text"; inp.placeholder = "Filter by title\u2026"; inp.setAttribute("aria-label", "Filter pages");
       var listBox = el("div", "cal-link-results");
       function fill() {
         var q = inp.value.trim().toLowerCase();
         listBox.innerHTML = "";
-        var opts = state.entries.filter(function (e) { return !q || (e.name || "").toLowerCase().indexOf(q) > -1; }).slice(0, 20);
-        if (!opts.length) { listBox.appendChild(el("div", "empty", "No matching entries.")); return; }
-        opts.forEach(function (e) {
+        var opts = state.pages.filter(function (p) { return !q || (p.title || "").toLowerCase().indexOf(q) > -1; }).slice(0, 20);
+        if (!opts.length) { listBox.appendChild(el("div", "empty", "No matching pages.")); return; }
+        opts.forEach(function (p) {
           var pr = el("button", "pick-row");
-          var dot = el("span", "type-dot"); dot.style.background = typeByKey(e.type).color;
-          pr.append(dot, el("span", null, e.name || "Unnamed"));
-          pr.addEventListener("click", function () { linkedId = e.id; linkSearchOpen = false; renderLinkWrap(); });
+          var nb = nbById(p.notebookId);
+          var dot = el("span", "type-dot"); dot.style.background = (nb && nb.color) || "var(--ink-mute)";
+          pr.append(dot, el("span", null, p.title || "Untitled"));
+          pr.addEventListener("click", function () { linkedId = p.id; linkSearchOpen = false; renderLinkWrap(); });
           listBox.appendChild(pr);
         });
       }
@@ -11873,13 +12055,13 @@ function openPlanModal(existing, defaultDateKey, presetTask) {
       fill();
       inp.focus();
     } else if (linkedId) {
-      var linked = entById(linkedId);
-      linkWrap.append(el("span", "cal-link-chip", linked ? linked.name : "(missing entry)"));
+      var linked = pgById(linkedId);
+      linkWrap.append(el("span", "cal-link-chip", linked ? (linked.title || "Untitled") : "(missing page)"));
       var unlink = el("button", "foot-btn", "Unlink");
       unlink.addEventListener("click", function () { linkedId = null; renderLinkWrap(); });
       linkWrap.appendChild(unlink);
     } else {
-      var linkBtn = el("button", "foot-btn", "Link an entry\u2026");
+      var linkBtn = el("button", "foot-btn", "Link a page\u2026");
       linkBtn.addEventListener("click", function () { linkSearchOpen = true; renderLinkWrap(); });
       linkWrap.appendChild(linkBtn);
     }
@@ -11889,8 +12071,13 @@ function openPlanModal(existing, defaultDateKey, presetTask) {
   var scheduleSection = el("div", "cal-plan-section");
   scheduleSection.append(field("Repeat", repeatSel), weeklyField, everyNField, untilField);
 
+  // A task already linked to its page (opened via that page's own Tasks
+  // panel — see isPageLinked above) keeps that link fixed, same reasoning
+  // as hiding the task/plan toggle: unlinking it here would silently pull
+  // it out of the page's task list, which defeats the point of it being
+  // there. Skip offering the (now redundant, and unsafe) generic picker.
   var linkSection = el("div", "cal-plan-section");
-  linkSection.append(el("div", "cal-field-lbl", "Linked entry"), linkWrap);
+  if (!isPageLinked) linkSection.append(el("div", "cal-field-lbl", "Linked page"), linkWrap);
 
   form.append(field("Title", titleInp), field("Notes", detailInp), taskRow, noDueRow, dateRow, scheduleSection, linkSection);
   extra.append(form);
@@ -11927,12 +12114,12 @@ function openPlanModal(existing, defaultDateKey, presetTask) {
     var projectId = workspace.activeProjectId;
     if (existing) {
       existing.title = title; existing.detail = detail; existing.date = date; existing.durationDays = durationDays;
-      existing.recurrence = rec; existing.isTask = isTask; existing.noDue = noDue; existing.linkedEntryId = linkedId; existing.projectId = projectId;
+      existing.recurrence = rec; existing.isTask = isTask; existing.noDue = noDue; existing.linkedPageId = linkedId; existing.projectId = projectId;
       if (!rec) existing.exceptions = {};
     } else {
       state.plans.push({
         id: uid(), title: title, detail: detail, date: date, durationDays: durationDays, recurrence: rec, exceptions: {},
-        isTask: isTask, noDue: noDue, doneDates: [], linkedEntryId: linkedId, linkedPageId: null, color: null, createdAt: Date.now(), projectId: projectId
+        isTask: isTask, noDue: noDue, doneDates: [], linkedPageId: linkedId, color: null, createdAt: Date.now(), projectId: projectId
       });
     }
     persist(); closeModal(); renderCalendarTab();
@@ -11963,15 +12150,7 @@ $("cal-add-plan-btn").addEventListener("click", function () { openPlanModal(null
 
 
 var ORACLE_CLOSERS = ["Where do those meet?", "What does that cost them?", "Who gives way first?", "What happens the day they cross?", "What is the unspoken thing between them?", "Which one bends?", "What do they want from each other?"];
-var ORACLE_TYPE_PROMPTS = {
-  "character::character": ["Put these two in a room. Who speaks first, and who refuses to?", "They want different things from the same moment."],
-  "character::place": ["This place changed them — or they are about to change it.", "What did they leave here, or come back for?"],
-  "character::faction": ["The faction wants something from them. Or fears what they could become.", "Where does loyalty end and self end?"],
-  "character::object": ["What this thing means to them is not what it means to anyone else.", "They would lose much to keep it — or to destroy it."],
-  "faction::faction": ["A border, a treaty, or an old grievance lies between them.", "What would make these two move against each other?"],
-  "place::place": ["A road, a rumor, or a refugee runs between them.", "What travels from one to the other that should not?"],
-  "concept::character": ["This idea has a hold on them they cannot quite name.", "They embody it, or they are its undoing."]
-};
+var ORACLE_TYPE_PROMPTS = {};
 var ORACLE_GENERIC = ["A thread runs between these two. Follow it.", "They share something nobody has noticed yet.", "What would force these two into the same scene?", "One of these holds a secret about the other."];
 var ORACLE_SHARED = [
   "Both carry \u201c{t}\u201d. What does that shared thread pull taut between them?",
@@ -12039,30 +12218,28 @@ var TYPE_TREE = {
 };
 function defaultRootTrait(base) { return (base === "character" || base === "race") ? "living" : "non-living"; }
 function typeTraitsOf(e) { var t = typeByKey(e.type); return (t && Array.isArray(t.traits)) ? t.traits.map(normTag).filter(Boolean) : []; }
-function entryTagsOf(e) { return (e.tags || []).map(normTag).filter(Boolean); }
-function allTagsOf(e) {
+function pageTagsOf(p) { return (p.tags || []).map(normTag).filter(Boolean); }
+function allUsedPageTags() {
   var seen = {}, out = [];
-  typeTraitsOf(e).concat(entryTagsOf(e)).forEach(function (t) { var k = t.toLowerCase(); if (t && !seen[k]) { seen[k] = 1; out.push(t); } });
-  return out;
-}
-function allUsedTags() {
-  var seen = {}, out = [];
-  state.entries.forEach(function (e) {
-    (e.tags || []).forEach(function (t) { var n = normTag(t); var k = n.toLowerCase(); if (n && !seen[k]) { seen[k] = 1; out.push(n); } });
+  state.pages.forEach(function (p) {
+    (p.tags || []).forEach(function (t) { var n = normTag(t); var k = n.toLowerCase(); if (n && !seen[k]) { seen[k] = 1; out.push(n); } });
   });
   return out;
 }
+// Oracle draws two pages together and asks what connects them — previously
+// drew from world Entries (now removed); tags already exist on pages, so
+// they carry the same "shared thread" / "contrast" logic Oracle always
+// used, just against a different pool. With no shared or contrasting tags,
+// it falls back to which notebooks the two pages come from rather than
+// entry types (which no longer exist).
 function oracleRationale(a, b) {
-  var aN = a.name || "One", bN = b.name || "the other";
-  var aAll = allTagsOf(a), bAll = allTagsOf(b);
+  var aN = a.title || "One page", bN = b.title || "the other";
+  var aAll = pageTagsOf(a), bAll = pageTagsOf(b);
   var bAllL = bAll.map(function (s) { return s.toLowerCase(); });
-  // prefer a tag the two carry on their own; else any shared (incl. inherited type traits)
-  var aEntry = entryTagsOf(a), bEntryL = entryTagsOf(b).map(function (s) { return s.toLowerCase(); });
-  var sharedEntry = aEntry.filter(function (s) { return bEntryL.indexOf(s.toLowerCase()) > -1; });
   var shared = aAll.filter(function (s) { return bAllL.indexOf(s.toLowerCase()) > -1; });
   var why, text;
-  if (sharedEntry.length || shared.length) {
-    var tg = pick(sharedEntry.length ? sharedEntry : shared);
+  if (shared.length) {
+    var tg = pick(shared);
     text = pick(ORACLE_SHARED).replace(/\{t\}/g, tg).replace("{a}", aN).replace("{b}", bN);
     why = { kind: "shared", tags: [tg] };
   } else if (aAll.length && bAll.length) {
@@ -12070,32 +12247,31 @@ function oracleRationale(a, b) {
     text = pick(ORACLE_CONTRAST).replace("{a}", aN).replace("{b}", bN).replace("{x}", x).replace("{y}", y).replace("{c}", pick(ORACLE_CLOSERS));
     why = { kind: "contrast", a: x, b: y };
   } else {
-    var tkey = [oracleArchetype(a), oracleArchetype(b)].sort().join("::");
-    var pool = ORACLE_TYPE_PROMPTS[tkey] || ORACLE_GENERIC;
-    text = pick(pool);
-    why = { kind: "type", cats: [typeByKey(a.type).label, typeByKey(b.type).label] };
+    text = pick(ORACLE_GENERIC);
+    var aNb = nbById(a.notebookId), bNb = nbById(b.notebookId);
+    why = { kind: "notebook", cats: [(aNb && aNb.name) || "a notebook", (bNb && bNb.name) || "a notebook"] };
   }
   return { text: text, why: why };
 }
-function oracleReady() { return state.entries.length >= 2; }
+function oracleReady() { return state.pages.length >= 2; }
 var orHistory = [];
 function oracleDraw() {
   if (!oracleReady()) { renderOracle(); return; }
   var anchorId = $("or-anchor").value;
-  var pool = state.entries.slice();
+  var pool = state.pages.slice();
   var a, b;
-  if (anchorId && entById(anchorId)) {
-    a = entById(anchorId);
-    var others = pool.filter(function (e) { return e.id !== a.id; });
+  if (anchorId && pgById(anchorId)) {
+    a = pgById(anchorId);
+    var others = pool.filter(function (p) { return p.id !== a.id; });
     b = pick(others);
   } else {
     a = pick(pool);
-    var rest = pool.filter(function (e) { return e.id !== a.id; });
+    var rest = pool.filter(function (p) { return p.id !== a.id; });
     b = pick(rest);
   }
   if (Math.random() < 0.5) { var t = a; a = b; b = t; }
   var r = oracleRationale(a, b);
-  orHistory.unshift({ a: a.name || "Unnamed", b: b.name || "Unnamed", text: r.text });
+  orHistory.unshift({ a: a.title || "Untitled", b: b.title || "Untitled", text: r.text });
   orHistory = orHistory.slice(0, 6);
   renderOracleCard(a, b, r);
   renderOracleHistory();
@@ -12105,14 +12281,15 @@ function renderOracleCard(a, b, r) {
   out.innerHTML = "";
   var card = el("div", "or-card");
   var pair = el("div", "or-pair");
-  [a, b].forEach(function (e, idx) {
+  [a, b].forEach(function (p, idx) {
     if (idx === 1) pair.appendChild(el("span", "or-bolt", "✶"));
     var box = el("div", "or-ent");
-    var dot = el("span", "type-dot"); dot.style.background = typeByKey(e.type).color;
+    var nb = nbById(p.notebookId);
+    var dot = el("span", "type-dot"); dot.style.background = (nb && nb.color) || "var(--ink-mute)";
     var col = el("div");
-    var nm = el("div", "nm", e.name || "Unnamed");
-    nm.addEventListener("click", function () { setTab("entries", true); openEntry(e.id); });
-    col.append(nm, el("div", "ty", typeByKey(e.type).label));
+    var nm = el("div", "nm", p.title || "Untitled");
+    nm.addEventListener("click", function () { openPage(p.id); });
+    col.append(nm, el("div", "ty", nb ? nb.name : ""));
     box.append(dot, col);
     pair.appendChild(box);
   });
@@ -12129,18 +12306,18 @@ function renderOracleCard(a, b, r) {
       var c = el("span", "why-tag"); c.style.cssText = tagChipStyle(tg); c.textContent = tg; why.appendChild(c);
     });
   } else {
-    why.appendChild(el("span", null, "a " + r.why.cats[0].toLowerCase() + " and a " + r.why.cats[1].toLowerCase() + " — tag them to sharpen the prompt"));
+    why.appendChild(el("span", null, "a page from " + r.why.cats[0] + " and one from " + r.why.cats[1] + " — tag your pages to sharpen the prompt"));
   }
   card.appendChild(why);
   var actions = el("div", "or-actions");
-  var linkBtn = el("button", "primary", (a.links || []).indexOf(b.id) > -1 || (b.links || []).indexOf(a.id) > -1 ? "Already linked" : "Link them");
+  var linkBtn = el("button", "primary", (a.oracleLinks || []).indexOf(b.id) > -1 || (b.oracleLinks || []).indexOf(a.id) > -1 ? "Already linked" : "Link them");
   if (linkBtn.textContent === "Already linked") linkBtn.classList.add("linked");
   linkBtn.addEventListener("click", function () {
-    if ((a.links || []).indexOf(b.id) < 0 && (b.links || []).indexOf(a.id) < 0) {
-      a.links = (a.links || []).concat([b.id]);
+    if ((a.oracleLinks || []).indexOf(b.id) < 0 && (b.oracleLinks || []).indexOf(a.id) < 0) {
+      a.oracleLinks = (a.oracleLinks || []).concat([b.id]);
       a.updatedAt = Date.now();
       persist();
-      toast("Linked " + (a.name || "entry") + " → " + (b.name || "entry"));
+      toast("Linked " + (a.title || "page") + " → " + (b.title || "page"));
     }
     linkBtn.textContent = "Already linked"; linkBtn.classList.add("linked");
   });
@@ -12166,19 +12343,19 @@ function renderOracle() {
   var sel = $("or-anchor");
   var prev = sel.value;
   sel.innerHTML = "";
-  var any = el("option"); any.value = ""; any.textContent = "anyone"; sel.appendChild(any);
-  state.entries.slice().sort(function (a, b) { return (a.name || "").localeCompare(b.name || ""); }).forEach(function (e) {
-    var o = el("option"); o.value = e.id; o.textContent = e.name || "Unnamed"; sel.appendChild(o);
+  var any = el("option"); any.value = ""; any.textContent = "any page"; sel.appendChild(any);
+  state.pages.slice().sort(function (a, b) { return (a.title || "").localeCompare(b.title || ""); }).forEach(function (p) {
+    var o = el("option"); o.value = p.id; o.textContent = p.title || "Untitled"; sel.appendChild(o);
   });
-  if (entById(prev)) sel.value = prev;
+  if (pgById(prev)) sel.value = prev;
   var out = $("or-out");
   if (!oracleReady()) {
     out.innerHTML = "";
-    out.appendChild(el("div", "or-empty", "The Oracle needs at least two entries to draw between. Create a few characters or places first, then come back."));
+    out.appendChild(el("div", "or-empty", "The Oracle needs at least two pages to draw between. Write a few pages first, then come back."));
     $("or-history").style.display = "none";
   } else if (!out.querySelector(".or-card")) {
     out.innerHTML = "";
-    out.appendChild(el("div", "or-empty", "Press Draw, and the Oracle will pull two entries together."));
+    out.appendChild(el("div", "or-empty", "Press Draw, and the Oracle will pull two pages together."));
   }
 }
 $("or-draw").addEventListener("click", oracleDraw);
@@ -12997,7 +13174,7 @@ function renderHubStats() {
   var pv = $("ov-pinned");
   pv.innerHTML = "";
   if (pinned.length) pinned.forEach(function (r) { pv.appendChild(r); });
-  else pv.appendChild(el("div", "empty", "Pin pages or entries to keep them close at hand."));
+  else pv.appendChild(el("div", "empty", "Pin pages to keep them close at hand."));
 
   var recent = [];
   state.pages.forEach(function (p) { recent.push({ ts: p.updatedAt, row: itemRow("page", p.id, p.title, nbById(p.notebookId) ? nbById(p.notebookId).color : "var(--sage)", p.updatedAt, function () { openPage(p.id); }) }); });
@@ -13270,11 +13447,6 @@ var HOME_TILE_DEFS = [
     settingsDesc: "A shortcut tile to your notes, showing how many you have.",
     build: function () {
       return { tab: "pages", desc: "Notes, lore, and long-form writing", num: state.pages.length, unit: state.pages.length === 1 ? "page" : "pages" };
-    } },
-  { key: "entries", railKey: "entries", label: railItem("entries").label, icon: railItem("entries").icon, experimental: true,
-    settingsDesc: "A shortcut tile to your world bible, showing how many entries you have.",
-    build: function () {
-      return { tab: "entries", desc: "Your world bible — people, places, powers", num: state.entries.length, unit: state.entries.length === 1 ? "entry" : "entries" };
     } },
   { key: "timelines", railKey: "timelines", label: railItem("timelines").label, icon: railItem("timelines").icon,
     settingsDesc: "A shortcut tile to your timelines, showing your era count.",
@@ -16142,7 +16314,7 @@ function boot() {
   syncGlobalFieldsBack();
   applyHiddenSettings();
   applyAllStyle();
-  var VALID_TABS = ["hub", "pages", "entries", "timelines", "productivity", "oracle", "management"];
+  var VALID_TABS = ["hub", "pages", "timelines", "productivity", "oracle", "management"];
   if (VALID_TABS.indexOf(state.sel.tab) === -1) state.sel.tab = "hub";
   if ((state.hidden.railTabs || []).indexOf(state.sel.tab) > -1) {
     state.sel.tab = "hub";
