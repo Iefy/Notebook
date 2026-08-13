@@ -1,8 +1,55 @@
 {
-  "version": "0.9.5-dev",
+  "version": "0.9.6-dev",
   "changelog": [
     {
-      "version": "0.9.5-dev",
+      "version": "0.9.6-dev",
+      "date": "2026-08-12",
+      "changes": [
+        {
+          "text": "[removed] World Entries",
+          "sub": [
+            "Removed from the sidebar, Home, every project type, and setup — nothing else in the app depended on it that couldn't be moved to pages instead",
+            "Calendar plans that were linked to an entry now link to a page instead — the \u201cLink an entry\u2026\u201d picker is a page picker now"
+          ]
+        },
+        {
+          "text": "[rework] Oracle now draws from pages instead of entries",
+          "sub": [
+            "Same mechanic \u2014 draws two things and asks what connects them \u2014 just pages now, using page tags for the shared/contrast prompts",
+            "With no shared or contrasting tags, it compares which notebooks the two pages are in instead of entry types",
+            "\u201cLink them\u201d records the connection on the page itself now"
+          ]
+        },
+        {
+          "text": "[rework] Timelines: era and event links point to pages now, not entries",
+          "sub": [
+            "The link picker searches your pages; linked items show the color of their notebook instead of an entry type",
+            "Clicking a linked item opens that page"
+          ]
+        },
+        {
+          "text": "[rework] Topics are automatic now \u2014 headings are topics",
+          "sub": [
+            "Every H1/H2/H3 with text becomes a topic on its own, no more selecting text and choosing \u201cNew topic\u201d",
+            "Rename a heading and its topic (and every place it's linked from) renames with it",
+            "Delete a heading, clear its text, or turn it back into a plain paragraph, and its topic goes away automatically \u2014 headings can't pile up stray topics from normal editing",
+            "Existing headings from before this change become topics automatically the next time they load",
+            "\u201cLink an existing topic\u201d is still there for referencing a topic from elsewhere in your writing \u2014 only the old \u201cmark this text as a new topic\u201d step is gone"
+          ]
+        },
+        {
+          "text": "[new] Notebook legend \u2014 a table of contents for each notebook",
+          "sub": [
+            "Replaces the old \u201cJump to a topic\u201d search \u2014 shows every page in the current notebook, numbered, with its topics listed underneath",
+            "This is what you see now when a notebook has no page open \u2014 pick a page, or a topic to jump straight to that heading",
+            "A Legend button in the sidebar (next to the page list) brings it back at any time, even with a page open",
+            "The existing \u201cBack to\u2026\u201d bar in the editor now also returns to the legend, when that's where you came from \u2014 it still works the normal way when you've followed a topic link from another page"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.9.5",
       "date": "2026-08-11",
       "changes": [
         {
