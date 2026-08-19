@@ -1,6 +1,119 @@
 {
-  "version": "0.9.7-dev",
+  "version": "1.0.0-dev",
   "changelog": [
+    {
+      "version": "1.0.0-dev",
+      "date": "2026-08-19",
+      "changes": [
+        {
+          "text": "[rework] Management: Investment accounts became general-purpose Accounts",
+          "sub": [
+            "An account can now hold any kind of transaction \u2014 earnings, expenses, or contributions \u2014 not just investments; a \u201cMerchandising\u201d account can track its own sales and costs the same way a brokerage account tracks contributions",
+            "Click an account to expand it in place and see its stats (Earned/Spent/Invested/Value), an optional goal with a progress bar, and its own transaction list, plus one-tap +Earning/+Expense/+Invest buttons",
+            "The separate \u201cInvestment accounts\u201d and \u201cBudgets\u201d (period spending limit) sections are gone \u2014 just Accounts now; anything not assigned to an account lands in \u201cOther transactions\u201d instead",
+            "Section headers carry a \u201c?\u201d that explains what they're for on hover, using the same stylized tooltip the Beta/Experimental/Recommended tags use elsewhere instead of a plain browser tooltip",
+            "Existing budget-limit data isn't deleted, just no longer shown"
+          ]
+        },
+        {
+          "text": "[rework] Oracle now draws from topics instead of pages",
+          "sub": [
+            "Same mechanic \u2014 draws two things and asks what connects them \u2014 just topics now, using tags from whichever page a topic lives on for the shared/contrast prompts",
+            "New: Manage connections \u2014 lists every link Oracle (or you) has drawn between two topics, each removable, plus a way to add one directly between two topics without waiting for a draw to pair them",
+            "\u201cLink them\u201d records the connection on the topic now, not the page",
+            "Removed the old \u201cjump to Oracle\u201d shortcut on the Entries panel \u2014 it pointed at a pool Oracle hasn't drawn from in a while"
+          ]
+        },
+        {
+          "text": "[new] An explicit way to create a topic",
+          "sub": [
+            "\u201c+ Topic\u201d in the page toolbar prompts for a name and adds it as a heading at the end of the page, caret ready to write underneath",
+            "Headings still become topics automatically just by typing one \u2014 this is just a clearer, more discoverable alternative to needing to already know that"
+          ]
+        },
+        {
+          "text": "[redesign] Notebook legend is a real cover page now, not a table of contents",
+          "sub": [
+            "A notebook's own color, name, and page/topic counts up top, the way a book's title page introduces what follows",
+            "Each page is a card \u2014 a text preview, its tags, and its topics as pill buttons \u2014 instead of a numbered serif index",
+            "Shown whenever a notebook has no page open, or any time from the Legend button in the sidebar"
+          ]
+        },
+        {
+          "text": "[new] The page tasks panel can switch to a Navigation view",
+          "sub": [
+            "Click the panel's header (Tasks / Navigation) to open a small menu \u2014 Navigation lists every topic on the current page and jumps straight to it with a scroll and a highlight flash",
+            "Doesn't touch the cross-page \u201cBack to\u2026\u201d trail the way following a topic link to another page does \u2014 it's a same-page shortcut",
+            "The collapsed strip's label now matches whichever view is actually active, instead of always reading \u201cTasks\u201d",
+            "The switcher's title and toggle arrow are anchored to the left, next to each other, instead of the arrow drifting off to the right"
+          ]
+        },
+        {
+          "text": "[new] Productivity: Recap",
+          "sub": [
+            "This week / This month / This year \u2014 a headline hours total, a bar chart (days, weeks, or months depending on the period) that animates in, and how it compares to the period before",
+            "Quick stats: sessions logged, busiest day/week/month, and your current streak",
+            "Toggle it off from Preferences like any other Productivity section, same as Medals or Weekly history"
+          ]
+        },
+        "[redesign] Productivity is out of Beta; Management is now tagged Experimental instead of Beta",
+        {
+          "text": "[new] Lock a page against edits or deletion",
+          "sub": [
+            "A Lock button sits in the page toolbar between Pin and Delete \u2014 locked pages can't be typed in, formatted, tagged, or deleted until unlocked again",
+            "Covers every way a page could still be edited around a simple read-only flag \u2014 toolbar formatting commands, keyboard shortcuts, paste, drag-and-drop, and the table right-click menu, not just typing directly into the text",
+            "Delete shows a reminder to unlock first instead of the usual confirmation"
+          ]
+        },
+        {
+          "text": "[new] Sessions can be logged or moved to a specific project",
+          "sub": [
+            "Logging time by hand now has a project picker (once there's more than one project), defaulting to whichever one you're in",
+            "The session edit modal can reassign a session to a different project after the fact",
+            "The Sessions list shows which project a session belongs to when you're not already filtered to one"
+          ]
+        },
+        {
+          "text": "[redesign] Patch notes and the update-available screen are cleaner",
+          "sub": [
+            "A version's changes used to render as a solid tinted box; several stacked (common if you're a few versions behind) read as a wall of identical cards \u2014 now just a version label and a thin rule, so multiple versions read as one continuous list",
+            "A downgrade warning still gets the heavier callout treatment, since that one should stand out",
+            "Both screens now open with a small mark next to the heading instead of a bare heading",
+            "A change's deeper sub-details now sit behind a collapsed \u201cN details\u201d toggle instead of always being shown"
+          ]
+        },
+        {
+          "text": "[fix] A notebook's own timeline stopped showing up when opened from Notebooks",
+          "sub": [
+            "A shared CSS class between the timeline pointer and an unrelated empty-state message meant the pointer was always hidden in both states \u2014 the rule meant to hide the empty-state caught the pointer too"
+          ]
+        },
+        {
+          "text": "[fix] A plain to-do with no due date could show up on the calendar marked overdue",
+          "sub": [
+            "A due-date-less task still keeps a real date internally as bookkeeping \u2014 it was never meant to land on the calendar at all, but the calendar's day-matching logic didn't know to skip it",
+            "Now excluded at the source, so it can't appear on the month grid, a day's plan list, or Home's mini calendar \u2014 only in the Tasks card's dedicated \u201cNo due date\u201d group, where it always belonged"
+          ]
+        },
+        {
+          "text": "[fix] Clear Formatting didn't always fully clear a quote imported from elsewhere",
+          "sub": [
+            "A quote made in-app is a flat <blockquote>; one pasted in or converted from markdown commonly arrives wrapped in an extra <p> \u2014 Clear Formatting's browser-native command only ever reached the inner wrapper, leaving the quote styling stuck",
+            "Fixed at the one place all page content already flows through (paste, load, save, markdown conversion) so it self-heals regardless of where a quote came from",
+            "Also fixes pressing Enter after a pasted quote behaving like Shift+Enter \u2014 same root cause: the nested wrapper meant the browser only ever split the inner paragraph instead of starting a new quote"
+          ]
+        },
+        {
+          "text": "[fix] Merge duplicates could combine sessions from different projects",
+          "sub": [
+            "Auto-detected duplicate groups now require a matching project, not just a matching day and label",
+            "A merged session now keeps its project instead of losing it \u2014 previously dropped regardless of source",
+            "Manually merging hand-picked sessions across projects now asks which project the result should keep, same as a disagreeing label or note already did"
+          ]
+        },
+        "[fix] The Welcome page was out of date \u2014 it listed Entries as a room (it's linked from pages/timelines now), called Productivity \u201cWork,\u201d and never mentioned Management, page locking, or Topics"
+      ]
+    },
     {
       "version": "0.9.7-dev",
       "date": "2026-08-12",
