@@ -405,8 +405,31 @@ body[data-tab="timelines"] #view-timeline { display: flex; }
 .bar-btn:hover { background: var(--surf2); color: var(--ink-hi); }
 .bar-btn.on { color: var(--sage); background: var(--sage-bg); }
 .bar-btn.pin-on { color: var(--amber); }
+.bar-btn.lock-on { color: var(--sage); background: var(--sage-bg); }
 .bar-btn.danger:hover { color: var(--red); }
 .bar-btn.wide { width: auto; padding: 0 12px; font-size: 12.5px; }
+
+/* Locked page: title + body become read-only (see renderPageEditor), and
+   this banner makes that obvious without having to notice the toolbar
+   icon's state — same "unlock to edit" idea shown right where someone
+   would otherwise start typing. */
+.pg-locked-banner {
+  display: none; align-items: center; gap: 7px;
+  margin: 0 var(--pad) 10px; padding: 8px 12px;
+  border: 1px solid var(--sage-bd); background: var(--sage-bg); color: var(--ink-hi);
+  border-radius: var(--radius); font-size: 12.5px; flex-shrink: 0;
+}
+.pg-locked-banner svg { flex-shrink: 0; color: var(--sage); }
+#pg-edit-wrap.pg-locked .pg-locked-banner { display: flex; }
+#pg-edit-wrap.pg-locked #pg-title-input,
+#pg-edit-wrap.pg-locked #pg-rich { cursor: default; }
+#pg-edit-wrap.pg-locked #pg-rich:focus { outline: none; }
+/* Formatting commands (bold, lists, tables…) act on the document selection
+   directly and don't care about contenteditable on their own — the click
+   handler already refuses to run them on a locked page, this just makes
+   that visually obvious instead of the buttons looking clickable for
+   nothing. */
+#pg-edit-wrap.pg-locked #pg-toolbar { opacity: 0.45; pointer-events: none; }
 
 .ed-head { padding: 4px var(--pad) 0; flex-shrink: 0; }
 .title-input {
@@ -448,51 +471,64 @@ body.saved-flash .save-rule::after { transform: scaleX(1); }
   transition: background 0.12s;
 }
 .view-empty button:hover { background: var(--sage-bg); }
-/* Notebook legend (#pg-legend, inside #pg-legend-wrap) — overrides
-   .view-empty's small centered-message layout with a left-aligned,
-   scrollable table of contents, since a notebook with real content needs
-   room, unlike the plain "nothing here" glyph+message .view-empty is
-   designed for (which #pg-legend still falls back to when a notebook has
-   no pages — see renderPageLegend). Numbered entries, serif type, no
-   hover boxes — reads as an index of the notebook rather than another
-   app list; topics sit indented underneath their page as sub-entries,
-   the way a TOC nests sections under a chapter.
-   #pg-legend itself switches from a centered flex column (so the fallback
-   glyph/message/button center properly, matching how .view-empty's direct
-   children used to) to plain block stacking once there's an actual
-   contents list to lay out (.has-pages, set in renderPageLegend). */
+/* Notebook legend (#pg-legend, inside #pg-legend-wrap) — shown in the main
+   editor pane whenever nothing's open. Built to read as this notebook's own
+   cover/contents page rather than a plain reference index: a cover header
+   (color, name, counts) the way a book's title page introduces what
+   follows, then each page as a card in the app's own visual language
+   (rounded row, hover state, tag pills) with its topics as pill buttons
+   underneath — not a numbered serif list.
+   #pg-legend switches from a centered flex column (so the fallback
+   glyph/message/button for an empty notebook center properly) to plain
+   block stacking once there's an actual contents list to lay out
+   (.has-pages, set in renderPageLegend). */
 #pg-legend-wrap { display: flex; align-items: center; justify-content: center; text-align: center; overflow-y: auto; padding: 28px calc(var(--pad) + 8px); }
-#pg-legend-wrap.has-pages { justify-content: flex-start; text-align: left; align-items: stretch; padding: 32px calc(var(--pad) + 8px); }
+#pg-legend-wrap.has-pages { justify-content: flex-start; text-align: left; align-items: stretch; padding: 32px calc(var(--pad) + 8px) 48px; }
 #pg-legend { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-#pg-legend-wrap.has-pages #pg-legend { display: block; max-width: 440px; margin: 0 auto; }
-.pg-legend-title {
-  font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--ink-mute); margin: 0 4px 20px; text-align: center;
+#pg-legend-wrap.has-pages #pg-legend { display: block; max-width: 620px; margin: 0 auto; }
+.pg-legend-cover {
+  display: flex; align-items: center; gap: 14px;
+  margin: 4px 4px 26px; padding-bottom: 20px; border-bottom: 1px solid var(--border);
 }
-.pg-legend-page {
-  display: flex; align-items: baseline; gap: 12px;
-  width: 100%; padding: 7px 4px;
+.pg-legend-cover-dot {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  box-shadow: 0 0 0 4px var(--surf2);
 }
-.pg-legend-num {
-  font-family: var(--serif); font-size: 12px; color: var(--ink-mute);
-  flex-shrink: 0; min-width: 18px; text-align: right;
+.pg-legend-cover-name {
+  font-family: var(--serif); font-size: 24px; font-weight: 600; color: var(--ink-hi);
+  line-height: 1.2;
 }
-.pg-legend-page-body { flex: 1; min-width: 0; }
+.pg-legend-cover-meta { font-size: 12px; color: var(--ink-mute); margin-top: 3px; }
+.pg-legend-cover-new {
+  margin-left: auto; flex-shrink: 0;
+  font-size: 11.5px; padding: 7px 13px; border-radius: calc(20px * var(--radius-scale, 1));
+  border: 1px solid var(--border); color: var(--ink);
+}
+.pg-legend-cover-new:hover { border-color: var(--sage-bd); color: var(--sage); background: var(--sage-bg); }
+.pg-legend-list { display: flex; flex-direction: column; gap: 8px; }
+.pg-legend-card {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 13px 16px; background: var(--surf); transition: border-color 0.15s, background 0.15s;
+}
+.pg-legend-card:hover { border-color: var(--sage-bd); background: var(--surf2); }
 .pg-legend-page-title {
   display: block; width: 100%; text-align: left;
-  font-family: var(--serif); font-size: 14.5px; color: var(--ink-hi);
+  font-family: var(--serif); font-size: 15.5px; font-weight: 600; color: var(--ink-hi);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  padding-bottom: 2px; border-bottom: 1px solid transparent;
 }
-.pg-legend-page-title:hover { color: var(--sage); border-bottom-color: var(--sage-bd); }
-.pg-legend-topics { margin-top: 3px; display: flex; flex-direction: column; }
+.pg-legend-page-title:hover { color: var(--sage); }
+.pg-legend-preview {
+  font-size: 12.5px; color: var(--ink-dim); margin-top: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pg-legend-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.pg-legend-topics { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .pg-legend-topic {
-  display: block; width: 100%; text-align: left;
-  font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--ink-dim);
-  padding: 2px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 11.5px; color: var(--ink-dim); background: var(--surf2);
+  border: 1px solid var(--border); border-radius: calc(20px * var(--radius-scale, 1));
+  padding: 4px 10px;
 }
-.pg-legend-topic::before { content: "\2013\a0 "; color: var(--ink-mute); font-style: normal; }
-.pg-legend-topic:hover { color: var(--sage); }
+.pg-legend-topic:hover { color: var(--sage); border-color: var(--sage-bd); background: var(--sage-bg); }
 
 /* ── Page editor ── */
 #pg-edit-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; }
@@ -535,7 +571,7 @@ body.saved-flash .save-rule::after { transform: scaleX(1); }
    curNbTimeline and #nb-tl-editor's markup — in place of the usual
    "nothing open" message. This mode wins over the two rules above
    regardless of .is-empty, since #nb-tl-editor is the third state. */
-#view-page.showing-nb-tl #pg-edit-wrap, #view-page.showing-nb-tl .view-empty { display: none !important; }
+#view-page.showing-nb-tl #pg-edit-wrap, #view-page.showing-nb-tl #pg-legend-wrap { display: none !important; }
 #view-page:not(.showing-nb-tl) #nb-tl-editor { display: none !important; }
 
 /* ── Page tasks panel — sits in the blank space to the right of the
@@ -543,9 +579,30 @@ body.saved-flash .save-rule::after { transform: scaleX(1); }
    narrow ones. See applyPgTasksPanelState() / setPgTasksCollapsed(). ── */
 #ed-body { flex-direction: row; }
 #ed-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.pg-tasks-panel { width: 280px; flex-shrink: 0; border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; background: var(--bg); }
+.pg-tasks-panel { width: 280px; flex-shrink: 0; border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; background: var(--bg); position: relative; }
 .pg-tasks-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-.pg-tasks-head h3 { font-size: 12px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--ink-dim); flex: 1; }
+.pg-tasks-head h3 { font-size: 12px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--ink-dim); margin: 0; }
+/* Tasks header doubles as a switcher now — click it to swap what the panel
+   shows (Tasks, Navigation, more later) rather than the panel being locked
+   to one thing. Hover/expanded state on the chevron is the same "there's
+   more here" affordance used elsewhere for anything that reveals a menu. */
+.pg-tasks-switch { display: flex; align-items: center; justify-content: flex-start; text-align: left; gap: 5px; flex: 1; min-width: 0; padding: 3px 5px; margin: -3px -5px; border-radius: var(--radius); cursor: pointer; }
+.pg-tasks-switch:hover { background: var(--surf2); }
+.pg-tasks-switch-chev { color: var(--ink-mute); flex-shrink: 0; transition: transform 0.15s, color 0.15s; }
+.pg-tasks-switch:hover .pg-tasks-switch-chev { color: var(--ink-hi); }
+.pg-tasks-switch[aria-expanded="true"] .pg-tasks-switch-chev { transform: rotate(180deg); color: var(--sage); }
+.pg-tasks-menu {
+  position: absolute; top: 46px; left: 8px; right: 8px; z-index: 5;
+  background: var(--surf); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.2); overflow: hidden;
+}
+.pg-tasks-menu-item { display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left; padding: 9px 12px; }
+.pg-tasks-menu-item:hover { background: var(--surf2); }
+.pg-tasks-menu-item .nm { font-size: 12.5px; font-weight: 600; color: var(--ink-hi); }
+.pg-tasks-menu-item .note { font-size: 11px; color: var(--ink-mute); }
+.pg-tasks-nav-list { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 8px; }
+.pg-nav-row { display: block; width: 100%; text-align: left; padding: 8px 10px; border-radius: var(--radius); font-size: 12.5px; color: var(--ink); }
+.pg-nav-row:hover { background: var(--surf2); color: var(--ink-hi); }
 .pg-tasks-count { font-size: 11px; color: var(--ink-mute); }
 .pg-tasks-collapse-btn { width: 26px; height: 26px; display: grid; place-items: center; border-radius: var(--radius); color: var(--ink-mute); flex-shrink: 0; }
 .pg-tasks-collapse-btn:hover { background: var(--surf2); color: var(--ink-hi); }
@@ -1367,6 +1424,33 @@ body.saved-flash .save-rule::after { transform: scaleX(1); }
 }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+/* ── Recap ── */
+.wk-recap-tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+.wk-recap-tabs button { font-size: 11.5px; padding: 6px 13px; border-radius: calc(20px * var(--radius-scale, 1)); border: 1px solid var(--border); color: var(--ink-dim); }
+.wk-recap-tabs button:hover { color: var(--ink-hi); }
+.wk-recap-tabs button.on { background: var(--sage-bg); border-color: var(--sage-bd); color: var(--sage); font-weight: 600; }
+.wk-recap-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+.wk-recap-big { font-family: var(--serif); font-size: 36px; font-weight: 700; color: var(--ink-hi); line-height: 1; }
+.wk-recap-sub { font-size: 13px; color: var(--ink-mute); }
+.wk-recap-delta { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: calc(20px * var(--radius-scale, 1)); margin-left: auto; }
+.wk-recap-delta.up { color: var(--sage); background: var(--sage-bg); }
+.wk-recap-delta.down { color: var(--ink-mute); background: var(--surf2); }
+/* Bars animate in from 0 height on every render (see renderWkRecap using
+   requestAnimationFrame to flip from a 0% starting height) — a static bar
+   chart reads as a spreadsheet, a chart that grows in on arrival reads as
+   a recap, which is the whole point of this card. */
+.wk-recap-chart { display: flex; align-items: flex-end; gap: 6px; height: 120px; padding: 0 2px; margin-bottom: 18px; }
+.wk-recap-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; min-width: 0; }
+.wk-recap-bar-wrap { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.wk-recap-bar { width: 60%; min-width: 6px; height: 0%; background: var(--surf3); border-radius: 4px 4px 0 0; transition: height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.wk-recap-bar.current { background: var(--sage); }
+.wk-recap-bar.empty { background: var(--border); }
+.wk-recap-col-label { font-size: 9.5px; color: var(--ink-mute); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.wk-recap-stats { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 16px; border-top: 1px solid var(--border); }
+.wk-recap-stat { flex: 1; min-width: 84px; text-align: center; }
+.wk-recap-stat .num { font-size: 18px; font-weight: 700; color: var(--ink-hi); font-variant-numeric: tabular-nums; }
+.wk-recap-stat .lbl { font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-mute); margin-top: 2px; }
+
 /* ── Medals & achievements ── */
 .wk-achieve-teaser {
   display: flex; align-items: center; gap: 10px;
@@ -1487,7 +1571,7 @@ body[data-tab="management"] #view-management { display: flex; }
   .wk-group-plan #cal-detail-card { grid-column: 2; grid-row: 1; }
   .wk-group-plan #cal-tasks-card { grid-column: 2; grid-row: 2; }
   .wk-group-track #wk-achieve-teaser { grid-column: 1 / -1; }
-  .wk-group-review #wk-card-bylabel, .wk-group-review #wk-card-sessions { grid-column: 1 / -1; }
+  .wk-group-review #wk-card-recap, .wk-group-review #wk-card-bylabel, .wk-group-review #wk-card-sessions { grid-column: 1 / -1; }
 }
 @media (min-width: 1300px) {
   .wk-group-plan .wk-group-cards {
@@ -1593,6 +1677,68 @@ body.timing #wk-toggle { border-color: #4a342e; color: var(--red); }
 .mgmt-status.planned { color: var(--blue); border-color: var(--blue); }
 .mgmt-status.active { color: var(--amber); border-color: var(--amber); }
 .mgmt-status.done { color: var(--sage); border-color: var(--sage); }
+
+/* Small "?" hover-tooltip next to a section header — explains what the
+   section is for without needing a permanent paragraph of copy taking up
+   space. Native title attribute gives the hover/tap tooltip for free. */
+.mgmt-info-btn {
+  display: inline-grid; place-items: center;
+  width: 15px; height: 15px; margin-left: 5px;
+  border: 1px solid var(--ink-mute); border-radius: 50%;
+  color: var(--ink-mute); font-size: 9.5px; font-weight: 700;
+  text-transform: none; letter-spacing: 0; vertical-align: middle;
+  cursor: help; flex-shrink: 0;
+}
+.mgmt-info-btn:hover, .mgmt-info-btn:focus-visible { color: var(--ink-hi); border-color: var(--ink-dim); }
+
+/* Accounts list — each account is a collapsed row until clicked, at which
+   point it expands in place to reveal its own nested transactions. The
+   chevron + hover state are the affordance that tells someone "there's
+   more here, click to open it" before they ever click anything. */
+.mgmt-acct { border-bottom: 1px solid var(--border); }
+.mgmt-acct:last-child { border-bottom: none; }
+.mgmt-acct-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 11px 8px; margin: 0 -8px; cursor: pointer;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  transition: background 0.15s;
+}
+.mgmt-acct-row:hover { background: var(--surf2); }
+.mgmt-acct-row:hover .mgmt-acct-chevron { color: var(--ink-hi); }
+.mgmt-acct.open .mgmt-acct-row { background: var(--surf2); }
+.mgmt-acct-chevron {
+  flex-shrink: 0; width: 14px; text-align: center; color: var(--ink-mute);
+  font-size: 10px; transition: transform 0.18s, color 0.15s;
+}
+.mgmt-acct.open .mgmt-acct-chevron { transform: rotate(90deg); color: var(--sage); }
+.mgmt-acct-main { flex: 1; min-width: 0; }
+.mgmt-acct-title-row { display: flex; align-items: center; gap: 8px; }
+.mgmt-acct-title-row .nm { font-weight: 600; }
+.mgmt-acct-sub { margin-top: 2px; }
+/* Nested content — indented and rail-lined under its account, so the
+   hierarchy (account contains transactions) reads visually, not just
+   through copy. */
+.mgmt-acct-panel {
+  margin: 2px 0 12px 22px;
+  padding: 10px 0 4px 14px;
+  border-left: 2px solid var(--border);
+}
+.mgmt-acct-stats {
+  display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.mgmt-acct-stat { display: flex; flex-direction: column; gap: 1px; }
+.mgmt-acct-stat .lbl { font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-mute); font-weight: 700; }
+.mgmt-acct-stat .num { font-size: 14px; font-variant-numeric: tabular-nums; color: var(--ink-hi); }
+.mgmt-acct-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.mgmt-acct-actions button {
+  font-size: 11px; padding: 5px 10px; border-radius: calc(20px * var(--radius-scale, 1));
+  border: 1px solid var(--border); color: var(--ink);
+}
+.mgmt-acct-actions button:hover { border-color: var(--ink-dim); color: var(--ink-hi); }
+.mgmt-acct-actions button.mgmt-act-edit,
+.mgmt-acct-actions button.mgmt-act-delete { color: var(--ink-mute); }
+.mgmt-acct-tx-list .sess-row { padding: 8px 0; }
+
 .wk-chk {
   width: 20px; height: 20px; flex-shrink: 0;
   display: grid; place-items: center;
@@ -2195,6 +2341,10 @@ body[data-tab="oracle"] #panel { display: none; }
 .tag-tip { white-space: normal; max-width: 230px; }
 .tag-tip-default { color: var(--ink-dim); font-style: italic; }
 .tag-tip-note { margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--border); color: var(--ink-hi); font-style: normal; }
+/* When a tag-tip is just a plain explanation with no "kind" line above it
+   (see the "?" info buttons in Management), drop the divider — it's a
+   standalone note, not a footnote under something else. */
+.tag-tip-note:first-child { margin-top: 0; padding-top: 0; border-top: none; }
 /* Apply .dbl-clickable to anything that opens/acts on double-click, so the
    cursor itself hints at the behavior. Toggled off app-wide by the
    "Double-click cursor hint" preference (STYLE_BOOL_ITEMS / applyDblClickCursor),
@@ -2258,6 +2408,27 @@ html.no-dblclick-cursor .dbl-clickable { cursor: pointer; }
 .onboard-import-row { display: flex; justify-content: flex-end; margin-bottom: 12px; }
 .onboard-import-link { font-size: 11.5px; color: var(--ink-mute); text-decoration: underline; text-underline-offset: 2px; }
 .onboard-import-link:hover { color: var(--sage); }
+/* Patch notes & the update modal's title — a small branded mark next to
+   the heading, so these read as part of the app rather than a bare system
+   dialog. */
+.changelog-title-row { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+.changelog-title-row h2 { margin-bottom: 0; }
+.changelog-title-mark { font-size: 19px; color: var(--sage); flex-shrink: 0; line-height: 1; }
+/* A version's changes used to render as a fully tinted, bordered box —
+   fine for one entry, but stacking three or four (the common case for
+   someone who hasn't updated in a while) reads as a wall of identical
+   green cards rather than something to actually read. This is quieter: a
+   version is a small label plus a thin rule, not a box, so several
+   entries read as one continuous, scannable list. Reserved for routine
+   entries — a downgrade still gets the heavier .onboard-callout.warn
+   treatment below, because that one actually needs to stand out. */
+.changelog-entry { padding: 16px 0; border-top: 1px solid var(--border); }
+.changelog-entry:first-child { padding-top: 0; border-top: none; }
+.changelog-entry-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 9px; }
+.changelog-entry-version { font-family: var(--serif); font-size: 15px; font-weight: 700; color: var(--sage); }
+.changelog-entry-date { font-size: 11px; color: var(--ink-mute); }
+.change-sub-details { margin-top: 3px; }
+.change-sub-details > summary { font-size: 11px; }
 /* Export page — a print-dialog-style layout: options on the left, a live
    preview on the right. Reuses .onboard-overlay for the backdrop and
    .onboard-actions for the footer buttons. */
@@ -2308,6 +2479,11 @@ html.no-dblclick-cursor .dbl-clickable { cursor: pointer; }
 }
 #or-draw:hover { background: rgba(127,168,154,0.16); }
 .or-anchor-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-mute); }
+.or-manage-btn {
+  margin-left: auto; font-size: 12px; padding: 8px 13px; min-height: 34px;
+  border: 1px solid var(--border); border-radius: calc(8px * var(--radius-scale, 1)); color: var(--ink-dim);
+}
+.or-manage-btn:hover { color: var(--ink-hi); border-color: var(--ink-mute); }
 #or-anchor {
   background: var(--surf2); border: 1px solid var(--border); color: var(--ink);
   border-radius: var(--radius); padding: 9px 11px; font-size: 13px; max-width: 220px;
@@ -2706,7 +2882,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
     </div>
 
     <div id="panel-entries">
-      <div class="panel-head"><h2>Entries</h2><button class="sect-add" id="ent-oracle" aria-label="Oracle" title="Oracle — draw a connection prompt" style="margin-left:auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21"/></svg></button><button class="sect-add" id="browse-ent" aria-label="Browse all entries" title="Browse all (grid, bulk edits, audit)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button></div>
+      <div class="panel-head"><h2>Entries</h2><button class="sect-add" id="browse-ent" aria-label="Browse all entries" title="Browse all (grid, bulk edits, audit)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button></div>
       <div class="search-wrap">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
         <input id="search-ent" type="search" placeholder="Search entries…" aria-label="Search entries" autocomplete="off">
@@ -2743,6 +2919,9 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
           <button class="bar-btn" id="pin-pg-btn" aria-label="Pin page" title="Pin">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 17v5"/><path d="M9 3h6l1 7 2.5 2.5a1 1 0 0 1-.7 1.7H6.2a1 1 0 0 1-.7-1.7L8 10z"/></svg>
           </button>
+          <button class="bar-btn" id="lock-pg-btn" aria-label="Lock page" title="Lock this page against edits or deletion">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          </button>
           <button class="bar-btn danger" id="del-pg-btn" aria-label="Delete page" title="Delete page">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
           </button>
@@ -2754,6 +2933,10 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
           </button>
         </div>
         <div id="pg-era-header" class="pg-era-header" style="display:none"></div>
+        <div class="pg-locked-banner" id="pg-locked-banner">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <span>This page is locked; unlock it to edit or delete.</span>
+        </div>
         <details id="pg-tagpick" class="tagpick">
           <summary>Tags <span id="pg-tagpick-n" class="tagpick-n"></span></summary>
           <div id="pg-tagpick-body"></div>
@@ -2767,6 +2950,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
               <span class="sep"></span>
               <button data-cmd="h2" title="Heading" aria-label="Heading">H2</button>
               <button data-cmd="h3" title="Subheading" aria-label="Subheading">H3</button>
+              <button data-cmd="topic" title="New topic — adds a heading here that any page can link to" aria-label="New topic">+ Topic</button>
               <span class="sep"></span>
               <button data-cmd="ul" title="Bulleted list" aria-label="Bulleted list">• List</button>
               <button data-cmd="ol" title="Numbered list" aria-label="Numbered list">1. List</button>
@@ -2788,21 +2972,33 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
           </div>
           <div id="pg-tasks-panel" class="pg-tasks-panel">
             <div class="pg-tasks-head">
-              <h3>Tasks</h3>
+              <button class="pg-tasks-switch" id="pg-tasks-switch" aria-haspopup="true" aria-expanded="false" title="Switch panel">
+                <h3 id="pg-tasks-title">Tasks</h3>
+                <svg class="pg-tasks-switch-chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
               <span class="pg-tasks-count" id="pg-tasks-count"></span>
               <button class="pg-tasks-collapse-btn" id="pg-tasks-collapse-btn" aria-label="Collapse tasks panel" title="Collapse">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
+              <div class="pg-tasks-menu" id="pg-tasks-menu" style="display:none">
+                <button type="button" class="pg-tasks-menu-item" data-view="tasks">
+                  <span class="nm">Tasks</span><span class="note">Your to-dos on this page</span>
+                </button>
+                <button type="button" class="pg-tasks-menu-item" data-view="nav">
+                  <span class="nm">Navigation</span><span class="note">Jump to a topic on this page</span>
+                </button>
+              </div>
             </div>
             <div class="pg-tasks-list" id="pg-tasks-list"></div>
-            <div class="pg-tasks-add-row">
+            <div class="pg-tasks-nav-list" id="pg-tasks-nav-list" style="display:none"></div>
+            <div class="pg-tasks-add-row" id="pg-tasks-add-row">
               <input id="pg-tasks-add-input" type="text" placeholder="Add a task…" aria-label="New task">
               <input id="pg-tasks-add-due" type="date" aria-label="Due date (optional)">
             </div>
           </div>
           <button class="pg-tasks-collapsed-tab" id="pg-tasks-collapsed-tab" aria-label="Show tasks panel" title="Tasks">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-            <span class="pg-tasks-collapsed-label">Tasks</span>
+            <span class="pg-tasks-collapsed-label" id="pg-tasks-collapsed-label">Tasks</span>
           </button>
         </div>
       </div>
@@ -2924,7 +3120,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
     <!-- Work -->
     <section id="view-work">
       <div id="wk-scroll">
-        <h2>Productivity<span class="beta-tag" data-note="Goals, streaks, and medals are newer and still being tuned.">Beta</span></h2>
+        <h2>Productivity</h2>
         <p class="or-lede">Rest days, worked days, and anything you've planned — across every project, one-off or recurring, with links to your entries.</p>
         <div class="wk-group wk-group-plan">
           <div class="wk-group-label">Plan</div>
@@ -2987,6 +3183,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
             m
             <span>on</span>
             <input id="wk-log-date" type="date" aria-label="Date to log for">
+            <select id="wk-log-project" class="wk-sort-btn" aria-label="Log this session under project" style="display:none"></select>
             <button class="foot-btn" id="wk-log" style="min-height:34px;padding:6px 12px">Log</button>
           </div>
           <div class="wk-row wk-rest-row" id="wk-rest-row">
@@ -3023,6 +3220,15 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
         <div class="wk-group wk-group-review">
           <div class="wk-group-label">Review</div>
           <div class="wk-group-cards">
+        <div class="wk-card" id="wk-card-recap">
+          <div class="ov-sect-head"><span>Recap</span></div>
+          <div class="wk-recap-tabs" id="wk-recap-tabs">
+            <button type="button" data-period="week" class="on">This week</button>
+            <button type="button" data-period="month">This month</button>
+            <button type="button" data-period="year">This year</button>
+          </div>
+          <div id="wk-recap-body"></div>
+        </div>
         <div class="wk-card" id="wk-card-achievements">
           <div class="ov-sect-head"><span>Medals<span class="beta-tag" data-note="Tier thresholds and prestige math are still being tuned and may shift.">Beta</span></span><span class="note" id="wk-achieve-summary"></span><button id="wk-achieve-history-btn" class="wk-achieve-history-btn" type="button">History</button></div>
           <div id="wk-achieve-lifetime" class="wk-achieve-lifetime"></div>
@@ -3099,13 +3305,14 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
       <div id="or-scroll">
         <div class="or-eyebrow">Oracle <span class="experimental-tag" style="letter-spacing:normal" data-note="Prompt variety is still growing — expect repeats until the pool is bigger.">Experimental</span></div>
         <h2>Draw a connection</h2>
-        <p class="or-lede">The Oracle pulls two entries from your world and asks what lies between them. Tag your characters and places with words like <em>rival</em>, <em>haunted</em>, or <em>longing</em> and the prompts sharpen.</p>
+        <p class="or-lede">The Oracle pulls two topics from your notebooks and asks what lies between them. Tag the pages they live on with words like <em>rival</em>, <em>haunted</em>, or <em>longing</em> and the prompts sharpen.</p>
         <div class="or-controls">
           <button id="or-draw">Draw</button>
           <span class="or-anchor-wrap">
             <label for="or-anchor">around</label>
-            <select id="or-anchor" aria-label="Anchor entry"></select>
+            <select id="or-anchor" aria-label="Anchor topic"></select>
           </span>
+          <button id="or-manage-connections" class="or-manage-btn" type="button">Manage connections</button>
         </div>
         <div id="or-out"></div>
         <div class="or-history" id="or-history" style="display:none">
@@ -3117,7 +3324,7 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
 
     <section id="view-management">
       <div id="mgmt-scroll">
-        <h2>Management<span class="beta-tag" data-note="Budget and product tracking are new and still being tuned.">Beta</span></h2>
+        <h2>Management<span class="experimental-tag" data-note="Budget and product tracking are new and still evolving — expect rough edges.">Experimental</span></h2>
         <p class="or-lede">Real-world budget and the products or deliverables you're building on this project.</p>
 
         <div class="wk-group wk-group-budget">
@@ -3132,12 +3339,18 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
                 <div class="mgmt-summary-item"><span class="lbl">Wallet</span><span class="val" id="mgmt-sum-balance">$0</span></div>
               </div>
             </div>
-            <div class="wk-card" id="mgmt-budgets-card">
-              <div class="ov-sect-head"><span>Budgets</span><button class="foot-btn" id="mgmt-add-budget-limit-btn" style="min-height:30px;padding:5px 10px;font-size:11px">+ Add budget</button></div>
-              <div id="mgmt-budgets-list"></div>
+            <div class="wk-card" id="mgmt-accounts-card">
+              <div class="ov-sect-head">
+                <span>Accounts<button class="mgmt-info-btn" type="button" tabindex="0" aria-label="What are accounts?" data-note="Each account holds its own transactions and earnings — set one up for anything you want to track on its own: a brokerage account, a side project, a revenue stream. Click an account to open it. A goal is optional and doesn't connect to any real account — it's just your own record.">?</button></span>
+                <button class="foot-btn" id="mgmt-add-account-btn" style="min-height:30px;padding:5px 10px;font-size:11px">+ Add account</button>
+              </div>
+              <div id="mgmt-accounts-list"></div>
             </div>
             <div class="wk-card" id="mgmt-budget-list-card">
-              <div class="ov-sect-head"><span>Transactions</span><button class="foot-btn" id="mgmt-add-budget-btn" style="min-height:30px;padding:5px 10px;font-size:11px">+ Add transaction</button></div>
+              <div class="ov-sect-head">
+                <span>Other transactions<button class="mgmt-info-btn" type="button" tabindex="0" aria-label="What are other transactions?" data-note="Anything not tied to an account. Quick one-off entries land here — you can assign one to an account any time by editing it.">?</button></span>
+                <button class="foot-btn" id="mgmt-add-budget-btn" style="min-height:30px;padding:5px 10px;font-size:11px">+ Add transaction</button>
+              </div>
               <div id="mgmt-budget-list"></div>
             </div>
           </div>
@@ -3719,7 +3932,16 @@ function renderMd(src) {
       flushPara(); flushList();
       var q = [m[1]];
       while (i + 1 < lines.length && /^&gt;\s?/.test(lines[i + 1])) { i++; q.push(lines[i].replace(/^&gt;\s?/, "")); }
-      out.push("<blockquote><p>" + inlineMd(q.join("<br>")) + "</p></blockquote>");
+      // Flat <blockquote>text</blockquote>, no nested <p> — matches exactly
+      // what the toolbar's Quote button produces via
+      // execCommand("formatBlock", false, "blockquote") on a plain
+      // paragraph. That match matters: Clear Formatting's own
+      // formatBlock(p) only reaches the *closest* block ancestor of the
+      // caret, so a nested <blockquote><p>...</p></blockquote> only ever
+      // got its inner <p> touched — the outer blockquote tag was never
+      // reached, so quotes imported from elsewhere looked stuck even
+      // though the identical native-made quote clears fine.
+      out.push("<blockquote>" + inlineMd(q.join("<br>")) + "</blockquote>");
     } else if (/\|/.test(ln) && i + 1 < lines.length && isMdTableSep(lines[i + 1])) {
       flushPara(); flushList();
       var headCells = splitMdTableRow(ln);
@@ -3830,6 +4052,24 @@ function sanitizeHtml(html) {
       if (tag === "A" && ch.getAttribute("href") && ch.className !== "topic-link" && ch.className.indexOf("tl-chip-link") === -1) { ch.setAttribute("target", "_blank"); ch.setAttribute("rel", "noopener noreferrer"); }
       if (tag === "A" && (ch.className === "topic-link" || ch.className.indexOf("tl-chip-link") > -1)) { ch.setAttribute("href", "#"); }
       walk(ch);
+      // A quote pasted in from elsewhere (or saved by an older version)
+      // commonly arrives as <blockquote><p>line</p><p>line</p></blockquote>
+      // instead of this app's own flat <blockquote>line<br>line</blockquote>
+      // — same content, but that extra <p> wrapper changes how the
+      // browser's native Enter key behaves inside it. A flat blockquote
+      // splits cleanly into two separate quotes on Enter, same as one made
+      // in-app; a paragraph-wrapped one only splits the inner <p>, so both
+      // halves stay joined under the same outer <blockquote> — Enter reads
+      // as if Shift+Enter had been used instead. Flattening here means it
+      // never matters where a quote came from: paste, an older save, or a
+      // markdown import all end up in the same shape once sanitized.
+      if (tag === "BLOCKQUOTE" && ch.children.length && Array.prototype.every.call(ch.children, function (c) { return c.tagName === "P" || c.tagName === "DIV"; })) {
+        Array.prototype.slice.call(ch.children).forEach(function (para, pi) {
+          if (pi > 0) ch.insertBefore(document.createElement("br"), para);
+          while (para.firstChild) ch.insertBefore(para.firstChild, para);
+          ch.removeChild(para);
+        });
+      }
     });
   })(tmp);
   return tmp.innerHTML;
@@ -4463,7 +4703,7 @@ function dayKey(ts) {
 
 /* ── State ── */
 function welcomeBody() {
-  return "# Welcome to Notebook\n\nA quiet, local-first studio for your worlds. The rooms, on the left rail (you just picked which ones to show):\n\n- **Home** (the ❧) — your launcher and dashboard: live counts, a *Continue* tile back to your last edit, an activity heat-grid, pinned and recent items\n- **Notebooks** — rich-text notes grouped into notebooks\n- **Entries** — your world bible: characters, places, factions, concepts and more, with attributes, sections, and links between entries\n- **Timelines** — epochs and eras, each with status, summaries, dated events, and linked entries\n- **Work** — a session timer, a weekly goal, and medals for streaks, hours, and goal weeks\n- **Oracle** — draws two entries together and asks what connects them; tag entries with words like *rival* or *haunted* to sharpen the prompts\n\n## Writing in Notebooks\n\nThe toolbar handles headings, lists, quotes, code, and links, but you can also just type:\n\n- `1.` or `-` then a space starts a list — press **Tab** inside a list to nest it a level, **Shift+Tab** to lift it back out\n- Paste keeps its formatting (bold, links, lists…); typed web addresses turn into links on their own\n- **Focus** in the toolbar dims every paragraph but the one you're in\n\n## Work & medals\n\nLog sessions, set a weekly hour goal, and build a streak. Weeks get graded **Met → Exceeded → Crushed → Legendary**, and the same tiers apply to medals for your streak, your total hours, and how many weeks you've hit goal — each tier looks a little richer than the last, and Legendary earns a crown.\n\n## Keep your work safe\n\nEverything stays in this browser. In **Preferences \u2192 Data**, **Export everything** backs up every project plus your shared settings and Productivity data \u2014 Ctrl/Cmd+S does the same thing instantly. **Export this project** is there too, for just what you’re currently working on. **Import** brings either back \u2014 Notebook also reads old Suitebook exports, converting entries, lore pages, timelines, events, and work sessions. **Preferences \u2192 Snapshots** also keeps automatic restore points, but those live in this browser too \u2014 Export is the only copy that leaves it.\n\n> Ctrl+N new page · Ctrl+B bold · Ctrl+K search · Ctrl+S export everything\n\nChanged your mind about any of this? Everything you picked at setup — and a lot more — lives in **Preferences**, including a way to run through setup again.";
+  return "# Welcome to Notebook\n\nA quiet, local-first studio for your worlds. The rooms, on the left rail (you just picked which ones to show):\n\n- **Home** (the ❧) — your launcher and dashboard: live counts, a *Continue* tile back to your last edit, an activity heat-grid, a small calendar, pinned and recent items\n- **Notebooks** — rich-text notes grouped into notebooks; headings become jump-able **Topics** automatically, and pages can carry tags\n- **Timelines** — epochs and eras, each with status, summaries, dated events, and pages for writing them up\n- **Productivity** — a shared **Calendar** for plans and tasks (one-off or recurring), a session timer, weekly hour goals, and medals for streaks, hours, and goal weeks — all shared across every project, with a filter to view just one\n- **Oracle** — draws two entries together and asks what connects them; tag entries with words like *rival* or *haunted* to sharpen the prompts\n- **Management** — real-world **Accounts** you set up yourself (a brokerage account, a side project, a revenue stream — whatever you're tracking), each holding its own earnings, expenses, and contributions, plus the products or deliverables you're building\n\nCharacters, places, factions, and other **Entries** aren't their own room — you create and link them right from a page or timeline (the **+ Entry** button in the toolbar), so your world bible grows exactly where you're writing about it.\n\n## Writing in Notebooks\n\nThe toolbar handles headings, lists, quotes, code, and links, but you can also just type:\n\n- `1.` or `-` then a space starts a list — press **Tab** inside a list to nest it a level, **Shift+Tab** to lift it back out\n- Paste keeps its formatting (bold, links, lists…); typed web addresses turn into links on their own\n- **Focus** in the toolbar dims every paragraph but the one you're in\n- Done with a page and don't want it touched by accident? **Lock** it from the toolbar — a locked page can't be edited or deleted until you unlock it\n\n## Productivity\n\nPlan on the **Calendar** — plans, recurring or one-off, and a running task list. Log sessions against a weekly hour goal and build a streak; weeks get graded **Met → Exceeded → Crushed → Legendary**, and the same tiers apply to medals for your streak, your total hours, and how many weeks you've hit goal — each tier looks a little richer than the last, and Legendary earns a crown.\n\n## Management\n\nSet up an **Account** for anything you want to track on its own, with an optional goal. Click one open to log earnings, expenses, or contributions straight into it — everything nests under the account it belongs to. Anything you don't assign to an account lands in **Other transactions** instead.\n\n## Keep your work safe\n\nEverything stays in this browser. In **Preferences \u2192 Data**, **Export everything** backs up every project plus your shared settings and Productivity data \u2014 Ctrl/Cmd+S does the same thing instantly. **Export this project** is there too, for just what you’re currently working on. **Import** brings either back \u2014 Notebook also reads old Suitebook exports, converting entries, lore pages, timelines, events, and work sessions. **Preferences \u2192 Snapshots** also keeps automatic restore points, but those live in this browser too \u2014 Export is the only copy that leaves it.\n\n> Ctrl+N new page · Ctrl+B bold · Ctrl+K search · Ctrl+S export everything\n\nChanged your mind about any of this? Everything you picked at setup — and a lot more — lives in **Preferences**, including a way to run through setup again.";
 }
 function blankState() {
   var nbId = uid();
@@ -4501,6 +4741,7 @@ function blankState() {
     budget: [],
     budgetLimit: null,
     budgets: [],
+    accounts: [],
     products: [],
     customProjectTypes: [],
     hidden: { railTabs: ["entries", "oracle"], homeTiles: ["entries", "oracle"], homeSections: [], workSections: [], notebookFeatures: ["timelines"] },
@@ -4546,6 +4787,7 @@ function normalizeState(s) {
   s.pages = Array.isArray(s.pages) ? s.pages : [];
   s.pages.forEach(function (p) {
     if (!p || typeof p !== "object") return;
+    p.locked = !!p.locked;
     try { pageToHtml(p); }
     catch (e) {
       console.warn("Notebook: couldn't convert a page's content, keeping it as plain text", e);
@@ -4555,6 +4797,14 @@ function normalizeState(s) {
   });
   s.topics = Array.isArray(s.topics) ? s.topics : [];
   s.topics = s.topics.filter(function (t) { return t && typeof t === "object" && t.id && s.pages.some(function (p) { return p.id === t.pageId; }); });
+  safe("topic oracleLinks", function () {
+    var topicIds = {};
+    s.topics.forEach(function (t) { topicIds[t.id] = true; });
+    s.topics.forEach(function (t) {
+      var raw = Array.isArray(t.oracleLinks) ? t.oracleLinks : [];
+      t.oracleLinks = raw.filter(function (id) { return typeof id === "string" && id !== t.id && topicIds[id]; });
+    });
+  });
   s.entries = Array.isArray(s.entries) ? s.entries : [];
   s.timelines = Array.isArray(s.timelines) ? s.timelines : [];
   s.sessions = Array.isArray(s.sessions) ? s.sessions : [];
@@ -4951,7 +5201,12 @@ function normalizeState(s) {
         cashOutAmount: Math.max(0, +b.cashOutAmount || 0),
         cashOutTxId: typeof b.cashOutTxId === "string" ? b.cashOutTxId : null,
         cashOutOf: typeof b.cashOutOf === "string" ? b.cashOutOf : null,
-        returnOf: typeof b.returnOf === "string" ? b.returnOf : null
+        returnOf: typeof b.returnOf === "string" ? b.returnOf : null,
+        // Which account (see s.accounts) this transaction is nested under,
+        // if any — any kind (income/expense/investment) can belong to an
+        // account. Validated against real accounts below, once s.accounts
+        // itself has been sanitized.
+        accountId: typeof b.accountId === "string" ? b.accountId : null
       };
     });
   });
@@ -4980,6 +5235,33 @@ function normalizeState(s) {
       };
     }).filter(function (b) { return b.limit > 0; });
     s.budgetLimit = null; // fully migrated onto s.budgets; kept only so old exports/snapshots still parse
+  });
+  // Accounts are the single, general-purpose container everything else
+  // nests under — a budget transaction (income, expense, or investment
+  // alike) can point at one via accountId. The transactions themselves
+  // stay in s.budget as the single source of truth for totals; an account
+  // is just a name plus an optional goal layered on top. (This used to be
+  // s.investAccounts, limited to investment contributions only — the
+  // fallback below picks that up for anyone upgrading from that version.)
+  safe("accounts", function () {
+    var raw = Array.isArray(s.accounts) ? s.accounts : (Array.isArray(s.investAccounts) ? s.investAccounts : []);
+    s.accounts = raw.filter(function (a) { return a && typeof a === "object"; }).map(function (a) {
+      return {
+        id: a.id || uid(),
+        name: (typeof a.name === "string" && a.name.trim()) ? a.name.trim().slice(0, 60) : "Account",
+        institution: typeof a.institution === "string" ? a.institution.slice(0, 60) : "",
+        goal: Math.max(0, +a.goal || 0),
+        note: typeof a.note === "string" ? a.note : "",
+        createdAt: +a.createdAt || Date.now()
+      };
+    });
+    s.investAccounts = undefined; // fully migrated onto s.accounts
+    // A transaction pointing at an account that's since been deleted falls
+    // back to unassigned rather than pointing at nothing — same treatment
+    // as any other dangling reference in this app (e.g. cashOutOf).
+    var acctIds = {};
+    s.accounts.forEach(function (a) { acctIds[a.id] = true; });
+    s.budget.forEach(function (b) { if (b.accountId && !acctIds[b.accountId]) b.accountId = null; });
   });
   safe("products", function () {
     var PRODUCT_STATUSES = ["idea", "planned", "active", "done"];
@@ -5052,7 +5334,7 @@ function normalizeState(s) {
     var RAIL_KEYS = RAIL_ITEMS.map(function (it) { return it.key; });
     var HOME_TILE_KEYS = HOME_TILE_DEFS.map(function (d) { return d.key; });
     var HOME_SECTION_KEYS = ["calendar", "activity", "pinned", "recent"];
-    var WORK_SECTION_KEYS = ["goal", "history", "bylabel", "sessions", "achievements"];
+    var WORK_SECTION_KEYS = ["recap", "goal", "history", "bylabel", "sessions", "achievements"];
     function cleanList(arr, allowed) {
       return Array.isArray(arr) ? arr.filter(function (k) { return allowed.indexOf(k) > -1; }) : [];
     }
@@ -6430,6 +6712,18 @@ function renderPageEditor() {
   renderPgTlHeader(p);
   renderPgTagPicker(p);
   $("pin-pg-btn").classList.toggle("pin-on", !!p.pinned);
+  // Locking disables the two places content actually gets typed (title,
+  // body) at the DOM level — not just in the click handlers below — so
+  // there's no way to slip past it through keyboard input, and read-only
+  // is what screen readers/browsers announce for it, matching what it
+  // actually is.
+  $("pg-edit-wrap").classList.toggle("pg-locked", !!p.locked);
+  $("pg-title-input").readOnly = !!p.locked;
+  $("pg-rich").contentEditable = p.locked ? "false" : "true";
+  var lockBtn = $("lock-pg-btn");
+  lockBtn.classList.toggle("lock-on", !!p.locked);
+  lockBtn.setAttribute("aria-label", p.locked ? "Unlock page" : "Lock page");
+  lockBtn.title = p.locked ? "Unlock this page to allow edits or deletion" : "Lock this page against edits or deletion";
   updatePgMeta(p);
   renderPgTasks(p);
   if (typeof renderTopicBackBar === "function") renderTopicBackBar();
@@ -6555,8 +6849,35 @@ function pgTaskDueState(t, todayKeyIn) {
   var left = daysBetweenKeys(todayKey, dueEnd);
   return { state: "active", label: left === 1 ? "Due tomorrow" : "Due " + left + "d" };
 }
+// The sidebar can show Tasks or Navigation (topics on the current page) —
+// a panel-wide UI choice, not saved per page or persisted, so it stays
+// wherever you last left it as you move between pages.
+var pgSidebarView = "tasks";
 function renderPgTasks(p) {
-  var listEl = $("pg-tasks-list");
+  var viewLabel = pgSidebarView === "nav" ? "Navigation" : "Tasks";
+  var titleEl = $("pg-tasks-title");
+  if (titleEl) titleEl.textContent = viewLabel;
+  // The collapsed strip used to always say "Tasks" regardless of which
+  // view was actually active underneath — misleading once Navigation
+  // became a second option, so this keeps it in sync with whatever
+  // renderPgTasks just decided to show.
+  var collapsedLabel = $("pg-tasks-collapsed-label"), collapsedTab = $("pg-tasks-collapsed-tab");
+  if (collapsedLabel) collapsedLabel.textContent = viewLabel;
+  if (collapsedTab) {
+    collapsedTab.title = viewLabel;
+    collapsedTab.setAttribute("aria-label", "Show " + viewLabel.toLowerCase() + " panel");
+  }
+  var listEl = $("pg-tasks-list"), navEl = $("pg-tasks-nav-list"), addRow = $("pg-tasks-add-row");
+  if (pgSidebarView === "nav") {
+    if (listEl) listEl.style.display = "none";
+    if (addRow) addRow.style.display = "none";
+    if (navEl) navEl.style.display = "";
+    renderPgNavList(p);
+    return;
+  }
+  if (listEl) listEl.style.display = "";
+  if (addRow) addRow.style.display = "";
+  if (navEl) navEl.style.display = "none";
   if (!listEl) return;
   listEl.innerHTML = "";
   if (!p) { $("pg-tasks-count").textContent = ""; return; }
@@ -6600,6 +6921,54 @@ function renderPgTasks(p) {
     listEl.appendChild(row);
   });
 }
+// Navigation view: every topic (heading) on the current page, one tap to
+// jump straight to it — a same-page shortcut, so unlike goToTopic it never
+// touches the cross-page back-stack, it just scrolls and flashes the
+// heading in place.
+function renderPgNavList(p) {
+  var wrap = $("pg-tasks-nav-list");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  if (!p) { $("pg-tasks-count").textContent = ""; wrap.appendChild(el("div", "pg-tasks-empty", "No page open.")); return; }
+  var topics = (state.topics || []).filter(function (t) { return t.pageId === p.id; });
+  $("pg-tasks-count").textContent = topics.length ? String(topics.length) : "";
+  if (!topics.length) { wrap.appendChild(el("div", "pg-tasks-empty", "No topics on this page yet. Headings become topics automatically, or use \u201c+ Topic\u201d in the toolbar.")); return; }
+  topics.forEach(function (t) {
+    var row = el("button", "pg-nav-row", t.name || "Untitled topic");
+    row.addEventListener("click", function () { scrollToTopicInPage(t.id); });
+    wrap.appendChild(row);
+  });
+}
+function scrollToTopicInPage(topicId) {
+  var target = pgRich.querySelector('[data-topic-id="' + topicId + '"]');
+  if (!target) { toast("Couldn't find that topic on the page."); return; }
+  target.scrollIntoView({ behavior: "smooth", block: "center" });
+  target.classList.add("topic-flash");
+  setTimeout(function () { target.classList.remove("topic-flash"); }, 1600);
+}
+(function () {
+  var switchBtn = $("pg-tasks-switch"), menu = $("pg-tasks-menu");
+  if (!switchBtn || !menu) return;
+  switchBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    var willOpen = menu.style.display === "none" || !menu.style.display;
+    menu.style.display = willOpen ? "block" : "none";
+    switchBtn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+  });
+  document.addEventListener("click", function () {
+    menu.style.display = "none";
+    switchBtn.setAttribute("aria-expanded", "false");
+  });
+  Array.prototype.forEach.call(menu.querySelectorAll("[data-view]"), function (btn) {
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      pgSidebarView = btn.dataset.view;
+      menu.style.display = "none";
+      switchBtn.setAttribute("aria-expanded", "false");
+      renderPgTasks(curPage());
+    });
+  });
+})();
 $("pg-tasks-add-input").addEventListener("keydown", function (e) {
   if (e.key !== "Enter") return;
   e.preventDefault();
@@ -6676,7 +7045,7 @@ function openPage(id, viaTopic) {
 }
 function newPage() {
   if (!nbById(state.sel.nb)) state.sel.nb = state.notebooks[0].id;
-  var p = { id: uid(), notebookId: state.sel.nb, title: "", body: "", format: "html", tags: [], pinned: false, createdAt: Date.now(), updatedAt: Date.now() };
+  var p = { id: uid(), notebookId: state.sel.nb, title: "", body: "", format: "html", tags: [], pinned: false, locked: false, createdAt: Date.now(), updatedAt: Date.now() };
   state.pages.push(p);
   openPage(p.id);
   $("pg-title-input").focus();
@@ -6773,7 +7142,7 @@ function startRenameNb(nb) {
 }
 
 $("pg-title-input").addEventListener("input", function () {
-  var p = curPage(); if (!p) return;
+  var p = curPage(); if (!p || p.locked) return;
   p.title = this.value; p.updatedAt = Date.now();
   if (p.kind === "era") {
     var tl = tlById(p.timelineId);
@@ -6824,11 +7193,12 @@ function restorePropsIfMissing(p) {
 }
 // Notebook legend — shown in the main editor pane whenever nothing's open
 // (see renderPageEditor), and reachable any time via the Legend button in
-// the sidebar (#show-legend), not just when you land here naturally. Lists
-// every page in the current notebook with its topics nested underneath —
-// topics are automatic now (see syncTopicsFromHeadings), so this is the
-// replacement for the old global "Jump to a topic" search: one notebook's
-// whole map, one click to any page or heading in it.
+// the sidebar (#show-legend), not just when you land here naturally. Reads
+// as this notebook's own cover/contents page — a header introducing it,
+// then every page as a card with a preview, its tags, and its topics as
+// pill buttons underneath. Topics are automatic (see syncTopicsFromHeadings),
+// so this doubles as the replacement for the old global "Jump to a topic"
+// search: one notebook's whole map, one click to any page or heading in it.
 function renderPageLegend() {
   var wrap = $("pg-legend");
   if (!wrap) return;
@@ -6847,17 +7217,23 @@ function renderPageLegend() {
     return;
   }
   if (legendWrap) legendWrap.classList.add("has-pages");
-  wrap.appendChild(el("div", "pg-legend-title", nb.name || "Notebook"));
+
+  var topicCount = (state.topics || []).filter(function (t) { return pages.some(function (p) { return p.id === t.pageId; }); }).length;
+  var cover = el("div", "pg-legend-cover");
+  var dot = el("span", "pg-legend-cover-dot"); dot.style.background = nb.color || "var(--sage)";
+  var nameCol = el("div");
+  nameCol.appendChild(el("div", "pg-legend-cover-name", nb.name || "Notebook"));
+  var metaText = pages.length + (pages.length === 1 ? " page" : " pages") + (topicCount ? " \u00b7 " + topicCount + (topicCount === 1 ? " topic" : " topics") : "");
+  nameCol.appendChild(el("div", "pg-legend-cover-meta", metaText));
+  var newBtn = el("button", "pg-legend-cover-new", "+ New page");
+  newBtn.addEventListener("click", newPage);
+  cover.append(dot, nameCol, newBtn);
+  wrap.appendChild(cover);
+
+  var list = el("div", "pg-legend-list");
   var sorted = pages.slice().sort(function (a, b) { return (a.title || "").localeCompare(b.title || ""); });
-  sorted.forEach(function (p, idx) {
-    // A plain container, not itself a button — the title and each topic
-    // below are independently clickable (see pickTopic/goToTopic), and
-    // nesting clickable buttons inside a clickable row isn't valid HTML,
-    // unlike the Pages list's tags (decorative, not click targets) —
-    // topics here need to actually navigate.
-    var row = el("div", "pg-legend-page");
-    row.appendChild(el("span", "pg-legend-num", (idx + 1) + "."));
-    var body = el("div", "pg-legend-page-body");
+  sorted.forEach(function (p) {
+    var card = el("div", "pg-legend-card");
     var untitledLabel = p.kind === "era" ? "Unnamed era" : p.kind === "epoch" ? "Unnamed epoch" : "Untitled";
     var title = el("button", "pg-legend-page-title", p.title || untitledLabel);
     title.addEventListener("click", function () {
@@ -6867,7 +7243,17 @@ function renderPageLegend() {
       topicNavStack.push({ pageId: null, scrollTop: 0 });
       openPage(p.id, true);
     });
-    body.appendChild(title);
+    card.appendChild(title);
+    var preview = htmlToProseText(p.body || "").slice(0, 140);
+    if (preview) card.appendChild(el("div", "pg-legend-preview", preview));
+    if (p.tags && p.tags.length) {
+      var tagLine = el("div", "pg-legend-tags");
+      p.tags.slice(0, 6).forEach(function (tg) {
+        var chip = el("span", null, tg); chip.style.cssText = tagChipStyle(tg);
+        tagLine.appendChild(chip);
+      });
+      card.appendChild(tagLine);
+    }
     var topics = (state.topics || []).filter(function (t) { return t.pageId === p.id; });
     if (topics.length) {
       var topicLine = el("div", "pg-legend-topics");
@@ -6876,14 +7262,14 @@ function renderPageLegend() {
         topicRow.addEventListener("click", function () { goToTopic(t.id); });
         topicLine.appendChild(topicRow);
       });
-      body.appendChild(topicLine);
+      card.appendChild(topicLine);
     }
-    row.appendChild(body);
-    wrap.appendChild(row);
+    list.appendChild(card);
   });
+  wrap.appendChild(list);
 }
 function commitRich() {
-  var p = curPage(); if (!p) return;
+  var p = curPage(); if (!p || p.locked) return;
   syncTopicsFromHeadings(p, pgRich);
   p.body = sanitizeHtml(pgRich.innerHTML);
   p.format = "html";
@@ -6977,6 +7363,7 @@ pgRich.addEventListener("dragover", function (e) {
   if (e.dataTransfer && Array.prototype.slice.call(e.dataTransfer.types || []).indexOf("Files") > -1) e.preventDefault();
 });
 pgRich.addEventListener("drop", function (e) {
+  var p = curPage(); if (p && p.locked) return;
   var files = e.dataTransfer && e.dataTransfer.files ? Array.prototype.slice.call(e.dataTransfer.files) : [];
   var imageFiles = files.filter(function (f) { return f.type.indexOf("image/") === 0; });
   if (!imageFiles.length) return;
@@ -7031,6 +7418,8 @@ function nearestContentEditable(node) {
 // .tl-props without interfering with normal editing inside the duration/
 // tags/meta fields, which stay fully editable.
 pgRich.addEventListener("beforeinput", function (e) {
+  var lockedCheck = curPage();
+  if (lockedCheck && lockedCheck.locked) { e.preventDefault(); return; }
   var p = curPage();
   if (!p || (p.kind !== "era" && p.kind !== "epoch")) return;
   var props = pgRich.querySelector(".tl-props");
@@ -7057,6 +7446,7 @@ pgRich.addEventListener("blur", function () { commitRich(); renderPages(); });
    clipboard has HTML, unless the person has turned that off in Settings. Colours,
    fonts and other styling not supported by the editor are stripped by sanitizeHtml. */
 pgRich.addEventListener("paste", function (e) {
+  var p = curPage(); if (p && p.locked) { e.preventDefault(); return; }
   if (!e.clipboardData) return;
   var files = Array.prototype.slice.call(e.clipboardData.files || []);
   var imageFiles = files.filter(function (f) { return f.type.indexOf("image/") === 0; });
@@ -7397,10 +7787,21 @@ pgRich.addEventListener("contextmenu", function (e) {
   var cell = closestCell(e.target);
   if (!cell) return;
   e.preventDefault();
+  var ctxPage = curPage();
+  if (ctxPage && ctxPage.locked) return;
   if (Popout.activeWin()) { openTableManageModal(cell); return; }
   openTableCellMenu(cell, e.clientX, e.clientY);
 });
 pgRich.addEventListener("keydown", function (e) {
+  // Locked pages: block anything that would change content, but keep
+  // navigation (arrows, Home/End/PageUp/PageDown, Escape) and Ctrl/Cmd+C
+  // (copying is reading, not editing) working normally.
+  var lockedPage = curPage();
+  if (lockedPage && lockedPage.locked) {
+    var navKeys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown", "Escape"];
+    var isCopy = (e.ctrlKey || e.metaKey) && (e.key === "c" || e.key === "C");
+    if (navKeys.indexOf(e.key) === -1 && !isCopy) { e.preventDefault(); return; }
+  }
   if (e.key === "Tab") {
     var sel = (Popout.activeWin() || window).getSelection();
     if (!sel.rangeCount) return;
@@ -7461,7 +7862,7 @@ function richCmd(cmd) {
     else if (cmd === "code") (Popout.activeDoc() || document).execCommand("formatBlock", false, "pre");
     else if (cmd === "ul") (Popout.activeDoc() || document).execCommand("insertUnorderedList");
     else if (cmd === "ol") (Popout.activeDoc() || document).execCommand("insertOrderedList");
-    else if (cmd === "clear") { (Popout.activeDoc() || document).execCommand("removeFormat"); (Popout.activeDoc() || document).execCommand("formatBlock", false, "p"); }
+    else if (cmd === "clear") { clearRichFormatting(); }
     else if (cmd === "table") {
       // No execCommand for tables, so this builds the HTML directly. The
       // trailing empty paragraph guarantees there's always somewhere to
@@ -7516,12 +7917,73 @@ function openLinkChooser() {
   cancel.addEventListener("click", closeModal);
   row.appendChild(cancel);
 }
+// Clear Formatting used to be just removeFormat + formatBlock("p"), which
+// only reaches the single block ancestor closest to the caret. That's fine
+// for a blockquote made in-app (the Quote button leaves it flat:
+// <blockquote>text</blockquote>, so formatBlock replaces the whole thing).
+// But a blockquote imported from markdown or pasted in from elsewhere
+// commonly arrives nested — <blockquote><p>text</p></blockquote> — and in
+// that shape formatBlock only ever touched the inner <p>, leaving the
+// outer <blockquote> (and its quote styling) stuck in place. This walks up
+// from wherever the selection actually is and strips any such wrapper by
+// hand, so the result is the same regardless of how the quote got there.
+function clearRichFormatting() {
+  var doc = Popout.activeDoc() || document;
+  doc.execCommand("removeFormat");
+  doc.execCommand("formatBlock", false, "p");
+  var win = Popout.activeWin() || window;
+  var sel = win.getSelection ? win.getSelection() : null;
+  if (!sel || !sel.rangeCount) return;
+  var node = sel.getRangeAt(0).commonAncestorContainer;
+  if (node.nodeType !== 1) node = node.parentNode;
+  var changed = false;
+  while (node && node !== pgRich && pgRich.contains(node)) {
+    var parent = node.parentNode;
+    if (node.nodeType === 1 && node.tagName === "BLOCKQUOTE") {
+      while (node.firstChild) parent.insertBefore(node.firstChild, node);
+      parent.removeChild(node);
+      changed = true;
+    }
+    node = parent;
+  }
+  if (changed) commitRich();
+}
+// Topics have only ever come from typing a heading and having it noticed
+// (see syncTopicsFromHeadings) — real, but easy to miss if you didn't
+// already know that's how it works. This is the direct route: name it,
+// and a heading (which is what makes it a topic) gets added to the end of
+// the page for you, caret already inside the empty line under it.
+function promptNewTopic() {
+  var p = curPage(); if (!p || p.locked) return;
+  inputModal("New topic", "e.g. The Siege of Varek Hold", function (name) {
+    name = (name || "").trim();
+    if (!name) return;
+    pgRich.focus();
+    var h = document.createElement("h2");
+    h.textContent = name;
+    var para = document.createElement("p");
+    para.innerHTML = "<br>";
+    pgRich.appendChild(h);
+    pgRich.appendChild(para);
+    var range = document.createRange();
+    range.selectNodeContents(para);
+    range.collapse(true);
+    var sel = (Popout.activeWin() || window).getSelection();
+    sel.removeAllRanges(); sel.addRange(range);
+    commitRich();
+    para.scrollIntoView({ block: "center", behavior: "smooth" });
+    toast("Topic added — other pages can link to it now");
+  });
+}
 $("pg-toolbar").addEventListener("click", function (e) {
   var btn = e.target.closest("button[data-cmd]"); if (!btn) return;
   e.preventDefault();
+  var tbPage = curPage();
+  if (tbPage && tbPage.locked) return;
   if (btn.dataset.cmd === "link") { openLinkChooser(); return; }
   if (btn.dataset.cmd === "image") { openImagePicker(); return; }
   if (btn.dataset.cmd === "tl-link") { insertLinkedEntryChip(); return; }
+  if (btn.dataset.cmd === "topic") { promptNewTopic(); return; }
   if (btn.dataset.cmd === "table") {
     // mousedown above preserves the caret position in pg-rich even though
     // focus is momentarily on this button, so this still reflects wherever
@@ -7929,15 +8391,22 @@ function renderPgTagPicker(p) {
   tagEditor(body, p.tags, function () {
     p.updatedAt = Date.now(); scheduleSave(); renderPages();
     $("pg-tagpick-n").textContent = p.tags.length ? "· " + p.tags.length : "";
-  }, { curLabel: "On this page", emptyMsg: "No tags yet — tap a preset, or type below.", add: true, manage: true, addPlaceholder: "add a tag…" });
+  }, { curLabel: "On this page", emptyMsg: p.locked ? "No tags." : "No tags yet — tap a preset, or type below.", add: true, manage: true, addPlaceholder: "add a tag…", readOnly: !!p.locked });
   $("pg-tagpick-n").textContent = p.tags.length ? "· " + p.tags.length : "";
 }
 $("pin-pg-btn").addEventListener("click", function () {
   var p = curPage(); if (!p) return;
   p.pinned = !p.pinned; scheduleSave(); renderPagesTab();
 });
+$("lock-pg-btn").addEventListener("click", function () {
+  var p = curPage(); if (!p) return;
+  p.locked = !p.locked; p.updatedAt = Date.now();
+  scheduleSave(); renderPageEditor(); renderPages();
+  toast(p.locked ? "Page locked" : "Page unlocked");
+});
 $("del-pg-btn").addEventListener("click", function () {
   var p = curPage(); if (!p) return;
+  if (p.locked) { toast("This page is locked — unlock it first to delete it"); return; }
   var tv = timeVocab();
   if (p.kind === "era") {
     var tl = tlById(p.timelineId);
@@ -8434,11 +8903,13 @@ function tagEditor(container, tags, onChange, opts) {
     var cc = el("div", "tagpick-chips");
     if (!tags.length) cc.appendChild(el("span", "tagpick-none", opts.emptyMsg || "No tags yet."));
     tags.forEach(function (tag) {
+      if (opts.readOnly) { cc.appendChild(el("span", "tagchip on", tag)).style.cssText = tagChipStyle(tag); return; }
       var chip = el("button", "tagchip on", tag); chip.style.cssText = tagChipStyle(tag); chip.title = "Remove";
       chip.addEventListener("click", function () { var i = tags.indexOf(tag); if (i > -1) tags.splice(i, 1); onChange(); render(); });
       cc.appendChild(chip);
     });
     cur.appendChild(cc); container.appendChild(cur);
+    if (opts.readOnly) return;
     var suggest = [], sseen = {};
     state.tagPresets.forEach(function (p) { var k = p.name.toLowerCase(); if (!sseen[k]) { sseen[k] = 1; suggest.push(p.name); } });
     allUsedPageTags().forEach(function (t) { var k = t.toLowerCase(); if (!sseen[k]) { sseen[k] = 1; suggest.push(t); } });
@@ -9213,6 +9684,140 @@ function weekSecondsFor(ts) {
   return n;
 }
 function weekSeconds() { return weekSecondsFor(Date.now()); }
+// Total logged time within [start, end) — including whatever the live
+// timer has racked up so far, if it started inside the window. Shared by
+// the Recap card's headline total and every one of its chart bars.
+function secondsInRange(start, end) {
+  var n = 0;
+  state.sessions.forEach(function (s) { if (s.ts >= start && s.ts < end) n += s.seconds || 0; });
+  if (state.runningSession && state.runningSession.startTs >= start && state.runningSession.startTs < end) {
+    n += (Date.now() - state.runningSession.startTs) / 1000;
+  }
+  return n;
+}
+// Splits a period into the chart's bars: a week into 7 days, a month into
+// its weeks, a year into 12 months — plus the equivalent prior period, for
+// the Recap card's "up/down vs last ___" comparison.
+function recapBuckets(period) {
+  var now = Date.now();
+  if (period === "month") {
+    var d = new Date(now);
+    var mStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    var mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+    var buckets = [];
+    var cur = mStart, wn = 1;
+    while (cur < mEnd) {
+      var bEnd = Math.min(cur + 7 * 86400000, mEnd);
+      buckets.push({ start: cur, end: bEnd, label: "W" + wn });
+      cur = bEnd; wn++;
+    }
+    var prevStart = new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime();
+    return {
+      buckets: buckets, rangeStart: mStart, rangeEnd: mEnd, prevStart: prevStart, prevEnd: mStart,
+      unitLabel: "this month", deltaLabel: "last month",
+      isCurrent: function (b) { return now >= b.start && now < b.end; }
+    };
+  }
+  if (period === "year") {
+    var d2 = new Date(now);
+    var yStart = new Date(d2.getFullYear(), 0, 1).getTime();
+    var yEnd = new Date(d2.getFullYear() + 1, 0, 1).getTime();
+    var buckets2 = [];
+    for (var m = 0; m < 12; m++) {
+      var bS = new Date(d2.getFullYear(), m, 1).getTime();
+      var bE = new Date(d2.getFullYear(), m + 1, 1).getTime();
+      buckets2.push({ start: bS, end: bE, label: new Date(bS).toLocaleDateString(undefined, { month: "narrow" }) });
+    }
+    var prevYearStart = new Date(d2.getFullYear() - 1, 0, 1).getTime();
+    return {
+      buckets: buckets2, rangeStart: yStart, rangeEnd: yEnd, prevStart: prevYearStart, prevEnd: yStart,
+      unitLabel: "this year", deltaLabel: "last year",
+      isCurrent: function (b) { return now >= b.start && now < b.end; }
+    };
+  }
+  // week (default)
+  var ws = weekStartTs(now);
+  var buckets3 = [];
+  for (var i = 0; i < 7; i++) {
+    var bStart = ws + i * 86400000;
+    buckets3.push({ start: bStart, end: bStart + 86400000, label: new Date(bStart).toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2) });
+  }
+  var prevWeekStart = ws - 7 * 86400000;
+  return {
+    buckets: buckets3, rangeStart: ws, rangeEnd: ws + 7 * 86400000, prevStart: prevWeekStart, prevEnd: ws,
+    unitLabel: "this week", deltaLabel: "last week",
+    isCurrent: function (b) { return dayKey(b.start) === dayKey(now); }
+  };
+}
+var wkRecapPeriod = "week";
+// The headline number, the bar chart, and three quick stats — Productivity's
+// version of a wrapped/recap screen: what already happened, made to feel
+// like something worth seeing rather than a row in a spreadsheet.
+function renderWkRecap() {
+  var body = $("wk-recap-body");
+  if (!body) return;
+  var info = recapBuckets(wkRecapPeriod);
+  var bucketSecs = info.buckets.map(function (b) { return secondsInRange(b.start, b.end); });
+  var totalSecs = bucketSecs.reduce(function (a, b) { return a + b; }, 0);
+  var prevSecs = secondsInRange(info.prevStart, info.prevEnd);
+
+  body.innerHTML = "";
+  var head = el("div", "wk-recap-head");
+  head.appendChild(el("div", "wk-recap-big", fmtDur(totalSecs).trim() || "0m"));
+  head.appendChild(el("div", "wk-recap-sub", info.unitLabel));
+  if (totalSecs > 0 || prevSecs > 0) {
+    var deltaPct = prevSecs > 0 ? Math.round(((totalSecs - prevSecs) / prevSecs) * 100) : 100;
+    var up = deltaPct >= 0;
+    head.appendChild(el("div", "wk-recap-delta" + (up ? " up" : " down"), (up ? "\u2191 " : "\u2193 ") + Math.abs(deltaPct) + "% vs " + info.deltaLabel));
+  }
+  body.appendChild(head);
+
+  var maxSec = Math.max.apply(null, bucketSecs.concat([1]));
+  var chart = el("div", "wk-recap-chart");
+  var bars = [];
+  info.buckets.forEach(function (b, i) {
+    var col = el("div", "wk-recap-col");
+    var barWrap = el("div", "wk-recap-bar-wrap");
+    var bar = el("div", "wk-recap-bar" + (info.isCurrent(b) ? " current" : "") + (bucketSecs[i] ? "" : " empty"));
+    bar.dataset.pct = maxSec ? Math.max(3, Math.round((bucketSecs[i] / maxSec) * 100)) : 3;
+    if (bucketSecs[i] > 0) bar.title = b.label + ": " + fmtDur(bucketSecs[i]).trim();
+    barWrap.appendChild(bar);
+    col.append(barWrap, el("div", "wk-recap-col-label", b.label));
+    chart.appendChild(col);
+    bars.push(bar);
+  });
+  body.appendChild(chart);
+
+  var busiestIdx = bucketSecs.reduce(function (best, s, i) { return s > bucketSecs[best] ? i : best; }, 0);
+  var sessionCount = state.sessions.filter(function (s) { return s.ts >= info.rangeStart && s.ts < info.rangeEnd; }).length;
+  var streak = workStreak();
+  var stats = el("div", "wk-recap-stats");
+  function stat(lbl, val) {
+    var s = el("div", "wk-recap-stat");
+    s.appendChild(el("div", "num", val));
+    s.appendChild(el("div", "lbl", lbl));
+    stats.appendChild(s);
+  }
+  stat("Sessions", String(sessionCount));
+  stat("Busiest", bucketSecs[busiestIdx] > 0 ? info.buckets[busiestIdx].label : "\u2014");
+  stat("Streak", streak + (streak === 1 ? " day" : " days"));
+  body.appendChild(stats);
+
+  // Bars start at 0% (see CSS) and are flipped to their real height one
+  // frame later, so the transition actually animates on every render
+  // instead of just snapping into place.
+  requestAnimationFrame(function () {
+    bars.forEach(function (bar) { bar.style.height = bar.dataset.pct + "%"; });
+  });
+}
+Array.prototype.forEach.call($("wk-recap-tabs").querySelectorAll("button"), function (btn) {
+  btn.addEventListener("click", function () {
+    if (btn.classList.contains("on")) return;
+    wkRecapPeriod = btn.dataset.period;
+    Array.prototype.forEach.call($("wk-recap-tabs").querySelectorAll("button"), function (b) { b.classList.toggle("on", b === btn); });
+    renderWkRecap();
+  });
+});
 function isRestedDay(k) { return !!(state.restDays && state.restDays[k]); }
 /* current streak, ending today (or yesterday if today has no session yet).
    A day marked as rested is transparent: it doesn't add to the count, but it
@@ -10026,7 +10631,24 @@ function editSessionModal(s) {
   minsI.style.cssText = hoursI.style.cssText;
   var durWrap = el("div"); durWrap.style.cssText = "display:flex;align-items:center;gap:6px;flex:1";
   durWrap.append(hoursI, el("span", null, "h"), minsI, el("span", null, "m"));
-  field("Date", dateI); field("Time", timeI); field("Label", labelI); field("Duration", durWrap);
+  field("Date", dateI); field("Time", timeI); field("Label", labelI);
+  // Sessions are shared across every project — this lets one be moved to a
+  // different project after the fact (logged under the wrong one, or work
+  // that turned out to belong somewhere else), same list the sessions
+  // filter and manual-log dropdown both use. Only shown once there's
+  // actually more than one project to move it to.
+  var projI = null;
+  if (workspace.projects && workspace.projects.length > 1) {
+    projI = el("select");
+    projI.style.cssText = dateI.style.cssText;
+    workspace.projects.slice().sort(function (a, b) { return (a.name || "").localeCompare(b.name || ""); }).forEach(function (p) {
+      var opt = el("option", null, p.name || "Untitled project"); opt.value = p.id;
+      projI.appendChild(opt);
+    });
+    projI.value = s.projectId || workspace.activeProjectId;
+    field("Project", projI);
+  }
+  field("Duration", durWrap);
   var row = $modal("modal-row");
   var cancel = el("button", null, "Cancel");
   cancel.addEventListener("click", closeModal);
@@ -10039,18 +10661,42 @@ function editSessionModal(s) {
       if (isFinite(nd.getTime())) s.ts = nd.getTime();
     }
     s.label = labelI.value.trim();
+    if (projI) s.projectId = projI.value;
     var h = parseFloat(hoursI.value), m = parseFloat(minsI.value);
     h = isFinite(h) && h >= 0 ? h : 0;
     m = isFinite(m) && m >= 0 ? m : 0;
     var secs = Math.round(h * 3600 + m * 60);
     if (secs >= 0) s.seconds = secs;
-    closeModal(); persist(); renderWorkTab();
+    closeModal(); persist(); renderCalDetail(); renderWorkTab();
     toast("Session updated");
   });
   row.append(cancel, save);
 }
+// Sessions are shared across every project (see s.projectId), but logging
+// time by hand always defaulted to whatever project happened to be active
+// — this lets that be picked explicitly instead. Only shown once there's
+// more than one project to choose between; otherwise logging still just
+// goes to the one project that exists, same as before. Rebuilt on every
+// render (matches the sessions-list project filter's own approach), but
+// keeps whatever was already selected if it's still a real project rather
+// than snapping back to the active one underneath someone mid-pick.
+function renderWkLogProjectSelect() {
+  var sel = $("wk-log-project");
+  if (!sel) return;
+  if (!workspace.projects || workspace.projects.length <= 1) { sel.style.display = "none"; sel.innerHTML = ""; return; }
+  var prevValue = sel.value;
+  sel.innerHTML = "";
+  workspace.projects.slice().sort(function (a, b) { return (a.name || "").localeCompare(b.name || ""); }).forEach(function (p) {
+    var opt = el("option", null, p.name || "Untitled project"); opt.value = p.id;
+    sel.appendChild(opt);
+  });
+  var stillValid = Array.prototype.some.call(sel.options, function (o) { return o.value === prevValue; });
+  sel.value = stillValid ? prevValue : workspace.activeProjectId;
+  sel.style.display = "";
+}
 function renderWorkTab() {
   var hiddenWork = state.hidden.workSections || [];
+  $("wk-card-recap").style.display = hiddenWork.indexOf("recap") > -1 ? "none" : "";
   $("wk-card-goal").style.display = hiddenWork.indexOf("goal") > -1 ? "none" : "";
   $("wk-card-history").style.display = hiddenWork.indexOf("history") > -1 ? "none" : "";
   $("wk-card-bylabel").style.display = hiddenWork.indexOf("bylabel") > -1 ? "none" : "";
@@ -10058,6 +10704,7 @@ function renderWorkTab() {
   $("wk-card-achievements").style.display = hiddenWork.indexOf("achievements") > -1 ? "none" : "";
   checkMedalLevelUps();
   renderAchievements();
+  renderWkRecap();
   renderRestRow();
   var running = !!state.runningSession;
   document.body.classList.toggle("timing", running);
@@ -10067,6 +10714,7 @@ function renderWorkTab() {
   }
   $("wk-elapsed").textContent = running ? fmtClock((Date.now() - state.runningSession.startTs) / 1000) : "0:00";
   Popout.renderPipTimer();
+  renderWkLogProjectSelect();
 
   // week navigator + goal
   var viewTs = Date.now() + wkWeekOffset * 7 * 86400000;
@@ -10255,11 +10903,17 @@ function renderWorkTab() {
   list.innerHTML = "";
   if (!state.sessions.length) list.appendChild(el("div", "empty", "No sessions yet. Start the timer above, or log time by hand."));
   else if (!rows.length) list.appendChild(el("div", "empty", "No sessions match this filter."));
+  var showRowProject = workspace.projects && workspace.projects.length > 1 && !(wkFilter && wkFilter.type === "project");
   rows.slice(0, wkFilter ? 60 : 15).forEach(function (s) {
     var picked = !!wkSel[s.id];
     var row = el("div", "sess-row" + (wkSelMode ? " selectable" : "") + (picked ? " sel" : ""));
     var nm = el("span", "nm", s.label || "Untitled");
-    var when = el("span", "when", new Date(s.ts).toLocaleDateString() + " " + localTimeStr(s.ts));
+    var whenText = new Date(s.ts).toLocaleDateString() + " " + localTimeStr(s.ts);
+    if (showRowProject) {
+      var rowProj = projectMeta(s.projectId);
+      whenText = (rowProj ? rowProj.name : "\u2014") + " \u00b7 " + whenText;
+    }
+    var when = el("span", "when", whenText);
     var dur = el("span", "dur", fmtDur(s.seconds));
     if (wkSelMode) {
       var chk = el("span", "wk-chk", picked ? "✓" : "");
@@ -10552,10 +11206,13 @@ $("wk-label").addEventListener("input", function () {
 function commitLoggedTime(dateKey, secs) {
   var p = dateKey.split("-");
   var ts = new Date(+p[0], +p[1] - 1, +p[2], 12, 0, 0).getTime();
-  state.sessions.unshift({ id: uid(), ts: ts, seconds: secs, label: $("wk-label").value.trim() || "Work", note: "", projectId: workspace.activeProjectId });
+  var logSel = $("wk-log-project");
+  var pid = (logSel && logSel.style.display !== "none" && logSel.value) ? logSel.value : workspace.activeProjectId;
+  state.sessions.unshift({ id: uid(), ts: ts, seconds: secs, label: $("wk-label").value.trim() || "Work", note: "", projectId: pid });
   $("wk-hours").value = ""; $("wk-mins").value = ""; $("wk-log-date").value = dayKey();
   persist(); renderWorkTab();
-  toast("Logged " + fmtDur(secs).trim() + (dateKey === dayKey() ? "" : " on " + dateKey));
+  var loggedElsewhere = pid !== workspace.activeProjectId ? projectMeta(pid) : null;
+  toast("Logged " + fmtDur(secs).trim() + (dateKey === dayKey() ? "" : " on " + dateKey) + (loggedElsewhere ? " to " + loggedElsewhere.name : ""));
 }
 $("wk-log").addEventListener("click", function () {
   var hrs = parseFloat($("wk-hours").value);
@@ -10669,12 +11326,15 @@ $("wk-bulk-merge").addEventListener("click", function () {
 });
 
 /* ════════════════ MERGE SESSIONS ════════════════ */
-// Groups sessions logged on the same day under the same label — the usual
-// source of clutter (starting/stopping the timer a few times on one task).
+// Groups sessions logged on the same day, under the same label, in the
+// same project — the usual source of clutter (starting/stopping the timer
+// a few times on one task). Project is part of the match key, not just a
+// display detail: two unrelated projects can easily share a day and a
+// generic label like "Work", and those aren't duplicates of each other.
 function findAutoMergeGroups() {
   var buckets = {}, order = [];
   state.sessions.forEach(function (s) {
-    var k = dayKey(s.ts) + "|" + ((s.label || "Untitled").trim() || "Untitled");
+    var k = dayKey(s.ts) + "|" + ((s.label || "Untitled").trim() || "Untitled") + "|" + (s.projectId || "");
     if (!buckets[k]) { buckets[k] = []; order.push(k); }
     buckets[k].push(s);
   });
@@ -10698,7 +11358,7 @@ function buildMergedSession(sessions, choice) {
   var seconds = sessions.reduce(function (n, s) { return n + (s.seconds || 0); }, 0);
   var p = choice.dateKey.split("-").map(Number);
   var ts = new Date(p[0], p[1] - 1, p[2], 12, 0, 0, 0).getTime();
-  return { id: uid(), ts: ts, seconds: seconds, label: choice.label, note: choice.note || "" };
+  return { id: uid(), ts: ts, seconds: seconds, label: choice.label, note: choice.note || "", projectId: choice.projectId || null };
 }
 function applyMerge(resolvedGroups) {
   var removeIds = {};
@@ -10731,12 +11391,15 @@ function openMergeReview(groups) {
     var labels = distinctValues(sessions, function (s) { return (s.label || "Untitled").trim() || "Untitled"; });
     var dateKeys = distinctValues(sessions, function (s) { return dayKey(s.ts); });
     var notes = distinctValues(sessions, function (s) { return (s.note || "").trim(); }).filter(function (n) { return n; });
+    var projectIds = distinctValues(sessions, function (s) { return s.projectId || ""; });
     var totalSecs = sessions.reduce(function (n, s) { return n + (s.seconds || 0); }, 0);
 
     var box = el("div", "merge-group");
+    var sameProject = projectIds.length === 1 ? projectMeta(projectIds[0]) : null;
     var headText = sessions.length + " sessions · " + fmtDur(totalSecs).trim() +
       (labels.length === 1 ? " · " + labels[0] : "") +
-      (dateKeys.length === 1 ? " · " + readableDateKey(dateKeys[0]) : "");
+      (dateKeys.length === 1 ? " · " + readableDateKey(dateKeys[0]) : "") +
+      (sameProject ? " · " + sameProject.name : "");
     box.appendChild(el("div", "merge-group-head", headText));
 
     function radioField(fieldLabel, values, formatFn, fieldKey) {
@@ -10766,8 +11429,16 @@ function openMergeReview(groups) {
     var getNote = notes.length > 1
       ? radioField("Which note?", notes.concat([""]), function (v) { return v || "(no note)"; }, "note")
       : function () { return notes[0] || ""; };
+    // Auto-detected groups always share one project (see findAutoMergeGroups),
+    // so this only ever shows up from the manual "select sessions, then
+    // merge" path, where someone picked sessions across projects on
+    // purpose — same treatment as a disagreeing label or note: ask, don't
+    // guess or silently drop it.
+    var getProjectId = projectIds.length > 1
+      ? radioField("Which project?", projectIds, function (v) { return (projectMeta(v) || {}).name || "No project"; }, "project")
+      : function () { return projectIds[0] || null; };
 
-    getters.push({ sessions: sessions, getLabel: getLabel, getDate: getDate, getNote: getNote });
+    getters.push({ sessions: sessions, getLabel: getLabel, getDate: getDate, getNote: getNote, getProjectId: getProjectId });
     extra.appendChild(box);
   });
 
@@ -10777,7 +11448,7 @@ function openMergeReview(groups) {
   var go = el("button", "primary", groups.length === 1 ? "Merge" : "Merge all");
   go.addEventListener("click", function () {
     var resolved = getters.map(function (g) {
-      return { sessions: g.sessions, choice: { label: g.getLabel(), dateKey: g.getDate(), note: g.getNote() } };
+      return { sessions: g.sessions, choice: { label: g.getLabel(), dateKey: g.getDate(), note: g.getNote(), projectId: g.getProjectId() } };
     });
     closeModal();
     applyMerge(resolved);
@@ -11690,6 +12361,12 @@ function calMonthDays(viewTs) {
    recurrence rules, an optional end date, and per-instance skip exceptions. */
 function addDaysToKey(k, n) { return dayKey(dayKeyToTs(k) + n * 86400000); }
 function isValidOccurrenceStart(plan, k) {
+  // A plain to-do (noDue) keeps a real day-key under the hood purely as its
+  // doneDates bookkeeping key (see addPageTask/the task modal) — it was
+  // never meant to land on the calendar at all, so it can't match any day
+  // here. Without this, it showed up as a dot on the day it happened to be
+  // created, and read as "overdue" the moment that day was in the past.
+  if (plan.noDue) return false;
   if (k < plan.date) return false;
   if (!plan.recurrence) return k === plan.date;
   var rec = plan.recurrence;
@@ -11767,7 +12444,7 @@ function renderCalendarTab() {
       instances.slice(0, 4).forEach(function (inst) {
         var p = inst.plan;
         var done = p.doneDates.indexOf(inst.occStart) > -1;
-        var overdue = p.isTask && !done && addDaysToKey(inst.occStart, inst.duration) < todayKey;
+        var overdue = p.isTask && !p.noDue && !done && addDaysToKey(inst.occStart, inst.duration) < todayKey;
         var mark = el("span", (inst.duration > 0 ? "cal-plan-bar" : "cal-plan-dot") + (done ? " done" : "") + (overdue ? " overdue" : ""));
         if (p.color) mark.style.background = p.color;
         dots.appendChild(mark);
@@ -11862,7 +12539,7 @@ function renderCalDetail() {
   instances.forEach(function (inst) {
     var p = inst.plan, occStart = inst.occStart;
     var done = p.doneDates.indexOf(occStart) > -1;
-    var overdue = p.isTask && !done && addDaysToKey(occStart, inst.duration) < todayKey;
+    var overdue = p.isTask && !p.noDue && !done && addDaysToKey(occStart, inst.duration) < todayKey;
     var row = el("div", "cal-plan-row" + (overdue ? " overdue" : "") + (done ? " checked" : ""));
     if (p.isTask) {
       var cb = el("button", "cal-plan-check" + (done ? " checked" : ""));
@@ -12348,6 +13025,13 @@ var TYPE_TREE = {
 function defaultRootTrait(base) { return (base === "character" || base === "race") ? "living" : "non-living"; }
 function typeTraitsOf(e) { var t = typeByKey(e.type); return (t && Array.isArray(t.traits)) ? t.traits.map(normTag).filter(Boolean) : []; }
 function pageTagsOf(p) { return (p.tags || []).map(normTag).filter(Boolean); }
+// A topic doesn't carry its own tags — it borrows its source page's, so
+// tagging the page a topic lives on is what sharpens Oracle's prompts now,
+// same as it always was, just one level removed.
+function topicTagsOf(t) {
+  var pg = t && pgById(t.pageId);
+  return pg ? pageTagsOf(pg) : [];
+}
 function allUsedPageTags() {
   var seen = {}, out = [];
   state.pages.forEach(function (p) {
@@ -12355,15 +13039,16 @@ function allUsedPageTags() {
   });
   return out;
 }
-// Oracle draws two pages together and asks what connects them — previously
-// drew from world Entries (now removed); tags already exist on pages, so
-// they carry the same "shared thread" / "contrast" logic Oracle always
-// used, just against a different pool. With no shared or contrasting tags,
-// it falls back to which notebooks the two pages come from rather than
-// entry types (which no longer exist).
+// Oracle draws two topics together and asks what connects them — topics
+// are the more granular unit (a page can hold several), so this pulls
+// from state.topics rather than state.pages now. Tags still come from
+// wherever each topic actually lives (see topicTagsOf), carrying the same
+// "shared thread" / "contrast" logic Oracle always used. With no shared or
+// contrasting tags, it falls back to which notebooks the two topics'
+// pages come from.
 function oracleRationale(a, b) {
-  var aN = a.title || "One page", bN = b.title || "the other";
-  var aAll = pageTagsOf(a), bAll = pageTagsOf(b);
+  var aN = a.name || "One topic", bN = b.name || "the other";
+  var aAll = topicTagsOf(a), bAll = topicTagsOf(b);
   var bAllL = bAll.map(function (s) { return s.toLowerCase(); });
   var shared = aAll.filter(function (s) { return bAllL.indexOf(s.toLowerCase()) > -1; });
   var why, text;
@@ -12377,30 +13062,31 @@ function oracleRationale(a, b) {
     why = { kind: "contrast", a: x, b: y };
   } else {
     text = pick(ORACLE_GENERIC);
-    var aNb = nbById(a.notebookId), bNb = nbById(b.notebookId);
+    var aPg = pgById(a.pageId), bPg = pgById(b.pageId);
+    var aNb = aPg && nbById(aPg.notebookId), bNb = bPg && nbById(bPg.notebookId);
     why = { kind: "notebook", cats: [(aNb && aNb.name) || "a notebook", (bNb && bNb.name) || "a notebook"] };
   }
   return { text: text, why: why };
 }
-function oracleReady() { return state.pages.length >= 2; }
+function oracleReady() { return (state.topics || []).length >= 2; }
 var orHistory = [];
 function oracleDraw() {
   if (!oracleReady()) { renderOracle(); return; }
   var anchorId = $("or-anchor").value;
-  var pool = state.pages.slice();
+  var pool = (state.topics || []).slice();
   var a, b;
-  if (anchorId && pgById(anchorId)) {
-    a = pgById(anchorId);
-    var others = pool.filter(function (p) { return p.id !== a.id; });
+  if (anchorId && topicById(anchorId)) {
+    a = topicById(anchorId);
+    var others = pool.filter(function (t) { return t.id !== a.id; });
     b = pick(others);
   } else {
     a = pick(pool);
-    var rest = pool.filter(function (p) { return p.id !== a.id; });
+    var rest = pool.filter(function (t) { return t.id !== a.id; });
     b = pick(rest);
   }
   if (Math.random() < 0.5) { var t = a; a = b; b = t; }
   var r = oracleRationale(a, b);
-  orHistory.unshift({ a: a.title || "Untitled", b: b.title || "Untitled", text: r.text });
+  orHistory.unshift({ a: a.name || "Untitled", b: b.name || "Untitled", text: r.text });
   orHistory = orHistory.slice(0, 6);
   renderOracleCard(a, b, r);
   renderOracleHistory();
@@ -12410,15 +13096,16 @@ function renderOracleCard(a, b, r) {
   out.innerHTML = "";
   var card = el("div", "or-card");
   var pair = el("div", "or-pair");
-  [a, b].forEach(function (p, idx) {
+  [a, b].forEach(function (t, idx) {
     if (idx === 1) pair.appendChild(el("span", "or-bolt", "✶"));
     var box = el("div", "or-ent");
-    var nb = nbById(p.notebookId);
+    var srcPage = pgById(t.pageId);
+    var nb = srcPage && nbById(srcPage.notebookId);
     var dot = el("span", "type-dot"); dot.style.background = (nb && nb.color) || "var(--ink-mute)";
     var col = el("div");
-    var nm = el("div", "nm", p.title || "Untitled");
-    nm.addEventListener("click", function () { openPage(p.id); });
-    col.append(nm, el("div", "ty", nb ? nb.name : ""));
+    var nm = el("div", "nm", t.name || "Untitled");
+    nm.addEventListener("click", function () { goToTopic(t.id); });
+    col.append(nm, el("div", "ty", srcPage ? (srcPage.title || "Untitled page") : ""));
     box.append(dot, col);
     pair.appendChild(box);
   });
@@ -12435,7 +13122,7 @@ function renderOracleCard(a, b, r) {
       var c = el("span", "why-tag"); c.style.cssText = tagChipStyle(tg); c.textContent = tg; why.appendChild(c);
     });
   } else {
-    why.appendChild(el("span", null, "a page from " + r.why.cats[0] + " and one from " + r.why.cats[1] + " — tag your pages to sharpen the prompt"));
+    why.appendChild(el("span", null, "a topic from " + r.why.cats[0] + " and one from " + r.why.cats[1] + " — tag the pages they're on to sharpen the prompt"));
   }
   card.appendChild(why);
   var actions = el("div", "or-actions");
@@ -12444,15 +13131,16 @@ function renderOracleCard(a, b, r) {
   linkBtn.addEventListener("click", function () {
     if ((a.oracleLinks || []).indexOf(b.id) < 0 && (b.oracleLinks || []).indexOf(a.id) < 0) {
       a.oracleLinks = (a.oracleLinks || []).concat([b.id]);
-      a.updatedAt = Date.now();
       persist();
-      toast("Linked " + (a.title || "page") + " → " + (b.title || "page"));
+      toast("Linked " + (a.name || "topic") + " → " + (b.name || "topic"));
     }
     linkBtn.textContent = "Already linked"; linkBtn.classList.add("linked");
   });
   var again = el("button", null, "Draw again");
   again.addEventListener("click", oracleDraw);
-  actions.append(linkBtn, again);
+  var manageBtn = el("button", null, "Manage connections");
+  manageBtn.addEventListener("click", openOracleConnectionsModal);
+  actions.append(linkBtn, again, manageBtn);
   card.appendChild(actions);
   out.appendChild(card);
 }
@@ -12472,27 +13160,96 @@ function renderOracle() {
   var sel = $("or-anchor");
   var prev = sel.value;
   sel.innerHTML = "";
-  var any = el("option"); any.value = ""; any.textContent = "any page"; sel.appendChild(any);
-  state.pages.slice().sort(function (a, b) { return (a.title || "").localeCompare(b.title || ""); }).forEach(function (p) {
-    var o = el("option"); o.value = p.id; o.textContent = p.title || "Untitled"; sel.appendChild(o);
+  var any = el("option"); any.value = ""; any.textContent = "any topic"; sel.appendChild(any);
+  (state.topics || []).slice().sort(function (a, b) { return (a.name || "").localeCompare(b.name || ""); }).forEach(function (t) {
+    var o = el("option"); o.value = t.id; o.textContent = t.name || "Untitled"; sel.appendChild(o);
   });
-  if (pgById(prev)) sel.value = prev;
+  if (topicById(prev)) sel.value = prev;
   var out = $("or-out");
   if (!oracleReady()) {
     out.innerHTML = "";
-    out.appendChild(el("div", "or-empty", "The Oracle needs at least two pages to draw between. Write a few pages first, then come back."));
+    out.appendChild(el("div", "or-empty", "The Oracle needs at least two topics to draw between. Add a heading or two (or use \u201c+ Topic\u201d on a page) and come back."));
     $("or-history").style.display = "none";
   } else if (!out.querySelector(".or-card")) {
     out.innerHTML = "";
-    out.appendChild(el("div", "or-empty", "Press Draw, and the Oracle will pull two pages together."));
+    out.appendChild(el("div", "or-empty", "Press Draw, and the Oracle will pull two topics together."));
   }
 }
 $("or-draw").addEventListener("click", oracleDraw);
-$("ent-oracle").addEventListener("click", function () {
-  var cur = state.sel.entry;
-  setTab("oracle");
-  if (cur && entById(cur)) { $("or-anchor").value = cur; oracleDraw(); }
-});
+$("or-manage-connections").addEventListener("click", openOracleConnectionsModal);
+// Connections used to be add-only, one at a time, from whatever the Oracle
+// happened to draw — this is the actual management surface: every
+// connection that exists, in one place, removable, plus a way to add one
+// directly between two topics you already know you want linked, without
+// having to redraw until the Oracle happens to pair them.
+function allOracleLinks() {
+  var pairs = [], seen = {};
+  (state.topics || []).forEach(function (t) {
+    (t.oracleLinks || []).forEach(function (otherId) {
+      var key = [t.id, otherId].sort().join("|");
+      if (seen[key]) return;
+      seen[key] = true;
+      var other = topicById(otherId);
+      if (other) pairs.push({ a: t, b: other });
+    });
+  });
+  return pairs;
+}
+function removeOracleLink(a, b) {
+  a.oracleLinks = (a.oracleLinks || []).filter(function (id) { return id !== b.id; });
+  b.oracleLinks = (b.oracleLinks || []).filter(function (id) { return id !== a.id; });
+}
+function openOracleConnectionsModal() {
+  openModal("Connections", "Every link the Oracle (or you) has drawn between two topics.");
+  var extra = $modal("modal-extra");
+  var addBtn = el("button", "primary", "+ Add connection");
+  addBtn.style.marginBottom = "12px";
+  addBtn.addEventListener("click", function () {
+    if ((state.topics || []).length < 2) { toast("Need at least two topics first."); return; }
+    pickTopic(function (aId) {
+      pickTopic(function (bId) {
+        if (aId === bId) { toast("Pick two different topics."); openOracleConnectionsModal(); return; }
+        var a = topicById(aId), b = topicById(bId);
+        if (!a || !b) return;
+        if ((a.oracleLinks || []).indexOf(b.id) < 0 && (b.oracleLinks || []).indexOf(a.id) < 0) {
+          a.oracleLinks = (a.oracleLinks || []).concat([b.id]);
+          persist();
+          toast("Connected " + a.name + " \u2192 " + b.name);
+        }
+        openOracleConnectionsModal();
+      });
+    });
+  });
+  extra.appendChild(addBtn);
+  var pairs = allOracleLinks();
+  var list = el("div");
+  if (!pairs.length) {
+    list.appendChild(el("div", "empty", "No connections yet \u2014 draw in Oracle and tap \u201cLink them,\u201d or add one directly above."));
+  } else {
+    pairs.forEach(function (pr) {
+      var row = el("div", "sess-row");
+      var nm = el("span", "nm", pr.a.name + " ✶ " + pr.b.name);
+      nm.style.cursor = "pointer";
+      nm.addEventListener("click", function () { closeModal(); goToTopic(pr.a.id); });
+      var rm = el("button", "tiny-x", "✕");
+      rm.setAttribute("aria-label", "Remove connection");
+      rm.title = "Remove";
+      rm.addEventListener("click", function () {
+        removeOracleLink(pr.a, pr.b);
+        persist();
+        toast("Connection removed");
+        openOracleConnectionsModal();
+      });
+      row.append(nm, rm);
+      list.appendChild(row);
+    });
+  }
+  extra.appendChild(list);
+  var row2 = $modal("modal-row");
+  var close = el("button", null, "Close");
+  close.addEventListener("click", closeModal);
+  row2.appendChild(close);
+}
 
 /* ════════════════ MANAGEMENT MODULE — budget & products ════════════════ */
 function fmtMoney(n) {
@@ -12502,162 +13259,6 @@ function fmtMoney(n) {
 var PRODUCT_STATUS_LABELS = { idea: "Idea", planned: "Planned", active: "Active", done: "Done" };
 var BUDGET_KIND_LABELS = { income: "Income", expense: "Expense", investment: "Investment" };
 
-var BUDGET_PERIOD_LABELS = { weekly: "Weekly", monthly: "Monthly", quarterly: "Quarterly", yearly: "Yearly", custom: "Custom range" };
-function pad2(n) { return String(n).padStart(2, "0"); }
-// Resolves a budget's period into the concrete date range (as dayKey
-// strings, so it can be compared against transaction dates directly) it
-// currently covers, plus a short label for display. weekly/monthly/
-// quarterly/yearly always mean "the one containing today" — a monthly
-// budget automatically rolls into the new month rather than needing to be
-// recreated. custom is a fixed range the person picked themselves.
-function budgetPeriodWindow(b) {
-  var now = new Date();
-  if (b.period === "weekly") {
-    var wStart = weekStartTs(Date.now());
-    return { startKey: dayKey(wStart), endKey: dayKey(wStart + 6 * 86400000), label: "this week" };
-  }
-  if (b.period === "quarterly") {
-    var qStartMonth = Math.floor(now.getMonth() / 3) * 3;
-    var qEnd = new Date(now.getFullYear(), qStartMonth + 3, 0);
-    return { startKey: now.getFullYear() + "-" + pad2(qStartMonth + 1) + "-01", endKey: dayKey(qEnd.getTime()), label: "this quarter" };
-  }
-  if (b.period === "yearly") {
-    return { startKey: now.getFullYear() + "-01-01", endKey: now.getFullYear() + "-12-31", label: "this year" };
-  }
-  if (b.period === "custom") {
-    return { startKey: b.startDate || "0000-01-01", endKey: b.endDate || "9999-12-31", label: (b.startDate || "?") + " \u2013 " + (b.endDate || "?") };
-  }
-  var mEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return { startKey: now.getFullYear() + "-" + pad2(now.getMonth() + 1) + "-01", endKey: dayKey(mEnd.getTime()), label: "this month" };
-}
-// Counts as spending anything that actually left the wallet within the
-// budget's current window — expenses, and investments too (putting money
-// into an investment is still money leaving your pocket, even though it's
-// tracked separately from "Expenses" in the summary above). Cash-out gains
-// and losses are their own income/expense transactions already, so they're
-// covered by the "expense" branch without special-casing. Optionally
-// narrowed to one category.
-function budgetSpent(b) {
-  var win = budgetPeriodWindow(b);
-  return state.budget.reduce(function (sum, tx) {
-    if (tx.kind !== "expense" && tx.kind !== "investment") return sum;
-    if (tx.date < win.startKey || tx.date > win.endKey) return sum;
-    if (b.category && tx.category !== b.category) return sum;
-    return sum + tx.amount;
-  }, 0);
-}
-function renderBudgetsList() {
-  var wrap = $("mgmt-budgets-list");
-  wrap.innerHTML = "";
-  if (!state.budgets.length) {
-    wrap.appendChild(el("div", "empty", "No budgets set yet. Add one for any span you like \u2014 weekly, monthly, a quarter, a year, or a custom range \u2014 and optionally just one category."));
-    return;
-  }
-  state.budgets.slice().sort(function (a, b) { return a.createdAt - b.createdAt; }).forEach(function (b) {
-    var win = budgetPeriodWindow(b);
-    var spent = budgetSpent(b);
-    var pct = b.limit ? Math.min(100, Math.round((spent / b.limit) * 100)) : 0;
-    var over = spent > b.limit;
-    var row = el("div", "mgmt-budget-row");
-    var head = el("div", "mgmt-budget-row-head");
-    head.appendChild(el("span", "nm", b.label));
-    head.appendChild(el("span", "mgmt-cat", BUDGET_PERIOD_LABELS[b.period] + (b.category ? " \u00b7 " + b.category : "")));
-    var edit = el("button", "tiny-x", "✎");
-    edit.setAttribute("aria-label", "Edit budget"); edit.title = "Edit";
-    edit.addEventListener("click", function () { openBudgetLimitModal(b); });
-    var del = el("button", "tiny-x", "✕");
-    del.setAttribute("aria-label", "Delete budget");
-    del.addEventListener("click", function () {
-      confirmModal("Delete this budget?", "\u201c" + b.label + "\u201d will be removed. Your transactions are untouched.", "Delete", function () {
-        state.budgets = state.budgets.filter(function (o) { return o.id !== b.id; });
-        persist(); renderBudgetsList();
-      });
-    });
-    head.append(edit, del);
-    var line = el("div", "note", fmtMoney(spent) + " of " + fmtMoney(b.limit) + " spent " + win.label + (over ? " \u2014 " + fmtMoney(spent - b.limit) + " over" : ""));
-    var bar = el("div", "wk-progress" + (over ? " tier-missed" : pct >= 90 ? " tier-exceeded" : ""));
-    var fill = el("div"); fill.style.width = pct + "%";
-    bar.appendChild(fill);
-    row.append(head, line, bar);
-    wrap.appendChild(row);
-  });
-}
-function openBudgetLimitModal(existing) {
-  var isEdit = !!existing;
-  openModal(isEdit ? "Edit budget" : "New budget", "");
-  var extra = $modal("modal-extra");
-  var form = el("div", "cal-plan-form");
-  function field(labelText, inputEl) {
-    var wrap = el("div", "cal-field");
-    wrap.appendChild(el("label", "cal-field-lbl", labelText));
-    wrap.appendChild(inputEl);
-    return wrap;
-  }
-  var labelInp = el("input"); labelInp.type = "text"; labelInp.placeholder = "e.g. Monthly, Groceries, Q1 hosting";
-  labelInp.value = existing ? existing.label : "";
-
-  var periodSel = el("select");
-  [["weekly", "Weekly"], ["monthly", "Monthly"], ["quarterly", "Quarterly"], ["yearly", "Yearly"], ["custom", "Custom range"]].forEach(function (o) {
-    var opt = el("option", null, o[1]); opt.value = o[0]; periodSel.appendChild(opt);
-  });
-  periodSel.value = existing ? existing.period : "monthly";
-
-  var limitInp = el("input"); limitInp.type = "number"; limitInp.step = "0.01"; limitInp.min = "0";
-  limitInp.value = existing ? existing.limit : ""; limitInp.placeholder = "0.00";
-
-  var categoryInp = el("input"); categoryInp.type = "text"; categoryInp.placeholder = "Leave blank to track all spending";
-  categoryInp.value = existing ? existing.category : "";
-
-  var startInp = el("input"); startInp.type = "date"; startInp.value = existing && existing.startDate ? existing.startDate : "";
-  var endInp = el("input"); endInp.type = "date"; endInp.value = existing && existing.endDate ? existing.endDate : "";
-  var customRow = el("div", "cal-field-row");
-  customRow.append(field("Start date", startInp), field("End date", endInp));
-  customRow.style.display = periodSel.value === "custom" ? "" : "none";
-  periodSel.addEventListener("change", function () { customRow.style.display = periodSel.value === "custom" ? "" : "none"; });
-
-  var row1 = el("div", "cal-field-row");
-  row1.append(field("Label", labelInp), field("Period", periodSel));
-  var row2 = el("div", "cal-field-row");
-  row2.append(field("Limit", limitInp), field("Category (optional)", categoryInp));
-  form.append(row1, row2, customRow);
-  extra.appendChild(form);
-
-  var modalRow = $modal("modal-row");
-  var cancel = el("button", null, "Cancel");
-  cancel.addEventListener("click", closeModal);
-  if (isEdit) {
-    var del = el("button", null, "Delete");
-    del.addEventListener("click", function () {
-      closeModal();
-      confirmModal("Delete this budget?", "\u201c" + existing.label + "\u201d will be removed. Your transactions are untouched.", "Delete", function () {
-        state.budgets = state.budgets.filter(function (o) { return o.id !== existing.id; });
-        persist(); renderBudgetsList();
-      });
-    });
-    modalRow.appendChild(del);
-  }
-  var save = el("button", "primary", isEdit ? "Save" : "Add");
-  save.addEventListener("click", function () {
-    var limit = Math.max(0, +limitInp.value || 0);
-    if (!limit) { limitInp.focus(); return; }
-    var label = labelInp.value.trim() || "Budget";
-    var period = periodSel.value;
-    var category = categoryInp.value.trim();
-    var startDate = period === "custom" ? (startInp.value || null) : null;
-    var endDate = period === "custom" ? (endInp.value || null) : null;
-    if (existing) {
-      existing.label = label; existing.period = period; existing.limit = limit;
-      existing.category = category; existing.startDate = startDate; existing.endDate = endDate;
-    } else {
-      state.budgets.push({ id: uid(), label: label, period: period, limit: limit, category: category, startDate: startDate, endDate: endDate, createdAt: Date.now() });
-    }
-    closeModal(); persist(); renderBudgetsList();
-    toast(isEdit ? "Budget updated" : "Budget added");
-  });
-  modalRow.append(cancel, save);
-  labelInp.focus();
-}
-$("mgmt-add-budget-limit-btn").addEventListener("click", function () { openBudgetLimitModal(null); });
 
 // A per-category view of where money's actually going, within each
 // transaction kind — the four summary numbers say what happened overall,
@@ -12698,9 +13299,56 @@ function openBudgetBreakdownModal() {
 }
 $("mgmt-breakdown-btn").addEventListener("click", openBudgetBreakdownModal);
 
+// One transaction row, used both by the "Other transactions" list (below)
+// and by each account's nested ledger (see buildAccountPanel) — same row,
+// same edit/delete/cash-out behavior, wherever it's shown.
+function buildTxRow(b) {
+  var row = el("div", "sess-row selectable");
+  row.title = "View details";
+  var nm = el("span", "nm", b.category || BUDGET_KIND_LABELS[b.kind]);
+  if (b.note) nm.appendChild(el("span", "mgmt-note-dot", "•"));
+  if (b.kind === "investment" && b.cashedOut) {
+    var cashOutDelta = b.cashOutAmount - b.amount;
+    var badgeText = "cashed out" + (cashOutDelta !== 0 ? " \u00b7 " + (cashOutDelta > 0 ? "+" : "\u2212") + fmtMoney(Math.abs(cashOutDelta)) : "");
+    var cashedBadge = el("span", "mgmt-cashed-badge", badgeText);
+    cashedBadge.title = "Withdrawn \u2014 this money is back in your wallet";
+    nm.appendChild(cashedBadge);
+  }
+  var cat = el("span", "mgmt-cat", b.date);
+  var sign = b.kind === "income" ? "+" : b.kind === "investment" ? "\u2192" : "\u2212";
+  var amt = el("span", "mgmt-amt " + b.kind, sign + fmtMoney(b.amount));
+  if (b.kind === "investment") amt.title = "Money set aside \u2014 not spent, not yet earned";
+  var edit = el("button", "tiny-x", "✎");
+  edit.setAttribute("aria-label", "Edit transaction");
+  edit.title = "Edit";
+  edit.addEventListener("click", function (e) {
+    e.stopPropagation();
+    if (b.cashOutOf) {
+      var srcInv = state.budget.find(function (t) { return t.id === b.cashOutOf; });
+      if (srcInv) { openCashOutModal(srcInv, b); return; }
+    }
+    if (b.kind === "investment" && b.cashedOut) {
+      var deltaTx = b.cashOutTxId ? state.budget.find(function (t) { return t.id === b.cashOutTxId; }) : null;
+      openCashOutModal(b, deltaTx);
+      return;
+    }
+    openBudgetModal(b);
+  });
+  var x = el("button", "tiny-x", "✕");
+  x.setAttribute("aria-label", "Delete transaction");
+  x.addEventListener("click", function (e) {
+    e.stopPropagation();
+    confirmModal("Delete this transaction?", (b.category || BUDGET_KIND_LABELS[b.kind]) + " of " + fmtMoney(b.amount) + " will be removed." + (b.cashOutOf ? " The investment it came from will go back to \u201cnot yet cashed out.\u201d" : ""), "Delete", function () {
+      deleteBudgetTx(b);
+      persist(); renderManagementBudget(); renderAccountsList();
+    });
+  });
+  row.append(nm, cat, amt, edit, x);
+  row.addEventListener("click", function () { openBudgetDetail(b); });
+  return row;
+}
+
 function renderManagementBudget() {
-  renderBudgetsList();
-  var rows = state.budget.slice().sort(function (a, b) { return (b.date || "").localeCompare(a.date || "") || b.createdAt - a.createdAt; });
   var income = 0, expense = 0, invested = 0;
   state.budget.forEach(function (b) {
     if (b.kind === "income") income += b.amount;
@@ -12720,51 +13368,15 @@ function renderManagementBudget() {
   balEl.textContent = fmtMoney(balance);
   balEl.className = "val" + (balance < 0 ? " expense" : balance > 0 ? " income" : "");
 
+  // This list only ever shows transactions with no accountId — anything
+  // tied to an account lives (and is edited) nested under that account
+  // instead, so it isn't shown twice in two different places.
+  var rows = state.budget.filter(function (b) { return !b.accountId; })
+    .slice().sort(function (a, b) { return (b.date || "").localeCompare(a.date || "") || b.createdAt - a.createdAt; });
   var list = $("mgmt-budget-list");
   list.innerHTML = "";
-  if (!rows.length) { list.appendChild(el("div", "empty", "No transactions yet. Add income, an expense, or an investment above.")); return; }
-  rows.forEach(function (b) {
-    var row = el("div", "sess-row selectable");
-    row.title = "View details";
-    var nm = el("span", "nm", b.category || BUDGET_KIND_LABELS[b.kind]);
-    if (b.note) nm.appendChild(el("span", "mgmt-note-dot", "•"));
-    if (b.kind === "investment" && b.cashedOut) {
-      var cashOutDelta = b.cashOutAmount - b.amount;
-      var badgeText = "cashed out" + (cashOutDelta !== 0 ? " \u00b7 " + (cashOutDelta > 0 ? "+" : "\u2212") + fmtMoney(Math.abs(cashOutDelta)) : "");
-      nm.appendChild(el("span", "mgmt-cashed-badge", badgeText));
-    }
-    var cat = el("span", "mgmt-cat", b.date);
-    var sign = b.kind === "income" ? "+" : b.kind === "investment" ? "\u2192" : "\u2212";
-    var amt = el("span", "mgmt-amt " + b.kind, sign + fmtMoney(b.amount));
-    var edit = el("button", "tiny-x", "✎");
-    edit.setAttribute("aria-label", "Edit transaction");
-    edit.title = "Edit";
-    edit.addEventListener("click", function (e) {
-      e.stopPropagation();
-      if (b.cashOutOf) {
-        var srcInv = state.budget.find(function (t) { return t.id === b.cashOutOf; });
-        if (srcInv) { openCashOutModal(srcInv, b); return; }
-      }
-      if (b.kind === "investment" && b.cashedOut) {
-        var deltaTx = b.cashOutTxId ? state.budget.find(function (t) { return t.id === b.cashOutTxId; }) : null;
-        openCashOutModal(b, deltaTx);
-        return;
-      }
-      openBudgetModal(b);
-    });
-    var x = el("button", "tiny-x", "✕");
-    x.setAttribute("aria-label", "Delete transaction");
-    x.addEventListener("click", function (e) {
-      e.stopPropagation();
-      confirmModal("Delete this transaction?", (b.category || BUDGET_KIND_LABELS[b.kind]) + " of " + fmtMoney(b.amount) + " will be removed." + (b.cashOutOf ? " The investment it came from will go back to \u201cnot yet cashed out.\u201d" : ""), "Delete", function () {
-        deleteBudgetTx(b);
-        persist(); renderManagementBudget();
-      });
-    });
-    row.append(nm, cat, amt, edit, x);
-    row.addEventListener("click", function () { openBudgetDetail(b); });
-    list.appendChild(row);
-  });
+  if (!rows.length) { list.appendChild(el("div", "empty", "Nothing unassigned \u2014 quick one-off entries that aren't part of any account will show up here.")); return; }
+  rows.forEach(function (b) { list.appendChild(buildTxRow(b)); });
 }
 
 function mgmtDetailRow(labelText, valueText) {
@@ -12793,6 +13405,7 @@ function openBudgetDetail(b) {
   var box = el("div", "cal-plan-form");
   box.append(
     mgmtDetailRow("Type", BUDGET_KIND_LABELS[b.kind]),
+    mgmtDetailRow("Account", accountName(b.accountId) || "Unassigned"),
     mgmtDetailRow("Date", b.date),
     mgmtDetailRow("Amount", fmtMoney(b.amount)),
     mgmtDetailRow("Category", b.category),
@@ -12824,7 +13437,7 @@ function openBudgetDetail(b) {
     closeModal();
     confirmModal("Delete this transaction?", (b.category || BUDGET_KIND_LABELS[b.kind]) + " of " + fmtMoney(b.amount) + " will be removed." + (b.cashOutOf ? " The investment it came from will go back to \u201cnot yet cashed out.\u201d" : ""), "Delete", function () {
       deleteBudgetTx(b);
-      persist(); renderManagementBudget();
+      persist(); renderManagementBudget(); renderAccountsList();
     });
   });
   var close = el("button", null, "Close");
@@ -12917,7 +13530,7 @@ function openCashOutModal(inv, existingDeltaTx) {
         id: uid(), kind: delta > 0 ? "income" : "expense", date: date,
         category: (delta > 0 ? "Cash out (earnings): " : "Cash out (loss): ") + (inv.category || "Investment"),
         amount: Math.abs(delta), note: note, createdAt: Date.now(),
-        cashedOut: false, cashOutAmount: 0, cashOutTxId: null, cashOutOf: inv.id, returnOf: null
+        cashedOut: false, cashOutAmount: 0, cashOutTxId: null, cashOutOf: inv.id, returnOf: null, accountId: null
       };
       state.budget.push(deltaTx);
       deltaTxId = deltaTx.id;
@@ -12925,7 +13538,7 @@ function openCashOutModal(inv, existingDeltaTx) {
     inv.cashedOut = true;
     inv.cashOutAmount = received;
     inv.cashOutTxId = deltaTxId;
-    closeModal(); persist(); renderManagementBudget();
+    closeModal(); persist(); renderManagementBudget(); renderAccountsList();
     toast(delta === 0 ? "Cashed out \u2014 break-even, nothing new logged" : delta > 0 ? "Cashed out \u2014 " + fmtMoney(delta) + " earnings logged as income" : "Cashed out \u2014 " + fmtMoney(-delta) + " loss logged as an expense");
   });
   modalRow.append(cancel, confirm);
@@ -12962,11 +13575,20 @@ function openBudgetModal(existing) {
   var noteInp = el("textarea"); noteInp.rows = 2; noteInp.placeholder = "Notes (optional)";
   noteInp.value = existing ? existing.note : "";
 
+  var accountSel = el("select");
+  var noAcctOpt = el("option", null, "No account"); noAcctOpt.value = "";
+  accountSel.appendChild(noAcctOpt);
+  state.accounts.slice().sort(function (a, b) { return a.createdAt - b.createdAt; }).forEach(function (a) {
+    var opt = el("option", null, a.name); opt.value = a.id; accountSel.appendChild(opt);
+  });
+  accountSel.value = existing && existing.accountId ? existing.accountId : "";
+  var accountField = field("Account (optional)", accountSel);
+
   var row1 = el("div", "cal-field-row");
   row1.append(field("Type", kindSel), field("Date", dateInp));
   var row2 = el("div", "cal-field-row");
   row2.append(field("Amount", amountInp), field("Category", categoryInp));
-  form.append(row1, row2, field("Note", noteInp));
+  form.append(row1, row2, accountField, field("Note", noteInp));
   extra.appendChild(form);
 
   var modalRow = $modal("modal-row");
@@ -12975,20 +13597,309 @@ function openBudgetModal(existing) {
   var save = el("button", "primary", isEdit ? "Save" : "Add");
   save.addEventListener("click", function () {
     var amt = Math.max(0, +amountInp.value || 0);
+    var accountId = accountSel.value || null;
     if (existing) {
       existing.kind = kindSel.value; existing.date = dateInp.value || dayKey();
       existing.amount = amt; existing.category = categoryInp.value.trim(); existing.note = noteInp.value.trim();
+      existing.accountId = accountId;
     } else {
       state.budget.push({
         id: uid(), kind: kindSel.value, date: dateInp.value || dayKey(),
-        amount: amt, category: categoryInp.value.trim(), note: noteInp.value.trim(), createdAt: Date.now()
+        amount: amt, category: categoryInp.value.trim(), note: noteInp.value.trim(), createdAt: Date.now(),
+        accountId: accountId, cashedOut: false, cashOutAmount: 0, cashOutTxId: null, cashOutOf: null, returnOf: null
       });
     }
-    closeModal(); persist(); renderManagementBudget(); toast(isEdit ? "Transaction updated" : "Transaction added");
+    closeModal(); persist(); renderManagementBudget(); renderAccountsList();
+    toast(isEdit ? "Transaction updated" : "Transaction added");
   });
   modalRow.append(cancel, save);
   amountInp.focus();
 }
+
+/* ═══════════ ACCOUNTS ═══════════
+   Everything nests under an account: an account is just a name (and an
+   optional goal) that budget transactions point back to via accountId.
+   There's no separate "investment account" vs "budget" category — one
+   account can hold earnings, expenses, and investments together, exactly
+   like a real account would. accountValue/accountTransactions derive
+   everything by filtering state.budget, so an account's numbers can never
+   drift out of sync with the ledger itself.
+
+   The list renders as an accordion: each account is a single row until
+   clicked, then expands in place to show its own transactions nested
+   underneath it (see expandedAccountId). That's deliberate — nesting the
+   content visually, rather than opening a separate modal, is what makes
+   "this account contains these transactions" legible at a glance instead
+   of something you have to remember. */
+function accountName(id) {
+  if (!id) return "";
+  var acc = state.accounts.find(function (a) { return a.id === id; });
+  return acc ? acc.name : "";
+}
+// What this account is currently "worth", from its own point of view:
+// earnings and open contributions add to it, spending subtracts from it.
+// A contribution counts the same way an earning does here — it's money
+// that's now sitting in this account — even though, globally, that same
+// dollar also left your wallet (that's what the top-level Overview
+// tracks, not this). Cashing out a contribution removes it from this sum
+// entirely, same as a withdrawal.
+function accountValue(acc) {
+  return state.budget.reduce(function (sum, b) {
+    if (b.accountId !== acc.id) return sum;
+    if (b.kind === "income") return sum + b.amount;
+    if (b.kind === "expense") return sum - b.amount;
+    if (b.kind === "investment" && !b.cashedOut) return sum + b.amount;
+    return sum;
+  }, 0);
+}
+function accountTransactions(acc) {
+  return state.budget.filter(function (b) { return b.accountId === acc.id; });
+}
+// Which account (if any) is currently expanded in the list — kept outside
+// state on purpose, since it's just UI focus, not data worth persisting or
+// exporting. Re-render calls that pass through here keep whatever was open
+// still open, instead of the list collapsing every time something inside
+// it changes.
+var expandedAccountId = null;
+
+function renderAccountsList() {
+  var wrap = $("mgmt-accounts-list");
+  wrap.innerHTML = "";
+  if (!state.accounts.length) {
+    wrap.appendChild(el("div", "empty", "No accounts yet. Add one for anything you want to track on its own \u2014 a project, a revenue stream, a brokerage account. Everything you log \u2014 earnings, expenses, contributions \u2014 nests inside the account it belongs to."));
+    return;
+  }
+  state.accounts.slice().sort(function (a, b) { return a.createdAt - b.createdAt; }).forEach(function (acc) {
+    var isOpen = expandedAccountId === acc.id;
+    var wrapEl = el("div", "mgmt-acct" + (isOpen ? " open" : ""));
+    var value = accountValue(acc);
+    var txs = accountTransactions(acc);
+    var txWord = txs.length + (txs.length === 1 ? " transaction" : " transactions");
+
+    var row = el("div", "mgmt-acct-row");
+    row.setAttribute("role", "button");
+    row.tabIndex = 0;
+    row.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    row.title = isOpen ? "Collapse " + acc.name : "Open " + acc.name + " to see its transactions";
+    var chevron = el("span", "mgmt-acct-chevron", "\u25B8");
+    chevron.setAttribute("aria-hidden", "true");
+
+    var main = el("div", "mgmt-acct-main");
+    var titleRow = el("div", "mgmt-acct-title-row");
+    titleRow.appendChild(el("span", "nm", acc.name));
+    titleRow.appendChild(el("span", "mgmt-cat", acc.institution ? acc.institution + " \u00b7 " + txWord : txWord));
+    main.appendChild(titleRow);
+
+    var pct = acc.goal ? Math.min(100, Math.round((value / acc.goal) * 100)) : 0;
+    var sub;
+    if (acc.goal) {
+      sub = el("div", "note mgmt-acct-sub", value >= acc.goal
+        ? "\uD83C\uDF89 Goal reached \u2014 " + fmtMoney(value)
+        : fmtMoney(value) + " of your " + fmtMoney(acc.goal) + " goal (" + Math.max(0, pct) + "%)");
+    } else {
+      sub = el("div", "note mgmt-acct-sub", fmtMoney(value) + (value < 0 ? " \u2014 more spent than earned so far" : " tracked so far"));
+    }
+    main.appendChild(sub);
+    if (acc.goal) {
+      var bar = el("div", "wk-progress" + (value >= acc.goal ? " tier-exceeded" : ""));
+      var fill = el("div"); fill.style.width = Math.max(0, pct) + "%";
+      bar.appendChild(fill);
+      main.appendChild(bar);
+    }
+
+    var edit = el("button", "tiny-x", "\u270E");
+    edit.setAttribute("aria-label", "Edit account"); edit.title = "Edit";
+    edit.addEventListener("click", function (e) { e.stopPropagation(); openAccountModal(acc); });
+    var del = el("button", "tiny-x", "\u2715");
+    del.setAttribute("aria-label", "Delete account");
+    del.addEventListener("click", function (e) {
+      e.stopPropagation();
+      confirmModal("Delete \u201c" + acc.name + "\u201d?", "The account will be removed. Its transactions stay in your log, just unassigned from any account \u2014 nothing gets deleted.", "Delete", function () {
+        state.accounts = state.accounts.filter(function (o) { return o.id !== acc.id; });
+        state.budget.forEach(function (b) { if (b.accountId === acc.id) b.accountId = null; });
+        if (expandedAccountId === acc.id) expandedAccountId = null;
+        persist(); renderAccountsList(); renderManagementBudget();
+      });
+    });
+
+    row.append(chevron, main, edit, del);
+    row.addEventListener("click", function () {
+      expandedAccountId = isOpen ? null : acc.id;
+      renderAccountsList();
+    });
+    row.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); row.click(); }
+    });
+    wrapEl.appendChild(row);
+    if (isOpen) wrapEl.appendChild(buildAccountPanel(acc, txs, value));
+    wrap.appendChild(wrapEl);
+  });
+}
+
+// The nested content revealed when an account is expanded: a quick
+// breakdown of this account's own numbers, one-tap actions to log
+// something new straight into it, and its transaction ledger \u2014
+// everything scoped to just this account, nothing global mixed in.
+function buildAccountPanel(acc, txs, value) {
+  var panel = el("div", "mgmt-acct-panel");
+
+  var earned = 0, spent = 0, invested = 0;
+  txs.forEach(function (b) {
+    if (b.kind === "income") earned += b.amount;
+    else if (b.kind === "investment" && !b.cashedOut) invested += b.amount;
+    else if (b.kind !== "investment") spent += b.amount;
+  });
+  function stat(lbl, val) {
+    var s = el("div", "mgmt-acct-stat");
+    s.appendChild(el("div", "lbl", lbl));
+    s.appendChild(el("div", "num", fmtMoney(val)));
+    return s;
+  }
+  var stats = el("div", "mgmt-acct-stats");
+  stats.append(stat("Earned", earned), stat("Spent", spent), stat("Invested", invested), stat("Value", value));
+  panel.appendChild(stats);
+
+  if (acc.note) panel.appendChild(el("div", "note", acc.note));
+
+  var actions = el("div", "mgmt-acct-actions");
+  var addEarn = el("button", "mgmt-act-earn", "+ Earning");
+  addEarn.addEventListener("click", function (e) { e.stopPropagation(); openAccountTxModal(acc, "income"); });
+  var addExpense = el("button", "mgmt-act-expense", "+ Expense");
+  addExpense.addEventListener("click", function (e) { e.stopPropagation(); openAccountTxModal(acc, "expense"); });
+  var addInvest = el("button", "mgmt-act-invest", "+ Invest");
+  addInvest.addEventListener("click", function (e) { e.stopPropagation(); openAccountTxModal(acc, "investment"); });
+  actions.append(addEarn, addExpense, addInvest);
+  panel.appendChild(actions);
+
+  var listWrap = el("div", "mgmt-acct-tx-list");
+  if (!txs.length) {
+    listWrap.appendChild(el("div", "empty", "Nothing logged in this account yet \u2014 use the buttons above to add its first earning, expense, or contribution."));
+  } else {
+    txs.slice().sort(function (a, b) { return (b.date || "").localeCompare(a.date || "") || b.createdAt - a.createdAt; }).forEach(function (b) {
+      listWrap.appendChild(buildTxRow(b));
+    });
+  }
+  panel.appendChild(listWrap);
+  return panel;
+}
+
+function openAccountModal(existing) {
+  var isEdit = !!existing;
+  openModal(isEdit ? "Edit account" : "New account", "");
+  var extra = $modal("modal-extra");
+  var form = el("div", "cal-plan-form");
+  function field(labelText, inputEl) {
+    var wrap = el("div", "cal-field");
+    wrap.appendChild(el("label", "cal-field-lbl", labelText));
+    wrap.appendChild(inputEl);
+    return wrap;
+  }
+  var nameInp = el("input"); nameInp.type = "text"; nameInp.placeholder = "e.g. Merchandising, Roth IRA, Freelance clients";
+  nameInp.value = existing ? existing.name : "";
+  var instInp = el("input"); instInp.type = "text"; instInp.placeholder = "e.g. Fidelity, Shopify (optional)";
+  instInp.value = existing ? existing.institution : "";
+  var goalInp = el("input"); goalInp.type = "number"; goalInp.step = "0.01"; goalInp.min = "0";
+  goalInp.value = existing && existing.goal ? existing.goal : ""; goalInp.placeholder = "0.00";
+  var goalHint = el("div", "note", "Optional. Only set this if working toward a specific target is helpful to you \u2014 leave it blank to just track what moves through this account, no pressure.");
+  var noteInp = el("textarea"); noteInp.rows = 2; noteInp.placeholder = "Notes (optional)";
+  noteInp.value = existing ? existing.note : "";
+
+  var row1 = el("div", "cal-field-row");
+  row1.append(field("Name", nameInp), field("Where it's held (optional)", instInp));
+  form.append(row1, field("Goal (optional)", goalInp), goalHint, field("Note", noteInp));
+  extra.appendChild(form);
+
+  var modalRow = $modal("modal-row");
+  var cancel = el("button", null, "Cancel");
+  cancel.addEventListener("click", closeModal);
+  if (isEdit) {
+    var del = el("button", null, "Delete");
+    del.addEventListener("click", function () {
+      closeModal();
+      confirmModal("Delete \u201c" + existing.name + "\u201d?", "The account will be removed. Its transactions stay in your log, just unassigned from any account \u2014 nothing gets deleted.", "Delete", function () {
+        state.accounts = state.accounts.filter(function (o) { return o.id !== existing.id; });
+        state.budget.forEach(function (b) { if (b.accountId === existing.id) b.accountId = null; });
+        if (expandedAccountId === existing.id) expandedAccountId = null;
+        persist(); renderAccountsList(); renderManagementBudget();
+      });
+    });
+    modalRow.appendChild(del);
+  }
+  var save = el("button", "primary", isEdit ? "Save" : "Add");
+  save.addEventListener("click", function () {
+    var name = nameInp.value.trim();
+    if (!name) { nameInp.focus(); return; }
+    if (existing) {
+      existing.name = name; existing.institution = instInp.value.trim();
+      existing.goal = Math.max(0, +goalInp.value || 0); existing.note = noteInp.value.trim();
+    } else {
+      var acc = { id: uid(), name: name, institution: instInp.value.trim(), goal: Math.max(0, +goalInp.value || 0), note: noteInp.value.trim(), createdAt: Date.now() };
+      state.accounts.push(acc);
+      expandedAccountId = acc.id; // open it right away so the next step (logging something into it) is obvious
+    }
+    closeModal(); persist(); renderAccountsList();
+    toast(isEdit ? "Account updated" : "Account added");
+  });
+  modalRow.append(cancel, save);
+  nameInp.focus();
+}
+$("mgmt-add-account-btn").addEventListener("click", function () { openAccountModal(null); });
+
+var ACCT_TX_QUICK_TITLE = { income: "Add earning", expense: "Add expense", investment: "Contribute" };
+var ACCT_TX_QUICK_VERB = { income: "earned into", expense: "spent from", investment: "put into" };
+// A one-tap way to log something straight into an account \u2014 this is
+// just openBudgetModal's full editor pre-narrowed to one kind and one
+// account, so the entry it creates is identical to (and fully editable
+// through) the general transaction editor later.
+function openAccountTxModal(acc, kind, existing) {
+  var isEdit = !!existing;
+  openModal((isEdit ? "Edit " + BUDGET_KIND_LABELS[kind].toLowerCase() : ACCT_TX_QUICK_TITLE[kind]) + " \u2014 " + acc.name, "");
+  var extra = $modal("modal-extra");
+  var form = el("div", "cal-plan-form");
+  function field(labelText, inputEl) {
+    var wrap = el("div", "cal-field");
+    wrap.appendChild(el("label", "cal-field-lbl", labelText));
+    wrap.appendChild(inputEl);
+    return wrap;
+  }
+  var intro = el("div", "note", "Log money " + ACCT_TX_QUICK_VERB[kind] + " \u201c" + acc.name + "\u201d. You can edit or remove it later.");
+  var amountInp = el("input"); amountInp.type = "number"; amountInp.step = "0.01"; amountInp.min = "0";
+  amountInp.value = existing ? existing.amount : ""; amountInp.placeholder = "0.00";
+  var dateInp = el("input"); dateInp.type = "date"; dateInp.value = existing ? existing.date : dayKey();
+  var categoryInp = el("input"); categoryInp.type = "text"; categoryInp.placeholder = "e.g. Client payment, Hosting, VOO shares (optional)";
+  categoryInp.value = existing ? existing.category : "";
+  var noteInp = el("textarea"); noteInp.rows = 2; noteInp.placeholder = "Notes (optional)";
+  noteInp.value = existing ? existing.note : "";
+
+  var row1 = el("div", "cal-field-row");
+  row1.append(field("Amount", amountInp), field("Date", dateInp));
+  form.append(intro, row1, field("What was this for? (optional)", categoryInp), field("Note", noteInp));
+  extra.appendChild(form);
+
+  var modalRow = $modal("modal-row");
+  var cancel = el("button", null, "Cancel");
+  cancel.addEventListener("click", closeModal);
+  var save = el("button", "primary", isEdit ? "Save" : ACCT_TX_QUICK_TITLE[kind]);
+  save.addEventListener("click", function () {
+    var amt = Math.max(0, +amountInp.value || 0);
+    if (!amt) { amountInp.focus(); return; }
+    if (existing) {
+      existing.date = dateInp.value || dayKey(); existing.amount = amt;
+      existing.category = categoryInp.value.trim(); existing.note = noteInp.value.trim();
+    } else {
+      state.budget.push({
+        id: uid(), kind: kind, date: dateInp.value || dayKey(), amount: amt,
+        category: categoryInp.value.trim(), note: noteInp.value.trim(), createdAt: Date.now(),
+        accountId: acc.id, cashedOut: false, cashOutAmount: 0, cashOutTxId: null, cashOutOf: null, returnOf: null
+      });
+    }
+    closeModal(); persist(); renderAccountsList(); renderManagementBudget();
+    toast(isEdit ? "Updated" : "Added to " + acc.name);
+  });
+  modalRow.append(cancel, save);
+  amountInp.focus();
+}
+
 
 // Keeps a product's Calendar presence in sync with its `date` field: creates
 // a lightweight companion Plan the first time a date is set, updates it on
@@ -13161,7 +14072,7 @@ function openProductReturnModal(p) {
     if (split.profit > 0) {
       state.budget.push({
         id: uid(), kind: "income", date: date, category: "Return (profit): " + p.name, amount: split.profit, note: note,
-        createdAt: Date.now(), cashedOut: false, cashOutAmount: 0, cashOutTxId: null, cashOutOf: null, returnOf: p.id
+        createdAt: Date.now(), cashedOut: false, cashOutAmount: 0, cashOutTxId: null, cashOutOf: null, returnOf: p.id, accountId: null
       });
     }
     closeModal(); persist(); renderManagementProducts(); renderManagementBudget();
@@ -13240,6 +14151,7 @@ function openProductModal(existing) {
 
 function renderManagementTab() {
   renderManagementBudget();
+  renderAccountsList();
   renderManagementProducts();
 }
 $("mgmt-add-budget-btn").addEventListener("click", function () { openBudgetModal(null); });
@@ -13611,6 +14523,7 @@ var HOME_SECTION_ITEMS = [
   { key: "recent", label: "Recent", desc: "Your most recently edited pages and entries.", recommended: true }
 ];
 var WORK_SECTION_ITEMS = [
+  { key: "recap", label: "Recap", desc: "This week/month/year at a glance — total hours, a bar chart, sessions, busiest period, and your streak.", recommended: true },
   { key: "goal", label: "This week (goal & progress)", desc: "Set an hour target for the week and watch a progress bar fill as you log time.", recommended: true },
   { key: "history", label: "Weekly history", desc: "Past weeks and how they graded against their goals (Met, Exceeded, Crushed, Legendary)." },
   { key: "bylabel", label: "Time by label", desc: "Totals broken down by whatever you typed into the session label (e.g. \u201cediting\u201d, \u201coutlining\u201d)." },
@@ -13752,6 +14665,22 @@ function tagBadge(kind, label, note) {
   wireTagTip(b, kind, note);
   return b;
 }
+// Same floating #wk-tip box the tag badges use, but for a plain "?" info
+// button with no "kind" (beta/experimental/...) line above it — just its
+// own note, styled the same way everything else on hover/tap is.
+function infoTipHtml(note) {
+  return '<div class="tag-tip"><div class="tag-tip-note">' + escapeHtml(note || "") + "</div></div>";
+}
+function wireInfoTip(elm, note) {
+  elm.addEventListener("mouseenter", function () { showTip(elm, infoTipHtml(note)); });
+  elm.addEventListener("mouseleave", hideTip);
+  // touch devices don't get hover — tap toggles the same tooltip instead.
+  elm.addEventListener("click", function (e) {
+    e.preventDefault(); e.stopPropagation();
+    var tip = $("wk-tip");
+    if (tip.classList.contains("show")) hideTip(); else showTip(elm, infoTipHtml(note));
+  });
+}
 // Any tag badge written directly into static HTML (rather than built by
 // toggleLabelEl) still gets the same hover behavior — an optional
 // data-note="..." attribute supplies its specific reason.
@@ -13761,6 +14690,11 @@ function initStaticTagTooltips() {
     elm.dataset.tipWired = "1";
     var kind = elm.classList.contains("beta-tag") ? "beta" : elm.classList.contains("experimental-tag") ? "experimental" : elm.classList.contains("optional-tag") ? "optional" : "recommended";
     wireTagTip(elm, kind, elm.dataset.note || "");
+  });
+  document.querySelectorAll(".mgmt-info-btn").forEach(function (elm) {
+    if (elm.dataset.tipWired) return;
+    elm.dataset.tipWired = "1";
+    wireInfoTip(elm, elm.dataset.note || "");
   });
 }
 function toggleLabelEl(it) {
@@ -14955,27 +15889,45 @@ function changeLineHtml(line) {
   return html;
 }
 function changelogEntryBox(e, tone) {
-  var box = el("div", "onboard-callout " + tone);
-  box.appendChild(el("div", "onboard-callout-title", "v" + e.version + (e.date ? " \u2014 " + e.date : "")));
+  var isWarn = tone === "warn";
+  var box = el("div", isWarn ? "onboard-callout warn" : "changelog-entry");
+  if (isWarn) {
+    box.appendChild(el("div", "onboard-callout-title", "v" + e.version + (e.date ? " \u2014 " + e.date : "")));
+  } else {
+    var head = el("div", "changelog-entry-head");
+    head.appendChild(el("span", "changelog-entry-version", "v" + e.version));
+    if (e.date) head.appendChild(el("span", "changelog-entry-date", e.date));
+    box.appendChild(head);
+  }
   var ul = el("ul", "onboard-list");
   (Array.isArray(e.changes) ? e.changes : []).forEach(function (item) {
     // A change entry is either a plain string (as before), or — to break a
     // change down further, e.g. "[fix] Tokens accumulating rapidly" with the
     // specifics underneath — an object { text, sub: [...] } where `sub` is a
     // nested bullet list rendered inside that line's <li>. Each sub-line goes
-    // through the same tag/markdown pipeline as top-level lines.
+    // through the same tag/markdown pipeline as top-level lines. The list
+    // itself sits behind a collapsed-by-default toggle (reusing the same
+    // <details>/<summary> pattern as elsewhere in the app) — the top-level
+    // line is usually enough on its own, so the deeper specifics only take
+    // up room once someone actually wants them.
     var line = typeof item === "string" ? item : (item && item.text) || "";
     var subs = (item && typeof item === "object" && Array.isArray(item.sub)) ? item.sub : null;
     var li = el("li");
     li.innerHTML = changeLineHtml(line);
     if (subs && subs.length) {
+      var det = document.createElement("details");
+      det.className = "tm-more change-sub-details";
+      var summary = document.createElement("summary");
+      summary.textContent = subs.length + (subs.length === 1 ? " detail" : " details");
+      det.appendChild(summary);
       var subUl = el("ul", "onboard-list change-sublist");
       subs.forEach(function (subLine) {
         var subLi = el("li");
         subLi.innerHTML = changeLineHtml(subLine);
         subUl.appendChild(subLi);
       });
-      li.appendChild(subUl);
+      det.appendChild(subUl);
+      li.appendChild(det);
     }
     ul.appendChild(li);
   });
@@ -14983,10 +15935,19 @@ function changelogEntryBox(e, tone) {
   return box;
 }
 var pendingUpdateVersion = null;
+// Small branded mark next to a modal's heading, shared by the update
+// prompt and patch notes so both read as part of the app rather than a
+// bare system dialog.
+function changelogTitleRow(text) {
+  var row = el("div", "changelog-title-row");
+  row.appendChild(el("span", "changelog-title-mark", "\u2767"));
+  row.appendChild(el("h2", null, text));
+  return row;
+}
 function renderUpdateModal(data, isDowngrade) {
   var body = $("update-body");
   body.innerHTML = "";
-  body.appendChild(el("h2", null, isDowngrade ? "A different version is available" : "An update is available"));
+  body.appendChild(changelogTitleRow(isDowngrade ? "A different version is available" : "An update is available"));
   if (isDowngrade) {
     var warn = el("div", "onboard-callout warn");
     warn.appendChild(el("div", "onboard-callout-title", "This looks like a downgrade"));
@@ -15233,13 +16194,13 @@ function latestInstalledChangelogEntry(changelog) {
 function showPatchNotesMessage(msg) {
   var body = $("patchnotes-body");
   body.innerHTML = "";
-  body.appendChild(el("h2", null, "Patch notes"));
+  body.appendChild(changelogTitleRow("Patch notes"));
   body.appendChild(el("p", "onboard-lede", msg));
 }
 function renderPatchNotes(entry, changelog) {
   var body = $("patchnotes-body");
   body.innerHTML = "";
-  body.appendChild(el("h2", null, "Patch notes"));
+  body.appendChild(changelogTitleRow("Patch notes"));
   if (!entry) {
     body.appendChild(el("p", "onboard-lede", "No changelog entry for v" + APP_VERSION + " yet."));
     // Every remote entry compared newer than the installed APP_VERSION, so
@@ -15674,7 +16635,7 @@ function exportJSON() {
     plans: ownPlans,
     lastGoalWeekAwarded: state.lastGoalWeekAwarded, goalTokenCheckedThrough: state.goalTokenCheckedThrough,
     medalPrestige: state.medalPrestige, medalBest: state.medalBest, medalHistory: state.medalHistory,
-    budget: state.budget, budgetLimit: state.budgetLimit, budgets: state.budgets, products: state.products,
+    budget: state.budget, budgetLimit: state.budgetLimit, budgets: state.budgets, accounts: state.accounts, products: state.products,
     graphLaidOut: state.graphLaidOut
   };
   var meta = projectMeta(pid);
@@ -16115,7 +17076,7 @@ function importNotebookData(data) {
       id: String(p.id || uid()), notebookId: String(p.notebookId || ""),
       title: String(p.title || ""), body: String(p.body || ""), format: p.format === "html" ? "html" : "md",
       tags: Array.isArray(p.tags) ? p.tags.map(String).slice(0, 12) : [],
-      pinned: !!p.pinned, createdAt: +p.createdAt || Date.now(), updatedAt: +p.updatedAt || Date.now()
+      pinned: !!p.pinned, locked: !!p.locked, createdAt: +p.createdAt || Date.now(), updatedAt: +p.updatedAt || Date.now()
     };
     if (p.kind === "era" || p.kind === "epoch") {
       out.kind = p.kind;
@@ -16185,7 +17146,10 @@ function importNotebookData(data) {
   }
   if (data.graphPos && typeof data.graphPos === "object") s.graphPos = data.graphPos;
   s.topics = Array.isArray(data.topics) ? data.topics.map(function (t) {
-    return { id: String(t.id || uid()), name: String(t.name || "Topic"), pageId: String(t.pageId || ""), createdAt: +t.createdAt || Date.now() };
+    return {
+      id: String(t.id || uid()), name: String(t.name || "Topic"), pageId: String(t.pageId || ""), createdAt: +t.createdAt || Date.now(),
+      oracleLinks: Array.isArray(t.oracleLinks) ? t.oracleLinks.map(String) : []
+    };
   }) : [];
   s.tagPresets = Array.isArray(data.tagPresets) ? data.tagPresets.map(function (t) {
     return { name: String(t.name || ""), color: String(t.color || "#8e897c") };
@@ -16203,6 +17167,8 @@ function importNotebookData(data) {
   if (Array.isArray(data.budget)) s.budget = data.budget;
   if (typeof data.budgetLimit === "number") s.budgetLimit = data.budgetLimit;
   if (Array.isArray(data.budgets)) s.budgets = data.budgets;
+  if (Array.isArray(data.accounts)) s.accounts = data.accounts;
+  else if (Array.isArray(data.investAccounts)) s.accounts = data.investAccounts; // older export, pre-rename
   if (Array.isArray(data.products)) s.products = data.products;
   if (Array.isArray(data.plans)) s.plans = data.plans;
   if (typeof data.lastGoalWeekAwarded === "string") s.lastGoalWeekAwarded = data.lastGoalWeekAwarded;
