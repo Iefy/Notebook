@@ -1435,21 +1435,45 @@ body.saved-flash .save-rule::after { transform: scaleX(1); }
 .wk-recap-delta { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: calc(20px * var(--radius-scale, 1)); margin-left: auto; }
 .wk-recap-delta.up { color: var(--sage); background: var(--sage-bg); }
 .wk-recap-delta.down { color: var(--ink-mute); background: var(--surf2); }
-/* Bars animate in from 0 height on every render (see renderWkRecap using
+/* Bars animate in from 0 height on every render (see renderRecapBody using
    requestAnimationFrame to flip from a 0% starting height) — a static bar
    chart reads as a spreadsheet, a chart that grows in on arrival reads as
-   a recap, which is the whole point of this card. */
+   a recap, which is the whole point of this card. Every bar shares the
+   same color deliberately — this recaps the whole period, not "today" or
+   "this week" specifically, so nothing should read as more important than
+   the rest of the chart. */
 .wk-recap-chart { display: flex; align-items: flex-end; gap: 6px; height: 120px; padding: 0 2px; margin-bottom: 18px; }
 .wk-recap-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; min-width: 0; }
 .wk-recap-bar-wrap { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
-.wk-recap-bar { width: 60%; min-width: 6px; height: 0%; background: var(--surf3); border-radius: 4px 4px 0 0; transition: height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.wk-recap-bar.current { background: var(--sage); }
+.wk-recap-bar { width: 60%; min-width: 6px; height: 0%; background: var(--sage); border-radius: 4px 4px 0 0; transition: height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .wk-recap-bar.empty { background: var(--border); }
-.wk-recap-col-label { font-size: 9.5px; color: var(--ink-mute); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.wk-recap-col-label { font-size: 9.5px; color: var(--ink-mute); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .wk-recap-stats { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 16px; border-top: 1px solid var(--border); }
 .wk-recap-stat { flex: 1; min-width: 84px; text-align: center; }
 .wk-recap-stat .num { font-size: 18px; font-weight: 700; color: var(--ink-hi); font-variant-numeric: tabular-nums; }
 .wk-recap-stat .lbl { font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-mute); margin-top: 2px; }
+/* The Review-section teaser — a live number, a 7-day sparkline, and a
+   streak count instead of a bare button, so there's a real preview of
+   what's inside worth glancing at even before opening the full breakdown. */
+.wk-recap-teaser { background: linear-gradient(135deg, var(--sage-bg), var(--surf) 65%); border-color: var(--sage-bd); }
+.wk-recap-teaser-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-top: 2px; }
+.wk-recap-teaser-num { font-family: var(--serif); font-size: 27px; font-weight: 700; color: var(--ink-hi); line-height: 1; }
+.wk-recap-teaser-lbl { font-size: 11.5px; color: var(--ink-mute); margin-top: 4px; }
+.wk-recap-teaser-spark { display: flex; align-items: flex-end; gap: 3px; height: 34px; flex-shrink: 0; }
+.wk-recap-teaser-spark-bar { width: 6px; min-height: 3px; background: var(--sage); border-radius: 2px 2px 0 0; opacity: 0.55; transition: height 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.wk-recap-teaser-spark-bar.today { opacity: 1; }
+.wk-recap-teaser-bottom { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--sage-bd); }
+.wk-recap-teaser-streak { font-size: 12px; color: var(--ink-dim); }
+.wk-recap-teaser-streak b { color: var(--ink-hi); font-weight: 700; }
+.wk-recap-teaser-btn {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  font-size: 12.5px; font-weight: 600; color: var(--sage);
+  border: 1px solid var(--sage-bd); background: var(--surf);
+  padding: 9px 14px; border-radius: calc(20px * var(--radius-scale, 1));
+}
+.wk-recap-teaser-btn:hover { background: var(--sage-bg); }
+.wk-recap-teaser-btn svg { transition: transform 0.15s; }
+.wk-recap-teaser-btn:hover svg { transform: translateX(2px); }
 
 /* ── Medals & achievements ── */
 .wk-achieve-teaser {
@@ -1571,7 +1595,7 @@ body[data-tab="management"] #view-management { display: flex; }
   .wk-group-plan #cal-detail-card { grid-column: 2; grid-row: 1; }
   .wk-group-plan #cal-tasks-card { grid-column: 2; grid-row: 2; }
   .wk-group-track #wk-achieve-teaser { grid-column: 1 / -1; }
-  .wk-group-review #wk-card-recap, .wk-group-review #wk-card-bylabel, .wk-group-review #wk-card-sessions { grid-column: 1 / -1; }
+  .wk-group-review #wk-card-bylabel, .wk-group-review #wk-card-sessions { grid-column: 1 / -1; }
 }
 @media (min-width: 1300px) {
   .wk-group-plan .wk-group-cards {
@@ -3220,14 +3244,22 @@ body.timing .pip-timer-toggle, .pip-timer.timing .pip-timer-toggle { border-colo
         <div class="wk-group wk-group-review">
           <div class="wk-group-label">Review</div>
           <div class="wk-group-cards">
-        <div class="wk-card" id="wk-card-recap">
+        <div class="wk-card wk-recap-teaser" id="wk-card-recap">
           <div class="ov-sect-head"><span>Recap</span></div>
-          <div class="wk-recap-tabs" id="wk-recap-tabs">
-            <button type="button" data-period="week" class="on">This week</button>
-            <button type="button" data-period="month">This month</button>
-            <button type="button" data-period="year">This year</button>
+          <div class="wk-recap-teaser-top">
+            <div class="wk-recap-teaser-stat">
+              <div class="wk-recap-teaser-num" id="wk-recap-teaser-num">0m</div>
+              <div class="wk-recap-teaser-lbl">this week</div>
+            </div>
+            <div class="wk-recap-teaser-spark" id="wk-recap-teaser-spark" aria-hidden="true"></div>
           </div>
-          <div id="wk-recap-body"></div>
+          <div class="wk-recap-teaser-bottom">
+            <div class="wk-recap-teaser-streak" id="wk-recap-teaser-streak"></div>
+            <button class="wk-recap-teaser-btn" id="wk-recap-open-btn" type="button">
+              Open Recap
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
         </div>
         <div class="wk-card" id="wk-card-achievements">
           <div class="ov-sect-head"><span>Medals<span class="beta-tag" data-note="Tier thresholds and prestige math are still being tuned and may shift.">Beta</span></span><span class="note" id="wk-achieve-summary"></span><button id="wk-achieve-history-btn" class="wk-achieve-history-btn" type="button">History</button></div>
@@ -9705,17 +9737,23 @@ function recapBuckets(period) {
     var mStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
     var mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
     var buckets = [];
-    var cur = mStart, wn = 1;
+    var cur = mStart;
     while (cur < mEnd) {
       var bEnd = Math.min(cur + 7 * 86400000, mEnd);
-      buckets.push({ start: cur, end: bEnd, label: "W" + wn });
-      cur = bEnd; wn++;
+      // "W1"/"W2" implied real calendar weeks when these are really just
+      // arbitrary 7-day chunks counted from the 1st — a plain date range
+      // (e.g. "8\u201314") says exactly what's being counted instead of
+      // implying a Mon\u2013Sun week that isn't actually there.
+      var startDay = new Date(cur).getDate();
+      var endDay = new Date(bEnd - 86400000).getDate();
+      var label = startDay + (endDay > startDay ? "\u2013" + endDay : "");
+      buckets.push({ start: cur, end: bEnd, label: label });
+      cur = bEnd;
     }
     var prevStart = new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime();
     return {
       buckets: buckets, rangeStart: mStart, rangeEnd: mEnd, prevStart: prevStart, prevEnd: mStart,
-      unitLabel: "this month", deltaLabel: "last month",
-      isCurrent: function (b) { return now >= b.start && now < b.end; }
+      unitLabel: "this month", deltaLabel: "last month"
     };
   }
   if (period === "year") {
@@ -9731,8 +9769,7 @@ function recapBuckets(period) {
     var prevYearStart = new Date(d2.getFullYear() - 1, 0, 1).getTime();
     return {
       buckets: buckets2, rangeStart: yStart, rangeEnd: yEnd, prevStart: prevYearStart, prevEnd: yStart,
-      unitLabel: "this year", deltaLabel: "last year",
-      isCurrent: function (b) { return now >= b.start && now < b.end; }
+      unitLabel: "this year", deltaLabel: "last year"
     };
   }
   // week (default)
@@ -9745,17 +9782,17 @@ function recapBuckets(period) {
   var prevWeekStart = ws - 7 * 86400000;
   return {
     buckets: buckets3, rangeStart: ws, rangeEnd: ws + 7 * 86400000, prevStart: prevWeekStart, prevEnd: ws,
-    unitLabel: "this week", deltaLabel: "last week",
-    isCurrent: function (b) { return dayKey(b.start) === dayKey(now); }
+    unitLabel: "this week", deltaLabel: "last week"
   };
 }
 var wkRecapPeriod = "week";
 // The headline number, the bar chart, and three quick stats — Productivity's
 // version of a wrapped/recap screen: what already happened, made to feel
-// like something worth seeing rather than a row in a spreadsheet.
-function renderWkRecap() {
-  var body = $("wk-recap-body");
-  if (!body) return;
+// like something worth seeing rather than a row in a spreadsheet. Every bar
+// gets the same treatment — this is a recap of the whole period, not a
+// pointer at "today" or "this week," so nothing is singled out from the
+// rest of the chart.
+function renderRecapBody(body) {
   var info = recapBuckets(wkRecapPeriod);
   var bucketSecs = info.buckets.map(function (b) { return secondsInRange(b.start, b.end); });
   var totalSecs = bucketSecs.reduce(function (a, b) { return a + b; }, 0);
@@ -9778,9 +9815,9 @@ function renderWkRecap() {
   info.buckets.forEach(function (b, i) {
     var col = el("div", "wk-recap-col");
     var barWrap = el("div", "wk-recap-bar-wrap");
-    var bar = el("div", "wk-recap-bar" + (info.isCurrent(b) ? " current" : "") + (bucketSecs[i] ? "" : " empty"));
+    var bar = el("div", "wk-recap-bar" + (bucketSecs[i] ? "" : " empty"));
     bar.dataset.pct = maxSec ? Math.max(3, Math.round((bucketSecs[i] / maxSec) * 100)) : 3;
-    if (bucketSecs[i] > 0) bar.title = b.label + ": " + fmtDur(bucketSecs[i]).trim();
+    if (bucketSecs[i] > 0) wireInfoTip(bar, b.label + ": " + fmtDur(bucketSecs[i]).trim());
     barWrap.appendChild(bar);
     col.append(barWrap, el("div", "wk-recap-col-label", b.label));
     chart.appendChild(col);
@@ -9810,14 +9847,66 @@ function renderWkRecap() {
     bars.forEach(function (bar) { bar.style.height = bar.dataset.pct + "%"; });
   });
 }
-Array.prototype.forEach.call($("wk-recap-tabs").querySelectorAll("button"), function (btn) {
-  btn.addEventListener("click", function () {
-    if (btn.classList.contains("on")) return;
-    wkRecapPeriod = btn.dataset.period;
-    Array.prototype.forEach.call($("wk-recap-tabs").querySelectorAll("button"), function (b) { b.classList.toggle("on", b === btn); });
-    renderWkRecap();
+// Recap used to render inline at the top of Review, all the time — this
+// brings it up on demand instead, in a modal, so it doesn't cost anyone
+// permanent space for something that's more of an occasional "how am I
+// doing" check-in than a dashboard tile.
+// The teaser's own small preview — a live "this week" total, a 7-day
+// sparkline, and the current streak — kept deliberately cheap (7 lookups,
+// not a full bucket build) since it re-renders on every Productivity visit,
+// unlike the full modal which only builds when opened.
+function renderRecapTeaser() {
+  var numEl = $("wk-recap-teaser-num");
+  if (!numEl) return;
+  numEl.textContent = fmtDur(weekSeconds()).trim() || "0m";
+
+  var ws = weekStartTs(Date.now());
+  var todayKeyStr = dayKey();
+  var daySecs = [];
+  for (var i = 0; i < 7; i++) {
+    var bStart = ws + i * 86400000;
+    daySecs.push(secondsInRange(bStart, bStart + 86400000));
+  }
+  var maxSec = Math.max.apply(null, daySecs.concat([1]));
+  var spark = $("wk-recap-teaser-spark");
+  spark.innerHTML = "";
+  daySecs.forEach(function (secs, i) {
+    var isToday = dayKey(ws + i * 86400000) === todayKeyStr;
+    var bar = el("div", "wk-recap-teaser-spark-bar" + (isToday ? " today" : ""));
+    bar.style.height = Math.max(8, Math.round((secs / maxSec) * 100)) + "%";
+    spark.appendChild(bar);
   });
-});
+
+  var streak = workStreak();
+  $("wk-recap-teaser-streak").innerHTML = streak > 0
+    ? "<b>" + streak + "</b>-day streak"
+    : "No streak yet";
+}
+function openRecapModal() {
+  openModal("Recap", "");
+  var extra = $modal("modal-extra");
+  var tabs = el("div", "wk-recap-tabs");
+  [["week", "This week"], ["month", "This month"], ["year", "This year"]].forEach(function (pair) {
+    var btn = el("button", pair[0] === wkRecapPeriod ? "on" : "", pair[1]);
+    btn.type = "button";
+    btn.addEventListener("click", function () {
+      if (wkRecapPeriod === pair[0]) return;
+      wkRecapPeriod = pair[0];
+      Array.prototype.forEach.call(tabs.children, function (b) { b.classList.toggle("on", b === btn); });
+      renderRecapBody(body);
+    });
+    tabs.appendChild(btn);
+  });
+  extra.appendChild(tabs);
+  var body = el("div");
+  extra.appendChild(body);
+  renderRecapBody(body);
+  var row = $modal("modal-row");
+  var close = el("button", "primary", "Close");
+  close.addEventListener("click", closeModal);
+  row.appendChild(close);
+}
+$("wk-recap-open-btn").addEventListener("click", openRecapModal);
 function isRestedDay(k) { return !!(state.restDays && state.restDays[k]); }
 /* current streak, ending today (or yesterday if today has no session yet).
    A day marked as rested is transparent: it doesn't add to the count, but it
@@ -10697,6 +10786,7 @@ function renderWkLogProjectSelect() {
 function renderWorkTab() {
   var hiddenWork = state.hidden.workSections || [];
   $("wk-card-recap").style.display = hiddenWork.indexOf("recap") > -1 ? "none" : "";
+  renderRecapTeaser();
   $("wk-card-goal").style.display = hiddenWork.indexOf("goal") > -1 ? "none" : "";
   $("wk-card-history").style.display = hiddenWork.indexOf("history") > -1 ? "none" : "";
   $("wk-card-bylabel").style.display = hiddenWork.indexOf("bylabel") > -1 ? "none" : "";
@@ -10704,7 +10794,6 @@ function renderWorkTab() {
   $("wk-card-achievements").style.display = hiddenWork.indexOf("achievements") > -1 ? "none" : "";
   checkMedalLevelUps();
   renderAchievements();
-  renderWkRecap();
   renderRestRow();
   var running = !!state.runningSession;
   document.body.classList.toggle("timing", running);
