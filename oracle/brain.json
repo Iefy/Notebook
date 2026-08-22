@@ -307,7 +307,8 @@
         "keyboard",
         "find"
       ],
-      "answer": "Ctrl/Cmd+K opens search. A few other shortcuts: Ctrl+N new page, Ctrl+B bold, Ctrl+S export everything."
+      "widget": "search",
+      "answer": "Ctrl/Cmd+K searches pages, entries, and timelines at once. A few other shortcuts: Ctrl+N new page, Ctrl+B bold, Ctrl+S export everything."
     },
     {
       "id": "oracle-self",
