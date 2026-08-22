@@ -1,0 +1,17 @@
+{
+  "goal": [
+    "Want to set a new goal for this week?",
+    "Want to log a session toward it?"
+  ],
+  "tasks": [
+    "Want to add another task?",
+    "Want to see everything in the full Calendar?"
+  ],
+  "recap": [
+    "Want a look at a different period?",
+    "Want the full breakdown by project?"
+  ],
+  "default": [
+    "Anything else you'd like to check on?"
+  ]
+}

@@ -1,0 +1,311 @@
+{
+  "entries": [
+    {
+      "id": "notebooks",
+      "title": "Notebooks & pages",
+      "keywords": [
+        "notebook",
+        "notebooks",
+        "page",
+        "pages",
+        "write",
+        "writing",
+        "note",
+        "notes"
+      ],
+      "answer": "Notebooks group pages of rich-text writing. Headings inside a page automatically become jump-able Topics, and pages can carry tags. Create a notebook from the Notebooks room, then “+ New page” inside it."
+    },
+    {
+      "id": "legend",
+      "title": "Notebook legend",
+      "keywords": [
+        "legend",
+        "table of contents",
+        "toc",
+        "cover",
+        "contents page"
+      ],
+      "answer": "Each notebook has a Legend — its own cover/contents page, shown whenever nothing's open. It's reachable any time via the Legend button, either in the sidebar or right in a page's own toolbar, no matter how you got to that page."
+    },
+    {
+      "id": "topics",
+      "title": "Topics",
+      "keywords": [
+        "topic",
+        "topics",
+        "heading",
+        "headings",
+        "jump"
+      ],
+      "answer": "Topics are automatic: any heading you type in a page becomes a jump-able topic, listed under that page in the Legend. No separate step to create one."
+    },
+    {
+      "id": "tags",
+      "title": "Tags",
+      "keywords": [
+        "tag",
+        "tags",
+        "label",
+        "labels",
+        "color",
+        "colour"
+      ],
+      "answer": "Tag a page from its toolbar. Tags get their own color and show up as small pills on the page, in lists, and in the Legend — useful for filtering and for sharpening Oracle's own matching if you teach it keyword-style entries."
+    },
+    {
+      "id": "timelines",
+      "title": "Timelines, epochs & eras",
+      "keywords": [
+        "timeline",
+        "timelines",
+        "epoch",
+        "epochs",
+        "era",
+        "eras",
+        "event",
+        "events"
+      ],
+      "answer": "Timelines hold epochs, and epochs hold eras — each with a status, a summary, dated events, and its own page for writing it up. The Timelines room is where you build these out."
+    },
+    {
+      "id": "entries",
+      "title": "Entries (characters, places, etc.)",
+      "keywords": [
+        "entry",
+        "entries",
+        "character",
+        "characters",
+        "place",
+        "places",
+        "faction",
+        "world bible"
+      ],
+      "answer": "Entries (characters, places, factions, and so on) aren't their own room — create and link them right from a page or timeline with the “+ Entry” button in the toolbar, so your world bible grows exactly where you're writing about it."
+    },
+    {
+      "id": "timer",
+      "title": "Session timer",
+      "keywords": [
+        "timer",
+        "session",
+        "sessions",
+        "start",
+        "stop",
+        "track",
+        "tracking",
+        "work"
+      ],
+      "answer": "The timer lives in Productivity. Type what you're working on and hit Start; Stop logs it as a session. You can also log time you've already spent by hand, without running the timer, via “Log manually.”"
+    },
+    {
+      "id": "pomodoro",
+      "title": "Pomodoro mode",
+      "keywords": [
+        "pomodoro",
+        "pomodor",
+        "break",
+        "breaks",
+        "interval",
+        "intervals"
+      ],
+      "answer": "Pomodoro alternates fixed work/break intervals automatically. Turn it on from the Pomodoro button next to the timer, where you can also set the work and break lengths in minutes. A finished work interval logs as a real session, same as stopping the timer manually."
+    },
+    {
+      "id": "weekly-goal",
+      "title": "Weekly goals & tiers",
+      "keywords": [
+        "goal",
+        "goals",
+        "weekly goal",
+        "target",
+        "hours",
+        "tier",
+        "tiers",
+        "met",
+        "exceeded",
+        "crushed",
+        "legendary"
+      ],
+      "widget": "goal",
+      "answer": "Set an hours target for the week from Productivity's Goal card. Weeks get graded Met → Exceeded → Crushed → Legendary depending on how far over goal you land — each tier looks a little richer than the last. Here's where you stand right now:"
+    },
+    {
+      "id": "rest-days",
+      "title": "Rest days",
+      "keywords": [
+        "rest",
+        "rest day",
+        "rest days",
+        "recover",
+        "recovery",
+        "token",
+        "tokens"
+      ],
+      "answer": "Mark a day as rested from the timer card's “Take a rest day” button. Rest tokens are earned automatically and protect a week's streak without you needing to log any hours that day."
+    },
+    {
+      "id": "medals",
+      "title": "Medals & prestige",
+      "keywords": [
+        "medal",
+        "medals",
+        "prestige",
+        "streak",
+        "streaks",
+        "badge",
+        "badges",
+        "achievement",
+        "achievements"
+      ],
+      "answer": "Medals track streaks, total hours, goal weeks, and overachieving — each with the same Met/Exceeded/Crushed/Legendary tiers. Prestiging a medal after reaching Legendary resets its progress but keeps a badge with a color that cycles per prestige level; click a medal's “Pn” tag to see every prestige it's reached."
+    },
+    {
+      "id": "calendar-tasks",
+      "title": "Calendar & tasks",
+      "keywords": [
+        "calendar",
+        "task",
+        "tasks",
+        "todo",
+        "to-do",
+        "due",
+        "overdue",
+        "plan",
+        "plans"
+      ],
+      "widget": "tasks",
+      "answer": "The Calendar (in Productivity) holds plans and tasks, one-off or recurring. A page's own Tasks panel and the Calendar's Tasks card share the same underlying list — a task linked to a page shows up in both places. Here's what's open right now:"
+    },
+    {
+      "id": "recap",
+      "title": "Recap",
+      "keywords": [
+        "recap",
+        "summary",
+        "week in review",
+        "highlights"
+      ],
+      "widget": "recap",
+      "answer": "Recap (in Productivity) is a wrapped-style summary of a week, month, or year: an hours chart, quick stats, what pages/entries you actually created or built on, and an hours breakdown by project. Here it is, live:"
+    },
+    {
+      "id": "management",
+      "title": "Management (budget & products)",
+      "keywords": [
+        "management",
+        "budget",
+        "money",
+        "income",
+        "expense",
+        "expenses",
+        "product",
+        "products",
+        "account",
+        "accounts"
+      ],
+      "answer": "Management tracks real-world accounts you set up yourself — a brokerage account, a side project, whatever — each holding its own earnings, expenses, and contributions, plus the products or deliverables you're building."
+    },
+    {
+      "id": "projects",
+      "title": "Projects & switching",
+      "keywords": [
+        "project",
+        "projects",
+        "switch",
+        "switching",
+        "quick swap"
+      ],
+      "answer": "Each project is a separate world with its own notebooks/entries/timelines/management data. Productivity (calendar, timer, goals, medals) is shared across every project. Switch quickly via the rail button or Ctrl/Cmd+P."
+    },
+    {
+      "id": "export-import",
+      "title": "Export & import",
+      "keywords": [
+        "export",
+        "import",
+        "backup",
+        "save file",
+        "download"
+      ],
+      "answer": "Preferences → Data → “Export everything” backs up every project plus shared settings and Productivity data; Ctrl/Cmd+S does the same instantly. “Export this project” is scoped to just the current one. Import brings either back, and also reads old Suitebook exports."
+    },
+    {
+      "id": "snapshots",
+      "title": "Snapshots",
+      "keywords": [
+        "snapshot",
+        "snapshots",
+        "restore",
+        "undo",
+        "version history"
+      ],
+      "answer": "Preferences → Snapshots keeps automatic restore points for the current project, on an interval you control. They live in this browser, same as everything else — Export is the only copy that actually leaves it."
+    },
+    {
+      "id": "lock-focus",
+      "title": "Locking pages & Focus",
+      "keywords": [
+        "lock",
+        "locked",
+        "focus",
+        "distraction"
+      ],
+      "answer": "Lock a page from its toolbar to stop it being edited or deleted by accident until unlocked. Focus (also in the toolbar) dims every paragraph but the one you're in."
+    },
+    {
+      "id": "feedback",
+      "title": "Feedback / bug reports",
+      "keywords": [
+        "bug",
+        "feedback",
+        "report",
+        "issue",
+        "enhancement",
+        "suggest"
+      ],
+      "answer": "Preferences → Feedback opens a form for reporting a bug or suggesting an enhancement — pick which with the tabs at the top. It's reviewed and submitted on GitHub; nothing sends until you do."
+    },
+    {
+      "id": "update",
+      "title": "Checking for updates",
+      "keywords": [
+        "update",
+        "updates",
+        "version",
+        "channel",
+        "dev",
+        "beta",
+        "stable"
+      ],
+      "answer": "Preferences → Check for updates compares your version against what's published. Version strings carry a channel (stable/beta/dev) as a suffix, shown as a colored tag, so you can tell a tested release from a build still in progress."
+    },
+    {
+      "id": "search",
+      "title": "Search & shortcuts",
+      "keywords": [
+        "search",
+        "shortcut",
+        "shortcuts",
+        "keyboard",
+        "find"
+      ],
+      "answer": "Ctrl/Cmd+K opens search. A few other shortcuts: Ctrl+N new page, Ctrl+B bold, Ctrl+S export everything."
+    },
+    {
+      "id": "oracle-self",
+      "title": "What Oracle can do",
+      "keywords": [
+        "oracle",
+        "assistant",
+        "help",
+        "what can you do",
+        "hello",
+        "hi",
+        "capabilities",
+        "what do you know"
+      ],
+      "listAllOnMatch": true,
+      "answer": "I can add a task (“remind me to outline chapter 3 tomorrow”), set your weekly goal (“set my goal to 12 hours”), or answer questions about how Notebook works. Type loosely — I score word overlap and tolerate typos, so exact phrasing isn't necessary. Here's everything I currently know about:"
+    }
+  ]
+}
