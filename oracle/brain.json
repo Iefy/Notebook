@@ -201,10 +201,59 @@
         "accent",
         "color",
         "colour",
-        "look"
+        "look",
+        "corner",
+        "corners",
+        "density",
+        "background",
+        "font",
+        "personalization",
+        "personalisation",
+        "dark mode"
       ],
       "widget": "style",
-      "answer": "The accent color, background tone, density, and corner style all live in Preferences → Style."
+      "answer": "Accent color, corner style, density, background tone, and heading font — everything in Preferences → Style, changeable right here."
+    },
+    {
+      "id": "editor-behavior",
+      "title": "Editor behavior",
+      "keywords": [
+        "editor",
+        "typing",
+        "paste",
+        "pasting",
+        "autolink",
+        "auto-link",
+        "autolist",
+        "auto-list",
+        "plain text"
+      ],
+      "widget": "editor",
+      "answer": "Whether pasted content keeps its formatting, whether typed lists and web addresses auto-format as you go — these live in Preferences → Editor."
+    },
+    {
+      "id": "preferences",
+      "title": "Preferences",
+      "keywords": [
+        "preferences",
+        "settings",
+        "options",
+        "personalization",
+        "personalisation",
+        "customize",
+        "customise",
+        "config",
+        "configure"
+      ],
+      "relatedIds": [
+        "appearance",
+        "editor-behavior",
+        "export-import",
+        "snapshots",
+        "feedback",
+        "update"
+      ],
+      "answer": "Preferences covers quite a bit: appearance and style, editor behavior, data and backups, snapshots, and feature toggles — grouped into their own screens there. A few of the most-asked-about pieces have their own quick answers here too."
     },
     {
       "id": "management",
