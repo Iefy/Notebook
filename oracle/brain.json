@@ -108,7 +108,10 @@
         "interval",
         "intervals"
       ],
-      "answer": "Pomodoro alternates fixed work/break intervals automatically. Turn it on from the Pomodoro button next to the timer, where you can also set the work and break lengths in minutes. A finished work interval logs as a real session, same as stopping the timer manually."
+      "widget": "toggle",
+      "toggle": "pomodoroEnabled",
+      "toggleLabel": "Pomodoro",
+      "answer": "Pomodoro alternates fixed work/break intervals automatically, logging each finished work interval as a real session."
     },
     {
       "id": "weekly-goal",
@@ -187,6 +190,21 @@
       ],
       "widget": "recap",
       "answer": "Recap (in Productivity) is a wrapped-style summary of a week, month, or year: an hours chart, quick stats, what pages/entries you actually created or built on, and an hours breakdown by project. Here it is, live:"
+    },
+    {
+      "id": "appearance",
+      "title": "Appearance & style",
+      "keywords": [
+        "appearance",
+        "style",
+        "theme",
+        "accent",
+        "color",
+        "colour",
+        "look"
+      ],
+      "widget": "style",
+      "answer": "The accent color, background tone, density, and corner style all live in Preferences → Style."
     },
     {
       "id": "management",

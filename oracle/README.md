@@ -42,18 +42,41 @@ the HTML file if you ever rename the repo or use a different branch).
   listed, so a handful of the obvious words per entry is enough.
 
   `"widget"` is optional and only means anything if it matches one Oracle
-  already knows how to render live: currently `"recap"`, `"goal"`, or
-  `"tasks"`. Leave it out for anything else — it just becomes a plain
-  text answer with no live data attached. Adding *new* widget types isn't
-  something a JSON file can do on its own; that needs a matching code
-  change in Notebook.html.
+  already knows how to render live: currently `"recap"`, `"goal"`,
+  `"tasks"`, `"toggle"`, or `"style"`. Leave it out for anything else — it
+  just becomes a plain text answer with no live data attached. Adding
+  *new* widget types isn't something a JSON file can do on its own; that
+  needs a matching code change in Notebook.html.
+
+  `"toggle"` is the one that needs two extra fields on the entry:
+  ```json
+  { "widget": "toggle", "toggle": "pomodoroEnabled", "toggleLabel": "Pomodoro" }
+  ```
+  `"toggle"` is the actual `state.settings` key being flipped — it has to
+  already exist as a real boolean setting in the app; a JSON file can't
+  invent a new one. `"toggleLabel"` is just the display name. Once an
+  entry is set up this way, people can say "turn on pomodoro" /
+  "disable pomodoro" as a direct command, and Oracle will also offer to
+  flip it for them ("want to give it a try?") when they ask about it
+  while it's off — replying "yes" to that offer works the same as typing
+  the full command.
+
+  For a widget-bearing entry, `"answer"` is only ever shown when the
+  question was clearly conceptual ("how do rest days work", "what's a
+  tag", "explain pomodoro"). A plain status check ("my tasks", "weekly
+  goals and tiers") skips straight to the live widget with a short,
+  freshly-computed data sentence instead — write `"answer"` as a real
+  explanation, since it won't show up every time regardless.
 
 - **oracle/logic/*.json** — each file is optional and independent. A
   missing or broken one just falls back to Notebook's own built-in default
   for that file only; it doesn't affect the others or stop Oracle from
   working. Exact shape each file needs:
   - `greetings.json` → `{ "greetings": ["...", "..."] }`
-  - `openers.json` → `{ "single": ["...", "..."], "multi": ["...", "..."] }`
+  - `openers.json` → `{ "single": ["...", "..."], "multi": ["...", "..."], "howto": ["...", "..."] }`
+    (`howto` is used when the question is conceptual — "how do rest days
+    work", "what's a tag" — as opposed to a plain status check like "my
+    tasks", which uses `single` instead)
   - `connectors.json` → `{ "connectors": ["...", "..."] }`
   - `followups.json` → `{ "goal": ["...", "..."], "tasks": [...], "recap": [...], "default": [...] }`
     (add more keys here matching future widget names as they're added)
