@@ -37,7 +37,8 @@
         "headings",
         "jump"
       ],
-      "answer": "Topics are automatic: any heading you type in a page becomes a jump-able topic, listed under that page in the Legend. No separate step to create one."
+      "widget": "topics",
+      "answer": "Topics are automatic: any heading you type in a page becomes a jump-able topic, listed under that page in the Legend."
     },
     {
       "id": "tags",
@@ -50,7 +51,8 @@
         "color",
         "colour"
       ],
-      "answer": "Tag a page from its toolbar. Tags get their own color and show up as small pills on the page, in lists, and in the Legend — useful for filtering and for sharpening Oracle's own matching if you teach it keyword-style entries."
+      "widget": "tags",
+      "answer": "Tag a page from its toolbar. Tags get their own color and show up as small pills on the page, in lists, and in the Legend."
     },
     {
       "id": "timelines",
@@ -65,7 +67,8 @@
         "event",
         "events"
       ],
-      "answer": "Timelines hold epochs, and epochs hold eras — each with a status, a summary, dated events, and its own page for writing it up. The Timelines room is where you build these out."
+      "widget": "timelines",
+      "answer": "Timelines hold epochs, and epochs hold eras — each with a status, a summary, dated events, and its own page for writing it up."
     },
     {
       "id": "entries",
@@ -93,9 +96,12 @@
         "stop",
         "track",
         "tracking",
-        "work"
+        "work",
+        "log",
+        "logging"
       ],
-      "answer": "The timer lives in Productivity. Type what you're working on and hit Start; Stop logs it as a session. You can also log time you've already spent by hand, without running the timer, via “Log manually.”"
+      "widget": "timer",
+      "answer": "Type what you're working on and hit Start; Stop logs it as a session. You can also log time you've already spent without running the timer — just say something like “log 2 hours for outlining.”"
     },
     {
       "id": "pomodoro",
@@ -294,7 +300,8 @@
         "save file",
         "download"
       ],
-      "answer": "Preferences → Data → “Export everything” backs up every project plus shared settings and Productivity data; Ctrl/Cmd+S does the same instantly. “Export this project” is scoped to just the current one. Import brings either back, and also reads old Suitebook exports."
+      "widget": "export",
+      "answer": "“Export everything” backs up every project plus shared settings and Productivity data; Ctrl/Cmd+S does the same instantly. “Export this project” is scoped to just the current one. Import brings either back, and also reads old Suitebook exports."
     },
     {
       "id": "snapshots",
@@ -330,7 +337,8 @@
         "enhancement",
         "suggest"
       ],
-      "answer": "Preferences → Feedback opens a form for reporting a bug or suggesting an enhancement — pick which with the tabs at the top. It's reviewed and submitted on GitHub; nothing sends until you do."
+      "widget": "feedback",
+      "answer": "Report a bug or suggest an enhancement — pick which with the tabs at the top of the form. It's reviewed and submitted on GitHub; nothing sends until you do."
     },
     {
       "id": "update",
