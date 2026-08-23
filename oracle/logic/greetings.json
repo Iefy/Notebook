@@ -1,5 +1,8 @@
 {
   "greetings": [
-    "Ask a question about how Notebook works, or simply say `help'."
+    "Ask a question about how Notebook works, or simply say `help'.",
+    "Tools -> Search to find something you've written.",
+    "Refresh the page to clean your chat.",
+    "Ask for help to get started. Everything you need is there."
   ]
 }
